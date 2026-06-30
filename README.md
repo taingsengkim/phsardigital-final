@@ -1,8 +1,11 @@
-⚙️ Tech Stack
-Next.js
-Better Auth
-ShadCN UI
-TypeScript
-TailwindCSS
-React Hook Form
-Zod
+## <a name="tech-stack">⚙️ Tech Stack</a>
+
+- Zod
+- Next.js
+- NextAuth
+- Open AI
+- MongoDB
+- ShadCN UI
+- TypeScript
+- TailwindCSS
+- React Hook Form
