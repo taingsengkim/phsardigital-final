@@ -19,6 +19,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import LogoSvg from "@/assets/svg/logo";
 
 const BRAND   = "#6C4CD8";
 const NAV_LINKS = ["Home", "Offers", "Brands", "Stores", "All Products"];
@@ -60,16 +61,8 @@ export default function Navbar() {
             style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none", flexShrink: 0 }}
             aria-label="Phsar Digital home"
           >
-            <div
-              style={{
-                width: 34, height: 34, borderRadius: 999,
-                background: BRAND,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                color: "#fff", fontWeight: 700, fontSize: 15,
-              }}
-            >
-              P
-            </div>
+            {/* real project logo mark */}
+            <LogoSvg style={{ width: 32, height: 32 }} />
             <span style={{ fontSize: 17, fontWeight: 700, color: "#241F35" }}>
               Phsar Digital
             </span>
@@ -190,7 +183,12 @@ export default function Navbar() {
           {NAV_LINKS.map((name) => (
             <Link
               key={name}
-              href={name === "Home" ? "/home" : name === "All Products" ? "/products" : `/products?tag=${name.toLowerCase()}`}
+              href={
+                name === "Home"         ? "/home"
+                : name === "All Products" ? "/products"
+                : name === "Offers"       ? "/products?sort=price_asc"
+                : `#`
+              }
               style={{
                 color: "rgba(255,255,255,0.92)",
                 fontSize: 12, fontWeight: 600,
