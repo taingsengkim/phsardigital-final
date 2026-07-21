@@ -1,19 +1,17 @@
 /**
- * Static product data for the home/products page.
+ * Static product data for the products page.
  *
- * HOW TO ADD YOUR OWN IMAGES:
- * 1. Drop your image files into  /public/products/
- * 2. Replace each `image` value below with "/products/your-filename.jpg"
- *
- * All other fields (title, price, originalPrice, discount, rating, store)
- * are placeholder values — update them to match your real data.
+ * Images currently use Unsplash URLs so you can see real photos immediately.
+ * To use your own images:
+ *   1. Drop files into  /public/products/
+ *   2. Replace the `image` value with  "/products/your-file.jpg"
  */
 
 export type MockProduct = {
   id: number;
   slug: string;
   title: string;
-  image: string;         // path relative to /public
+  image: string;
   price: number;
   originalPrice: number;
   discountPercent: number | null;
@@ -22,125 +20,25 @@ export type MockProduct = {
   storeName: string;
 };
 
-export const MOCK_PRODUCTS: MockProduct[] = [
-  {
-    id: 1,
-    slug: "macbook-pro-14",
-    title: "MacBook Laptops",
-    image: "/products/product-1.jpg",   // ← replace with your filename
-    price: 399.00,
-    originalPrice: 1399.00,
-    discountPercent: 10,
-    rating: 5,
-    reviewCount: 1,
-    storeName: "Store1Name",
-  },
-  {
-    id: 2,
-    slug: "macbook-z",
-    title: "MacBook z",
-    image: "/products/product-2.jpg",
-    price: 399.00,
-    originalPrice: 1399.00,
-    discountPercent: 10,
-    rating: 5,
-    reviewCount: 1,
-    storeName: "Store1Name",
-  },
-  {
-    id: 3,
-    slug: "macbook-pro-13",
-    title: "MacBook Laptops",
-    image: "/products/product-3.jpg",
-    price: 399.00,
-    originalPrice: 1399.00,
-    discountPercent: 10,
-    rating: 5,
-    reviewCount: 1,
-    storeName: "Store1Name",
-  },
-  {
-    id: 4,
-    slug: "macbook-air",
-    title: "MacBook Laptops",
-    image: "/products/product-4.jpg",
-    price: 399.00,
-    originalPrice: 1399.00,
-    discountPercent: 10,
-    rating: 5,
-    reviewCount: 1,
-    storeName: "Store1Name",
-  },
-  {
-    id: 5,
-    slug: "macbook-m2",
-    title: "MacBook Laptops",
-    image: "/products/product-5.jpg",
-    price: 399.00,
-    originalPrice: 1399.00,
-    discountPercent: 10,
-    rating: 5,
-    reviewCount: 1,
-    storeName: "Store1Name",
-  },
-  {
-    id: 6,
-    slug: "macbook-pro-16",
-    title: "MacBook Laptops",
-    image: "/products/product-6.jpg",
-    price: 399.00,
-    originalPrice: 1399.00,
-    discountPercent: 10,
-    rating: 5,
-    reviewCount: 1,
-    storeName: "Store1Name",
-  },
-  {
-    id: 7,
-    slug: "macbook-pro-max",
-    title: "MacBook z",
-    image: "/products/product-7.jpg",
-    price: 399.00,
-    originalPrice: 1399.00,
-    discountPercent: 10,
-    rating: 5,
-    reviewCount: 1,
-    storeName: "Store1Name",
-  },
-  {
-    id: 8,
-    slug: "macbook-studio",
-    title: "MacBook Laptops",
-    image: "/products/product-8.jpg",
-    price: 399.00,
-    originalPrice: 1399.00,
-    discountPercent: 10,
-    rating: 5,
-    reviewCount: 1,
-    storeName: "Store1Name",
-  },
-  {
-    id: 9,
-    slug: "macbook-mini",
-    title: "MacBook Laptops",
-    image: "/products/product-9.jpg",
-    price: 399.00,
-    originalPrice: 1399.00,
-    discountPercent: 10,
-    rating: 5,
-    reviewCount: 1,
-    storeName: "Store1Name",
-  },
-  {
-    id: 10,
-    slug: "macbook-ultra",
-    title: "MacBook Laptops",
-    image: "/products/product-10.jpg",
-    price: 399.00,
-    originalPrice: 1399.00,
-    discountPercent: 10,
-    rating: 5,
-    reviewCount: 1,
-    storeName: "Store1Name",
-  },
+const IMAGES = [
+  "https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=400&q=80",
+  "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=400&q=80",
+  "https://images.unsplash.com/photo-1591561954557-26941169b49e?w=400&q=80",
+  "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&q=80",
+  "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=400&q=80",
 ];
+
+export const MOCK_PRODUCTS: MockProduct[] = Array.from({ length: 10 }).map(
+  (_, i) => ({
+    id: i + 1,
+    slug: `macbook-${i + 1}`,
+    title: i % 5 === 1 || i % 5 === 4 ? "MacBook z" : "MacBook Laptops",
+    image: IMAGES[i % IMAGES.length],
+    price: 399.0,
+    originalPrice: 1399.0,
+    discountPercent: 10,
+    rating: 5,
+    reviewCount: 1,
+    storeName: "Store1Name",
+  })
+);

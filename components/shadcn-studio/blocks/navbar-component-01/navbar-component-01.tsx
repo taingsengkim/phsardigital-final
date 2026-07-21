@@ -2,7 +2,16 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import {
+  Search,
+  Heart,
+  ShoppingBag,
+  User,
+  MapPin,
+  Menu,
+  ChevronDown,
+  ShoppingCart,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,139 +19,165 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ModeToggle } from "@/components/ui/mode-toogle";
-import {
-  SearchIcon,
-  MenuIcon,
-  ShoppingCartIcon,
-  HeartIcon,
-  UserIcon,
-  MapPinIcon,
-  ChevronDownIcon,
-} from "lucide-react";
 
-const NAV_LINKS = [
-  { title: "HOME", href: "/home" },
-  { title: "OFFERS", href: "/products?sort=price_asc" },
-  { title: "BRANDS", href: "/products" },
-  { title: "STORES", href: "/products" },
+const BRAND   = "#6C4CD8";
+const NAV_LINKS = ["Home", "Offers", "Brands", "Stores", "All Products"];
+const CATEGORIES = [
+  "Electronic & Appliances",
+  "House & Land",
+  "Phone & Tablets",
+  "Furniture & Decor",
+  "Fashion & Beauty",
+  "Computer & Accessories",
+  "Home & Kitchen",
+  "Bag & Accessories",
+  "Cars & Vehicles",
 ];
 
-const Navbar = () => {
+export default function Navbar() {
   const [search, setSearch] = useState("");
+  const savedCount = 2;
+  const cartCount  = 2;
 
   return (
-    <header className="sticky top-0 z-50 border-b shadow-sm" style={{ backgroundColor: "#E7E3F9" }}>
-      {/* ── top bar ── */}
-      <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:px-6">
-        {/* logo / brand */}
-        <Link
-          href="/home"
-          className="flex-shrink-0 text-xl font-extrabold tracking-tight leading-none"
-          aria-label="Phsar Digital home"
+    <header className="sticky top-0 z-50">
+
+      {/* ── top bar: white ── */}
+      <div style={{ background: "#fff", borderBottom: "1px solid #EDEBF3" }}>
+        <div
+          style={{
+            maxWidth: 1240,
+            margin: "0 auto",
+            padding: "12px 24px",
+            display: "flex",
+            alignItems: "center",
+            gap: 16,
+          }}
         >
-          <span className="text-foreground"></span>
-          <span className="text-primary">Phsar</span>
-          <span className="text-foreground"> Digital</span>
-        </Link>
+          {/* logo */}
+          <Link
+            href="/home"
+            style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none", flexShrink: 0 }}
+            aria-label="Phsar Digital home"
+          >
+            <div
+              style={{
+                width: 34, height: 34, borderRadius: 999,
+                background: BRAND,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: "#fff", fontWeight: 700, fontSize: 15,
+              }}
+            >
+              P
+            </div>
+            <span style={{ fontSize: 17, fontWeight: 700, color: "#241F35" }}>
+              Phsar Digital
+            </span>
+          </Link>
 
-        {/* search bar */}
-        <div className="relative mx-4 flex flex-1 items-center">
-          <SearchIcon
-            size={16}
-            className="absolute left-3 text-muted-foreground pointer-events-none"
-          />
-          <input
-            type="search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search Products..."
-            className="w-full rounded-full border border-white/60 bg-white py-2 pl-9 pr-4 text-sm outline-none focus:ring-2 focus:ring-white/80 transition shadow-sm"
-            aria-label="Search products"
-          />
-        </div>
+          {/* search */}
+          <div style={{ flex: 1, maxWidth: 480, position: "relative" }}>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search Products..."
+              aria-label="Search products"
+              style={{
+                width: "100%",
+                padding: "9px 40px 9px 14px",
+                borderRadius: 999,
+                border: "1px solid #E2DFEC",
+                fontSize: 13,
+                background: "#F8F7FB",
+                outline: "none",
+              }}
+            />
+            <Search
+              size={15}
+              color={BRAND}
+              style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)" }}
+            />
+          </div>
 
-        {/* right actions */}
-        <div className="flex items-center gap-1">
-          {/* wishlist */}
-          <Button variant="ghost" size="icon" asChild>
-            <Link href="/saved" aria-label="Saved items">
-              <HeartIcon size={20} />
+          <div style={{ flex: 1 }} />
+
+          {/* icon buttons */}
+          {[
+            { Icon: Heart,       label: "Saved",   badge: savedCount, href: "/saved"      },
+            { Icon: ShoppingBag, label: "Orders",  badge: 0,          href: "/orders"     },
+            { Icon: User,        label: "Account", badge: 0,          href: "/auth/login" },
+            { Icon: ShoppingCart,label: "Cart",    badge: cartCount,  href: "/cart"       },
+          ].map(({ Icon, label, badge, href }) => (
+            <Link
+              key={label}
+              href={href}
+              aria-label={label}
+              style={{
+                position: "relative",
+                background: "#F1EFFA",
+                borderRadius: 999,
+                width: 36, height: 36,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <Icon size={16} color={BRAND} />
+              {badge > 0 && (
+                <span
+                  style={{
+                    position: "absolute", top: -4, right: -4,
+                    background: BRAND, color: "#fff",
+                    fontSize: 10, fontWeight: 700,
+                    borderRadius: 999, width: 16, height: 16,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}
+                >
+                  {badge}
+                </span>
+              )}
             </Link>
-          </Button>
-
-          {/* cart */}
-          <Button variant="ghost" size="icon" className="relative" asChild>
-            <Link href="/cart" aria-label="Cart">
-              <ShoppingCartIcon size={20} />
-              {/* badge — replace 9 with real count from store */}
-              <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-                9
-              </span>
-            </Link>
-          </Button>
-
-          {/* account */}
-          <Button variant="ghost" size="icon" asChild>
-            <Link href="/auth/login" aria-label="Account">
-              <UserIcon size={20} />
-            </Link>
-          </Button>
-
-          <ModeToggle />
-
-          {/* mobile hamburger */}
-          <DropdownMenu>
-            <DropdownMenuTrigger className="md:hidden" asChild>
-              <Button variant="outline" size="icon" aria-label="Menu">
-                <MenuIcon size={20} />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-48" align="end">
-              <DropdownMenuGroup>
-                {NAV_LINKS.map((item) => (
-                  <DropdownMenuItem key={item.href} asChild>
-                    <Link href={item.href}>{item.title}</Link>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          ))}
         </div>
       </div>
 
-      {/* ── bottom nav bar ── */}
-      <nav className="hidden md:block border-t border-white/30" style={{ backgroundColor: "#E7E3F9" }}>
-        <div className="mx-auto flex max-w-7xl items-center gap-6 px-4 py-2 sm:px-6">
+      {/* ── purple nav rail ── */}
+      <div style={{ background: BRAND }}>
+        <div
+          style={{
+            maxWidth: 1240,
+            margin: "0 auto",
+            padding: "8px 24px",
+            display: "flex",
+            alignItems: "center",
+            gap: 20,
+          }}
+        >
           {/* category dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1 font-semibold"
+              <button
+                style={{
+                  display: "flex", alignItems: "center", gap: 6,
+                  background: "rgba(255,255,255,0.15)",
+                  border: "none", color: "#fff",
+                  borderRadius: 6, padding: "6px 12px",
+                  fontSize: 12, fontWeight: 600, cursor: "pointer",
+                  flexShrink: 0,
+                }}
                 aria-label="Select Category"
               >
-                <MenuIcon size={15} />
+                <Menu size={13} />
                 Select Category
-                <ChevronDownIcon size={13} />
-              </Button>
+                <ChevronDown size={12} />
+              </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-52" align="start">
+            <DropdownMenuContent className="w-56" align="start">
               <DropdownMenuGroup>
-                {[
-                  "Electronic & Appliances",
-                  "House & Land",
-                  "Phone & Tablets",
-                  "Furniture & Decor",
-                  "Fashion & Beauty",
-                  "Computer & Accessories",
-                  "Home & Kitchen",
-                  "Bag & Accessories",
-                  "Cars & Vehicles",
-                ].map((cat) => (
+                {CATEGORIES.map((cat) => (
                   <DropdownMenuItem key={cat} asChild>
-                    <Link href={`/category/${cat.toLowerCase().replace(/\s+/g, "-").replace(/[&]/g, "and")}`}>
+                    <Link
+                      href={`/category/${cat.toLowerCase().replace(/\s+/g, "-").replace(/[&]/g, "and")}`}
+                    >
                       {cat}
                     </Link>
                   </DropdownMenuItem>
@@ -152,33 +187,39 @@ const Navbar = () => {
           </DropdownMenu>
 
           {/* nav links */}
-          {NAV_LINKS.map((item) => (
+          {NAV_LINKS.map((name) => (
             <Link
-              key={item.href}
-              href={item.href}
-              className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
+              key={name}
+              href={name === "Home" ? "/home" : name === "All Products" ? "/products" : `/products?tag=${name.toLowerCase()}`}
+              style={{
+                color: "rgba(255,255,255,0.92)",
+                fontSize: 12, fontWeight: 600,
+                textDecoration: "none",
+                whiteSpace: "nowrap",
+              }}
             >
-              {item.title}
+              {name}
             </Link>
           ))}
 
-          {/* all products */}
-          <Link
-            href="/products"
-            className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
-          >
-            All PRODUCTS
-          </Link>
+          <div style={{ flex: 1 }} />
 
-          {/* location */}
-          <div className="ml-auto flex items-center gap-1 text-sm text-muted-foreground">
-            <MapPinIcon size={14} className="text-primary " />
-            <span>Phnom Penh</span>
+          {/* location pill */}
+          <div
+            style={{
+              display: "flex", alignItems: "center", gap: 5,
+              color: "#fff", fontSize: 12, fontWeight: 600,
+              background: "rgba(255,255,255,0.12)",
+              borderRadius: 999, padding: "5px 12px",
+              flexShrink: 0,
+            }}
+          >
+            <MapPin size={12} />
+            Phnom Penh
           </div>
         </div>
-      </nav>
+      </div>
+
     </header>
   );
-};
-
-export default Navbar;
+}

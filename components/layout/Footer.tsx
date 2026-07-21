@@ -1,192 +1,139 @@
 import Link from "next/link";
 import {
-  ShieldCheckIcon,
-  HeadphonesIcon,
-  StarIcon,
-  PhoneIcon,
-  MapPinIcon,
-  MailIcon,
-  MessageSquareIcon,
+  Phone, Mail, User, MapPinned,
+  Recycle, Headphones, Star,
 } from "lucide-react";
 
-const COMPANY_LINKS = [
-  { label: "About Us", href: "/about" },
-  { label: "Careers", href: "/careers" },
-  { label: "Press & Media", href: "/press" },
-  { label: "Privacy Policy", href: "/privacy" },
-  { label: "Terms & Conditions", href: "/terms" },
-  { label: "Acceptable Use Policy", href: "/aup" },
+const BRAND = "#6C4CD8";
+
+const FOOTER_COLS = [
+  {
+    title: "Company",
+    links: [
+      "About Us", "Careers", "Press & Media",
+      "Privacy Policy", "Terms & Conditions", "Acceptable Use Policy",
+    ],
+  },
+  {
+    title: "Make Money with Us",
+    links: [
+      "Sell product on Phsar Digital", "Sell on Amazon Business",
+      "Merchant Portal", "Merchant Support", "Partner With Us", "Advertising",
+    ],
+  },
+  {
+    title: "Let Us Help You",
+    links: [
+      "Help Center", "Community", "Brand Directory", "Customer Service",
+      "Your Account", "Your Order", "Shipping Rates & Policies",
+      "Returns & Replacements",
+    ],
+  },
 ];
 
-const SELLER_LINKS = [
-  { label: "Sell product on Phsar Digital", href: "/sell" },
-  { label: "Sell on Amazon Business", href: "/sell/amazon" },
-  { label: "Merchant Portal", href: "/merchant" },
-  { label: "Merchant Support", href: "/merchant/support" },
-  { label: "Partner With Us", href: "/partners" },
-  { label: "Advertising", href: "/advertising" },
-];
-
-const HELP_LINKS = [
-  { label: "Help Center", href: "/help" },
-  { label: "Community", href: "/community" },
-  { label: "Brand Directory", href: "/brands" },
-  { label: "Customer Service", href: "/contact-us" },
-  { label: "Your Account", href: "/account" },
-  { label: "Your Order", href: "/orders" },
-  { label: "Shipping  Rates & Policies", href: "/shipping" },
-  { label: "Returns & Replacements", href: "/returns" },
-];
-
-const TRUST_BADGES = [
-  { icon: ShieldCheckIcon, label: "100 % SECURE CHECKOUT" },
-  { icon: HeadphonesIcon, label: "24/7 DEDICATED\nSUPPORT" },
-  { icon: StarIcon, label: "THOUSANDS OF GENUINE REVIEWS" },
+const TRUST = [
+  { icon: Recycle,     label: "100% Secure Checkout"            },
+  { icon: Headphones,  label: "24/7 Dedicated Support"          },
+  { icon: Star,        label: "Thousands of Genuine Reviews"    },
 ];
 
 export default function Footer() {
   return (
-    <footer className="border-t" style={{ backgroundColor: "#E7E3F9" }}>
+    <footer>
 
       {/* ── 4-column links ── */}
-      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
-        <div className="grid grid-cols-2 gap-x-8 gap-y-10 sm:grid-cols-4">
-
-          {/* Company */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-bold tracking-wide">Company</h3>
-            <ul className="space-y-2">
-              {COMPANY_LINKS.map((l) => (
-                <li key={l.href}>
-                  <Link
-                    href={l.href}
-                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {l.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+      <div
+        style={{
+          maxWidth: 1240, margin: "0 auto",
+          padding: "36px 24px 20px",
+          display: "flex", gap: 48, flexWrap: "wrap",
+        }}
+      >
+        {/* brand column */}
+        <div style={{ minWidth: 200 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+            <div
+              style={{
+                width: 30, height: 30, borderRadius: 999,
+                background: BRAND,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: "#fff", fontWeight: 700, fontSize: 13,
+              }}
+            >
+              P
+            </div>
+            <span style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 700, fontSize: 15, color: "#241F35" }}>
+              Phsar Digital
+            </span>
           </div>
-
-          {/* Make Money with Us */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-bold tracking-wide">Make Money with Us</h3>
-            <ul className="space-y-2">
-              {SELLER_LINKS.map((l) => (
-                <li key={l.href}>
-                  <Link
-                    href={l.href}
-                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {l.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Let Us Help You */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-bold tracking-wide">Let Us Help You</h3>
-            <ul className="space-y-2">
-              {HELP_LINKS.map((l) => (
-                <li key={l.href}>
-                  <Link
-                    href={l.href}
-                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {l.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Phsar Digital — contact */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-bold tracking-wide">Phsar Digital</h3>
-            <ul className="space-y-3">
-              <li>
-                <Link
-                  href="/contact-us"
-                  className="flex items-start gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <MessageSquareIcon size={13} className="mt-0.5 flex-shrink-0" />
-                  Start A Conversation
-                </Link>
-              </li>
-              <li>
-                <div className="flex items-start gap-2 text-xs text-muted-foreground">
-                  <MapPinIcon size={13} className="mt-0.5 flex-shrink-0" />
-                  Address
-                </div>
-              </li>
-              <li>
-                <a
-                  href="tel:+012000000"
-                  className="flex items-start gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <PhoneIcon size={13} className="mt-0.5 flex-shrink-0" />
-                  +012 ********
-                </a>
-              </li>
-              <li>
-                <a
-                  href="mailto:Phsar.Digital@com.kh"
-                  className="flex items-start gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <MailIcon size={13} className="mt-0.5 flex-shrink-0" />
-                  Phsar.Digital@com.kh
-                </a>
-              </li>
-              <li>
-                <Link
-                  href="/support"
-                  className="flex items-start gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <HeadphonesIcon size={13} className="mt-0.5 flex-shrink-0" />
-                  Support ticket
-                </Link>
-              </li>
-              <li>
-                <div className="flex items-start gap-2 text-xs text-muted-foreground">
-                  <MapPinIcon size={13} className="mt-0.5 flex-shrink-0" />
-                  street 124, Toul Kork, Cambodia
-                </div>
-              </li>
-            </ul>
-          </div>
-
         </div>
+
+        {/* link columns */}
+        {FOOTER_COLS.map((col) => (
+          <div key={col.title} style={{ minWidth: 170 }}>
+            <h4 style={{ fontSize: 13, fontWeight: 700, marginBottom: 10, color: "#241F35" }}>
+              {col.title}
+            </h4>
+            {col.links.map((l) => (
+              <Link
+                key={l}
+                href="#"
+                style={{
+                  display: "block", color: "#5A5470",
+                  fontSize: 13, marginBottom: 8, textDecoration: "none",
+                }}
+              >
+                {l}
+              </Link>
+            ))}
+          </div>
+        ))}
       </div>
 
       {/* ── trust badges ── */}
-      <div className="border-t border-b">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-8 px-4 py-5 sm:justify-between sm:px-6">
-          {TRUST_BADGES.map(({ icon: Icon, label }) => (
-            <div key={label} className="flex items-center gap-2.5">
-              <Icon size={22} className="flex-shrink-0 text-foreground" />
-              <span className="whitespace-pre-line text-xs font-bold uppercase tracking-wide text-foreground">
-                {label}
-              </span>
+      <div style={{ borderTop: "1px solid #EDEBF3" }}>
+        <div
+          style={{
+            maxWidth: 1240, margin: "0 auto",
+            padding: "20px 24px",
+            display: "flex", gap: 40, flexWrap: "wrap", justifyContent: "center",
+          }}
+        >
+          {TRUST.map(({ icon: Icon, label }) => (
+            <div key={label} style={{ display: "flex", alignItems: "center", gap: 8, color: "#3A3350" }}>
+              <Icon size={18} color={BRAND} />
+              <span style={{ fontSize: 11, fontWeight: 700 }}>{label}</span>
             </div>
           ))}
         </div>
       </div>
 
-      {/* ── bottom bar ── */}
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 px-4 py-4 sm:px-6">
-        <p className="text-xs text-muted-foreground">
-          © {new Date().getFullYear()} Phsar Digital. All rights reserved.
-        </p>
-        <div className="flex items-center gap-4">
-          <Link href="/privacy" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-            Privacy
+      {/* ── contact bar ── */}
+      <div style={{ borderTop: "1px solid #EDEBF3", padding: "20px 24px" }}>
+        <div
+          style={{
+            maxWidth: 1240, margin: "0 auto",
+            display: "flex", justifyContent: "space-between",
+            flexWrap: "wrap", gap: 12,
+          }}
+        >
+          <Link href="/contact-us" style={{ color: BRAND, fontSize: 12, fontWeight: 700, textDecoration: "none" }}>
+            Start A Conversation
           </Link>
-          <Link href="/terms" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-            Terms
-          </Link>
+          <div style={{ display: "flex", gap: 24, flexWrap: "wrap", fontSize: 12, color: "#5A5470" }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <Phone size={12} /> +012 ********
+            </span>
+            <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <Mail size={12} /> Phsar.Digital@com.kh
+            </span>
+            <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <User size={12} /> Support ticket
+            </span>
+            <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <MapPinned size={12} /> street 124, Toul Kork, Cambodia
+            </span>
+          </div>
         </div>
       </div>
 
