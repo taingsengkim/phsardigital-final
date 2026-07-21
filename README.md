@@ -27,7 +27,7 @@ As of **Week 10 (Sprint 4/5 Check-in)**, the overall project is on track, with t
 | **Admin Control Panel** | `80%` | **Static layout complete**; component views for user moderation & analytics built. |
 | **Public Marketplace** | `45%` | Home, Browse, and Shop layout scaffolding in active development. |
 | **Seller Dashboard** | `40%` | Merchant workspace shell & listing UI templates in progress. |
-| **Backend Integration** | `Ready` | **58 / ~80 endpoints (~72.5%)** live and tested; Keycloak auth ready for wiring. |
+| **Backend Integration** | `Ready for integration` | **66 / ~100 endpoints (~66%)** live and tested; Keycloak auth ready for wiring. |
 
 ---
 
@@ -55,7 +55,7 @@ As of **Week 10 (Sprint 4/5 Check-in)**, the overall project is on track, with t
 
 * **Framework:** Next.js / React (TypeScript)
 * **Styling & UI:** Tailwind CSS, Lucide Icons / Material UI / ShadCN
-* **Authentication:** Keycloak IAM Integration / Zod / Better Auth / 
+* **Authentication and Validation:** Keycloak IAM Integration / Zod / Better Auth 
 * **API Communication:** Axios / React Query
 * **State Management:** Zustand / Redux Toolkit
 * **Design Reference:** Figma (Localized Khmer Palette & Design Tokens)
