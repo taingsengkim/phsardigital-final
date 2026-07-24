@@ -6,6 +6,23 @@ import {
 
 const BRAND = "#6C4CD8";
 
+// Map footer link labels to their routes.
+// Add more entries here as you build out the pages.
+const LINK_HREFS: Record<string, string> = {
+  "About Us":                      "/about",
+  "Contact Us":                    "/contact-us",
+  "Privacy Policy":                "/privacy",
+  "Terms & Conditions":            "/terms",
+  "Your Account":                  "/account",
+  "Your Order":                    "/orders",
+  "Help Center":                   "/help",
+  "Customer Service":              "/contact-us",
+  "Shipping Rates & Policies":     "/shipping",
+  "Returns & Replacements":        "/returns",
+  "Sell product on Phsar Digital": "/sell",
+  "Merchant Portal":               "/merchant",
+};
+
 const FOOTER_COLS = [
   {
     title: "Company",
@@ -77,7 +94,7 @@ export default function Footer() {
             {col.links.map((l) => (
               <Link
                 key={l}
-                href="#"
+                href={LINK_HREFS[l] ?? "#"}
                 style={{
                   display: "block", color: "#5A5470",
                   fontSize: 13, marginBottom: 8, textDecoration: "none",
