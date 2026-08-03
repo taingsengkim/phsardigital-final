@@ -21,7 +21,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import LogoSvg from "@/assets/svg/logo";
 
-const BRAND   = "#6C4CD8";
+const BRAND = "#6C4CD8";
+const KEYCLOAK_LOGIN_URL =
+  "https://auth.quizzy.it.com/realms/phsardigital/protocol/openid-connect/auth?client_id=security-admin-console&redirect_uri=https%3A%2F%2Fauth.quizzy.it.com%2Fadmin%2Fphsardigital%2Fconsole%2F%23%2Fphsardigital%2Fusers&state=3fe56814-1df5-4f74-ac2f-5309b43920f3&response_mode=query&response_type=code&scope=openid&nonce=f73f6de8-076b-46db-9492-a7baacb5aa07&code_challenge=AIogSONZV7L534kxzT9G7_w4HREOpyrvGpxCfkTqcsQ&code_challenge_method=S256";
 const NAV_LINKS = ["Home", "Offers", "Brands", "Stores", "All Products"];
 const CATEGORIES = [
   "Electronic & Appliances",
@@ -37,12 +39,12 @@ const CATEGORIES = [
 
 export default function Navbar() {
   const [search, setSearch] = useState("");
+  const [isLoggedIn] = useState(false);
   const savedCount = 2;
-  const cartCount  = 2;
+  const cartCount = 2;
 
   return (
     <header className="sticky top-0 z-50">
-
       {/* ── top bar: white ── */}
       <div style={{ background: "#fff", borderBottom: "1px solid #EDEBF3" }}>
         <div
@@ -58,7 +60,13 @@ export default function Navbar() {
           {/* logo */}
           <Link
             href="/home"
-            style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none", flexShrink: 0 }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              textDecoration: "none",
+              flexShrink: 0,
+            }}
             aria-label="Phsar Digital home"
           >
             {/* real project logo mark */}
@@ -88,48 +96,158 @@ export default function Navbar() {
             <Search
               size={15}
               color={BRAND}
-              style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)" }}
+              style={{
+                position: "absolute",
+                right: 14,
+                top: "50%",
+                transform: "translateY(-50%)",
+              }}
             />
           </div>
 
           <div style={{ flex: 1 }} />
 
           {/* icon buttons */}
-          {[
-            { Icon: Heart,       label: "Saved",   badge: savedCount, href: "/saved"      },
-            { Icon: ShoppingBag, label: "Orders",  badge: 0,          href: "/orders"     },
-            { Icon: User,        label: "Account", badge: 0,          href: "/auth/login" },
-            { Icon: ShoppingCart,label: "Cart",    badge: cartCount,  href: "/cart"       },
-          ].map(({ Icon, label, badge, href }) => (
+          {!isLoggedIn && (
             <Link
-              key={label}
-              href={href}
-              aria-label={label}
+              href="/saved"
+              aria-label="Saved"
               style={{
                 position: "relative",
                 background: "#F1EFFA",
                 borderRadius: 999,
-                width: 36, height: 36,
-                display: "flex", alignItems: "center", justifyContent: "center",
+                width: 36,
+                height: 36,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
                 flexShrink: 0,
               }}
             >
-              <Icon size={16} color={BRAND} />
-              {badge > 0 && (
+              <Heart size={16} color={BRAND} />
+              {savedCount > 0 && (
                 <span
                   style={{
-                    position: "absolute", top: -4, right: -4,
-                    background: BRAND, color: "#fff",
-                    fontSize: 10, fontWeight: 700,
-                    borderRadius: 999, width: 16, height: 16,
-                    display: "flex", alignItems: "center", justifyContent: "center",
+                    position: "absolute",
+                    top: -4,
+                    right: -4,
+                    background: BRAND,
+                    color: "#fff",
+                    fontSize: 10,
+                    fontWeight: 700,
+                    borderRadius: 999,
+                    width: 16,
+                    height: 16,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
                   }}
                 >
-                  {badge}
+                  {savedCount}
                 </span>
               )}
             </Link>
-          ))}
+          )}
+
+          {!isLoggedIn && (
+            <Link
+              href="/orders"
+              aria-label="Orders"
+              style={{
+                position: "relative",
+                background: "#F1EFFA",
+                borderRadius: 999,
+                width: 36,
+                height: 36,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <ShoppingBag size={16} color={BRAND} />
+            </Link>
+          )}
+
+          {isLoggedIn ? (
+            <Link
+              href="/account"
+              aria-label="Account"
+              style={{
+                position: "relative",
+                background: "#F1EFFA",
+                borderRadius: 999,
+                width: 36,
+                height: 36,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <User size={16} color={BRAND} />
+            </Link>
+          ) : (
+            <Link
+              href={KEYCLOAK_LOGIN_URL}
+              aria-label="Login"
+              style={{
+                background: BRAND,
+                color: "#fff",
+                borderRadius: 999,
+                padding: "8px 14px",
+                fontSize: 13,
+                fontWeight: 700,
+                textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+              }}
+            >
+              Login
+            </Link>
+          )}
+
+          <Link
+            href="/cart"
+            aria-label="Cart"
+            style={{
+              position: "relative",
+              background: "#F1EFFA",
+              borderRadius: 999,
+              width: 36,
+              height: 36,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            <ShoppingCart size={16} color={BRAND} />
+            {cartCount > 0 && (
+              <span
+                style={{
+                  position: "absolute",
+                  top: -4,
+                  right: -4,
+                  background: BRAND,
+                  color: "#fff",
+                  fontSize: 10,
+                  fontWeight: 700,
+                  borderRadius: 999,
+                  width: 16,
+                  height: 16,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                {cartCount}
+              </span>
+            )}
+          </Link>
         </div>
       </div>
 
@@ -150,11 +268,17 @@ export default function Navbar() {
             <DropdownMenuTrigger asChild>
               <button
                 style={{
-                  display: "flex", alignItems: "center", gap: 6,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
                   background: "rgba(255,255,255,0.15)",
-                  border: "none", color: "#fff",
-                  borderRadius: 6, padding: "6px 12px",
-                  fontSize: 12, fontWeight: 600, cursor: "pointer",
+                  border: "none",
+                  color: "#fff",
+                  borderRadius: 6,
+                  padding: "6px 12px",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: "pointer",
                   flexShrink: 0,
                 }}
                 aria-label="Select Category"
@@ -184,14 +308,18 @@ export default function Navbar() {
             <Link
               key={name}
               href={
-                name === "Home"         ? "/home"
-                : name === "All Products" ? "/products"
-                : name === "Offers"       ? "/products?sort=price_asc"
-                : `#`
+                name === "Home"
+                  ? "/home"
+                  : name === "All Products"
+                    ? "/products"
+                    : name === "Offers"
+                      ? "/products?sort=price_asc"
+                      : `#`
               }
               style={{
                 color: "rgba(255,255,255,0.92)",
-                fontSize: 12, fontWeight: 600,
+                fontSize: 12,
+                fontWeight: 600,
                 textDecoration: "none",
                 whiteSpace: "nowrap",
               }}
@@ -205,10 +333,15 @@ export default function Navbar() {
           {/* location pill */}
           <div
             style={{
-              display: "flex", alignItems: "center", gap: 5,
-              color: "#fff", fontSize: 12, fontWeight: 600,
+              display: "flex",
+              alignItems: "center",
+              gap: 5,
+              color: "#fff",
+              fontSize: 12,
+              fontWeight: 600,
               background: "rgba(255,255,255,0.12)",
-              borderRadius: 999, padding: "5px 12px",
+              borderRadius: 999,
+              padding: "5px 12px",
               flexShrink: 0,
             }}
           >
@@ -217,7 +350,6 @@ export default function Navbar() {
           </div>
         </div>
       </div>
-
     </header>
   );
 }

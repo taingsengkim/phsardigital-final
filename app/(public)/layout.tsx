@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import NavbarPage from "../navbar-component-01/page";
+import NavbarPage from "../../components/navbar-component-01/page";
 import Footer from "@/components/layout/Footer";
 import NewsletterSection from "@/components/layout/NewsletterSection";
 import CategoryPage from "./category/[slug]/page";
