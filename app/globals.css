@@ -135,6 +135,11 @@
     background: #F8F7FB;
   }
 
+  /* footer link hover on dark background */
+  .footer-link:hover {
+    color: #fff !important;
+  }
+
   /* hide scrollbar for category row */
   .scrollbar-none::-webkit-scrollbar {
     display: none;
