@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { CategoryNode } from "@/lib/api/categories";
+import type { CategoryNode } from "@/app/api/categories";
 import { cn } from "@/lib/utils";
 
 type Props = {

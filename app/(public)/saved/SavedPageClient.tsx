@@ -5,7 +5,7 @@ import Link from "next/link";
 import { HeartIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ProductGrid from "@/components/product/ProductGrid";
-import { getSavedListings } from "@/lib/api/savedListings";
+import { getSavedListings } from "@/app/api/savedListings";
 import type { Listing } from "@/lib/types";
 
 export default function SavedPageClient() {

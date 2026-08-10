@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { getCart } from "@/lib/api/cart";
-import { createOrder } from "@/lib/api/orders";
+import { getCart } from "@/app/api/cart";
+import { createOrder } from "@/app/api/orders";
 import type { Cart } from "@/lib/types";
 
 export default function CheckoutClient() {
