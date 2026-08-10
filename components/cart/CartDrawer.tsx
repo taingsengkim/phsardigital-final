@@ -6,7 +6,7 @@ import { ShoppingCartIcon, XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import CartItemRow from "./CartItemRow";
-import { getCart } from "@/lib/api/cart";
+import { getCart } from "@/app/api/cart";
 import type { Cart } from "@/lib/types";
 
 export default function CartDrawer() {

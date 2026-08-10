@@ -124,17 +124,17 @@ export default function ProductsClient() {
                 <div className="p-2.5">
                   <Link
                     href={`/products/${p.slug}`}
-                    className="line-clamp-2 text-[12.5px] font-semibold text-[#241F35] hover:text-[#6C4CD8]"
+                    className="line-clamp-2 text-sm font-semibold text-[#241F35] hover:text-[#6C4CD8]"
                   >
                     {p.title}
                   </Link>
 
                   {/* prices */}
                   <div className="mt-1.5 flex items-baseline gap-1.5">
-                    <span className="text-[11px] text-[#B3ADC4] line-through">
+                    <span className="text-xs text-[#B3ADC4] line-through">
                       {usd(p.originalPrice)}
                     </span>
-                    <span className="text-[14px] font-bold text-[#6C4CD8]">
+                    <span className="text-base font-bold text-[#6C4CD8]">
                       {usd(p.price)}
                     </span>
                   </div>
@@ -142,14 +142,14 @@ export default function ProductsClient() {
                   {/* stars */}
                   <div className="mt-1 flex items-center gap-0.5">
                     {Array.from({ length: 5 }).map((_, i) => (
-                      <Star key={i} size={9} fill="#F5B301" color="#F5B301" />
+                      <Star key={i} size={10} fill="#F5B301" color="#F5B301" />
                     ))}
-                    <span className="ml-1 text-[10px] text-[#8B85A0]">
+                    <span className="ml-1 text-xs text-[#8B85A0]">
                       ({p.reviewCount})
                     </span>
                   </div>
 
-                  <p className="mt-0.5 text-[10px] text-[#8B85A0]">
+                  <p className="mt-0.5 text-xs text-[#8B85A0]">
                     {p.storeName}
                   </p>
                 </div>
@@ -184,27 +184,27 @@ export default function ProductsClient() {
                 <div className="flex flex-1 flex-col justify-center py-3 pr-3">
                   <Link
                     href={`/products/${p.slug}`}
-                    className="text-[13px] font-semibold text-[#241F35] hover:text-[#6C4CD8]"
+                    className="text-sm font-semibold text-[#241F35] hover:text-[#6C4CD8]"
                   >
                     {p.title}
                   </Link>
                   <div className="mt-1 flex items-baseline gap-1.5">
-                    <span className="text-[11px] text-[#B3ADC4] line-through">
+                    <span className="text-xs text-[#B3ADC4] line-through">
                       {usd(p.originalPrice)}
                     </span>
-                    <span className="text-[14px] font-bold text-[#6C4CD8]">
+                    <span className="text-base font-bold text-[#6C4CD8]">
                       {usd(p.price)}
                     </span>
                   </div>
                   <div className="mt-1 flex items-center gap-0.5">
                     {Array.from({ length: 5 }).map((_, i) => (
-                      <Star key={i} size={9} fill="#F5B301" color="#F5B301" />
+                      <Star key={i} size={10} fill="#F5B301" color="#F5B301" />
                     ))}
-                    <span className="ml-1 text-[10px] text-[#8B85A0]">
+                    <span className="ml-1 text-xs text-[#8B85A0]">
                       ({p.reviewCount})
                     </span>
                   </div>
-                  <p className="mt-0.5 text-[10px] text-[#8B85A0]">{p.storeName}</p>
+                  <p className="mt-0.5 text-xs text-[#8B85A0]">{p.storeName}</p>
                 </div>
                 <button
                   onClick={() => toggleSave(p.id)}

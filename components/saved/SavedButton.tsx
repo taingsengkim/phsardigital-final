@@ -4,7 +4,7 @@ import { useState } from "react";
 import { HeartIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { saveListings, unsaveListing } from "@/lib/api/savedListings";
+import { saveListings, unsaveListing } from "@/app/api/savedListings";
 
 type Props = {
   listingId: number;

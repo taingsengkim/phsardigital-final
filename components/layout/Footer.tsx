@@ -93,10 +93,10 @@ export default function Footer() {
       <div className="bg-[#ECEAF7]">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-6 py-7">
           <div>
-            <p className="text-[15px] font-bold text-[#1A1330]">
+            <p className="text-[18px] font-bold text-[#1A1330]">
               Sign up for Phsar Digital&apos;s News &amp; Offers
             </p>
-            <p className="mt-0.5 text-[12px] text-[#5A5470]">
+            <p className="mt-0.5 text-[18px] text-[#5A5470]">
               Be the first to know about Exclusive deals, New arrivals,
               and Marketplace insights!
             </p>
@@ -106,22 +106,22 @@ export default function Footer() {
             onSubmit={(e) => e.preventDefault()}
             className="flex items-center overflow-hidden rounded-lg border border-[#C8C3E0] bg-white"
           >
-            <Mail size={13} className="ml-3 shrink-0 text-[#6C4CD8]" />
+            <Mail size={16} className="ml-3 shrink-0 text-[#6C4CD8]" />
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Phsar.Digital@com.kh"
-              className="w-44 px-2.5 py-2.5 text-[12px] text-[#3F3A52] outline-none
+              className="w-44 px-2.5 py-2.5 text-[18px] text-[#3F3A52] outline-none
                          placeholder:text-[#6C4CD8] placeholder:underline sm:w-52"
             />
             <button
               type="submit"
               className="flex items-center gap-1 bg-[#6C4CD8] px-4 py-2.5
-                         text-[12px] font-semibold text-white transition-colors
+                         text-[18px] font-semibold text-white transition-colors
                          hover:bg-[#5C3DC8]"
             >
-              <Send size={11} /> Sign up
+              <Send size={17} /> Sign up
             </button>
           </form>
         </div>
@@ -137,8 +137,8 @@ export default function Footer() {
             <img
               src="/picture/logo.png"
               alt="Phsar Digital"
-              width={120}
-              height={120}
+              width={1220}
+              height={1220}
               className="h-16 w-16 object-contain"
               onError={(e) => {
                 (e.currentTarget as HTMLImageElement).style.display = "none";
@@ -153,13 +153,13 @@ export default function Footer() {
             >
               <span className="text-xl font-bold text-white">P</span>
             </div>
-            <span className="text-[15px] font-bold text-[#1A1330]">Phsar Digital</span>
+            <span className="text-[18px] font-bold text-[#1A1330]">Phsar Digital</span>
           </div>
 
           {/* 3 link columns */}
           {FOOTER_COLS.map((col) => (
             <div key={col.title}>
-              <p className="mb-3 text-[12px] font-bold uppercase tracking-wide text-[#1A1330]">
+              <p className="mb-3 text-[18px] font-bold uppercase tracking-wide text-[#1A1330]">
                 {col.title}
               </p>
               <ul className="space-y-1.5">
@@ -167,7 +167,7 @@ export default function Footer() {
                   <li key={l.label}>
                     <Link
                       href={l.href}
-                      className="text-[12px] text-[#5A5470] transition-colors hover:text-[#6C4CD8]"
+                      className="text-[18px] text-[#5A5470] transition-colors hover:text-[#6C4CD8]"
                     >
                       {l.label}
                     </Link>
@@ -183,7 +183,7 @@ export default function Footer() {
           {TRUST_BADGES.map(({ svg, label }) => (
             <div key={label} className="flex items-center gap-2">
               {svg}
-              <span className="text-[10px] font-bold uppercase tracking-wide text-[#3B2A85]">
+              <span className="text-[18px] font-bold uppercase tracking-wide text-[#3B2A85]">
                 {label}
               </span>
             </div>
@@ -194,25 +194,25 @@ export default function Footer() {
         <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-[#EDEBF3] pt-5">
           <Link
             href="/contact-us"
-            className="text-[12px] font-bold text-[#6C4CD8] hover:underline"
+            className="text-[18px] font-bold text-[#6C4CD8] hover:underline"
           >
             Start A Conversation
           </Link>
           <div className="hidden flex-1 border-t border-[#DEDAEA] sm:block" />
-          <span className="text-[12px] font-bold text-[#6C4CD8]">Address</span>
+          <span className="text-[18px] font-bold text-[#6C4CD8]">Address</span>
         </div>
 
         <div className="mt-4 flex flex-wrap gap-x-8 gap-y-3">
           {CONTACTS.map(({ Icon, text }) => (
-            <span key={text} className="flex items-center gap-1.5 text-[12px] text-[#241F35]">
-              <Icon size={13} className="shrink-0 text-[#6C4CD8]" />
+            <span key={text} className="flex items-center gap-1.5 text-[18px] text-[#241F35]">
+              <Icon size={16} className="shrink-0 text-[#6C4CD8]" />
               {text}
             </span>
           ))}
         </div>
 
         {/* ── copyright ── */}
-        <p className="mt-6 border-t border-[#EDEBF3] pt-4 text-center text-[11px] text-[#9CA3AF]">
+        <p className="mt-6 border-t border-[#EDEBF3] pt-4 text-center text-[18px] text-[#9CA3AF]">
           © {new Date().getFullYear()} Phsar Digital. All rights reserved.
         </p>
       </div>

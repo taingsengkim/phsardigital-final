@@ -66,5 +66,6 @@ export const MOCK_PRODUCTS: MockProduct[] = Array.from({ length: 10 }).map(
     rating: 5,
     reviewCount: 1,
     storeName: "Store1Name",
+    
   })
 );

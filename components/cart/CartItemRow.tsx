@@ -5,7 +5,7 @@ import Link from "next/link";
 import type { CartItem } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { MinusIcon, PlusIcon, Trash2Icon } from "lucide-react";
-import { updateCartItem, removeCartItem } from "@/lib/api/cart";
+import { updateCartItem, removeCartItem } from "@/app/api/cart";
 import { useState } from "react";
 
 type Props = {

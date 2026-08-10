@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import CartItemRow from "@/components/cart/CartItemRow";
-import { getCart } from "@/lib/api/cart";
+import { getCart } from "@/app/api/cart";
 import type { Cart } from "@/lib/types";
 import { ShoppingCartIcon } from "lucide-react";
 
