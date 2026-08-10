@@ -20,10 +20,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import LogoSvg from "@/assets/svg/logo";
+import LoginButton from "@/components/auth/LoginButton";
 
 const BRAND = "#6C4CD8";
-const KEYCLOAK_LOGIN_URL =
-  "https://auth.quizzy.it.com/realms/phsardigital/protocol/openid-connect/auth?client_id=security-admin-console&redirect_uri=https%3A%2F%2Fauth.quizzy.it.com%2Fadmin%2Fphsardigital%2Fconsole%2F%23%2Fphsardigital%2Fusers&state=3fe56814-1df5-4f74-ac2f-5309b43920f3&response_mode=query&response_type=code&scope=openid&nonce=f73f6de8-076b-46db-9492-a7baacb5aa07&code_challenge=AIogSONZV7L534kxzT9G7_w4HREOpyrvGpxCfkTqcsQ&code_challenge_method=S256";
+
 const NAV_LINKS = ["Home", "Offers", "Brands", "Stores", "All Products"];
 const CATEGORIES = [
   "Electronic & Appliances",
@@ -188,26 +188,7 @@ export default function Navbar() {
               <User size={16} color={BRAND} />
             </Link>
           ) : (
-            <Link
-              href={KEYCLOAK_LOGIN_URL}
-              aria-label="Login"
-              style={{
-                background: BRAND,
-                color: "#fff",
-                borderRadius: 999,
-                padding: "8px 14px",
-                fontSize: 13,
-                fontWeight: 700,
-                textDecoration: "none",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                whiteSpace: "nowrap",
-                flexShrink: 0,
-              }}
-            >
-              Login
-            </Link>
+            <LoginButton />
           )}
 
           <Link
