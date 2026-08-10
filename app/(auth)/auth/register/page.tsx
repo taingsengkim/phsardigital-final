@@ -24,7 +24,6 @@ const registerSchema = z
   .object({
     firstName: z.string().trim().min(1, "First name is required."),
     lastName: z.string().trim().min(1, "Last name is required."),
-    username: z.string().trim().min(1, "Username is required."),
     email: z.string().trim().email("Enter a valid email address."),
     phoneNumber: z
       .string()
@@ -61,7 +60,6 @@ export default function RegisterPage() {
     defaultValues: {
       firstName: "",
       lastName: "",
-      username: "",
       email: "",
       phoneNumber: "",
       password: "",
@@ -86,7 +84,6 @@ export default function RegisterPage() {
 
     try {
       await registerUser({
-        username: values.username.trim(),
         password: values.password,
         confirmPassword: values.confirmPassword,
         email: values.email.trim(),
@@ -249,20 +246,7 @@ export default function RegisterPage() {
                   />
                 </Field>
 
-                <Field
-                  label="Username"
-                  htmlFor="username"
-                  error={errors.username?.message}
-                >
-                  <InputBox
-                    id="username"
-                    icon={<User size={15} className="text-[#B0A8C8]" />}
-                    inputProps={register("username")}
-                    placeholder="johndoe"
-                    autoComplete="username"
-                    error={errors.username?.message}
-                  />
-                </Field>
+
 
                 <Field
                   label="Email Address"
