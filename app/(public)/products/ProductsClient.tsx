@@ -4,23 +4,21 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { LayoutGrid, List, ChevronDown, Heart, Star } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { MOCK_PRODUCTS } from "@/lib/mock-products";
 
-const BRAND  = "#6C4CD8";
-const ACCENT = "#8FC93A";
-
-const TOTAL  = 17;
+const TOTAL    = 17;
 const PER_PAGE = 10;
-const PAGES  = Math.ceil(TOTAL / PER_PAGE);
+const PAGES    = Math.ceil(TOTAL / PER_PAGE);
 
 function usd(n: number) {
   return n.toLocaleString("en-US", { style: "currency", currency: "USD" });
 }
 
 export default function ProductsClient() {
-  const [view, setView]   = useState<"grid" | "list">("grid");
-  const [sort, setSort]   = useState("popular");
-  const [page, setPage]   = useState(1);
+  const [view,  setView]  = useState<"grid" | "list">("grid");
+  const [sort,  setSort]  = useState("popular");
+  const [page,  setPage]  = useState(1);
   const [saved, setSaved] = useState<Set<number>>(new Set());
 
   function toggleSave(id: number) {
@@ -37,56 +35,38 @@ export default function ProductsClient() {
   return (
     <>
       {/* ── toolbar ── */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "18px 0 16px" }}>
+      <div className="mb-5 flex items-center gap-3">
         {/* grid / list toggle */}
-        <div
-          style={{
-            display: "flex", gap: 4,
-            background: "#fff",
-            border: "1px solid #E2DFEC",
-            borderRadius: 8, padding: 3,
-          }}
-        >
+        <div className="flex gap-1 rounded-lg border border-[#E2DFEC] bg-white p-1">
           {(["grid", "list"] as const).map((v) => (
             <button
               key={v}
               onClick={() => setView(v)}
               aria-label={v === "grid" ? "Grid view" : "List view"}
-              style={{
-                background: view === v ? BRAND : "transparent",
-                border: "none",
-                borderRadius: 6,
-                width: 30, height: 30,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                cursor: "pointer",
-              }}
+              className={cn(
+                "flex h-7 w-7 items-center justify-center rounded-md transition-colors",
+                view === v
+                  ? "bg-[#6C4CD8] text-white"
+                  : "text-[#8B85A0] hover:bg-[#F1EFFA]"
+              )}
             >
               {v === "grid"
-                ? <LayoutGrid size={14} color={view === v ? "#fff" : "#8B85A0"} />
-                : <List       size={14} color={view === v ? "#fff" : "#8B85A0"} />
+                ? <LayoutGrid size={14} />
+                : <List       size={14} />
               }
             </button>
           ))}
         </div>
 
         {/* divider */}
-        <div style={{ flex: 1, height: 1, background: "#EDEBF3" }} />
+        <div className="h-px flex-1 bg-[#E5E2EC]" />
 
-        {/* sort select */}
-        <div style={{ position: "relative" }}>
+        {/* sort */}
+        <div className="relative">
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value)}
-            style={{
-              appearance: "none",
-              background: "#fff",
-              border: "1px solid #E2DFEC",
-              borderRadius: 8,
-              padding: "8px 30px 8px 12px",
-              fontSize: 13,
-              cursor: "pointer",
-              outline: "none",
-            }}
+            className="appearance-none rounded-lg border border-[#E2DFEC] bg-white py-2 pl-3 pr-8 text-[12px] text-[#3F3A52] outline-none focus:border-[#6C4CD8]"
           >
             <option value="popular">Sort by</option>
             <option value="priceAsc">Price: Low to High</option>
@@ -94,170 +74,190 @@ export default function ProductsClient() {
             <option value="newest">Newest</option>
           </select>
           <ChevronDown
-            size={13}
-            color="#8B85A0"
-            style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}
+            size={12}
+            className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8B85A0]"
           />
         </div>
       </div>
 
-      {/* ── product grid / list ── */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: view === "grid" ? "repeat(auto-fill, minmax(175px, 1fr))" : "1fr",
-          gap: 16,
-        }}
-      >
-        {MOCK_PRODUCTS.map((p) => {
-          const isSaved = saved.has(p.id);
-          return (
-            <div
-              key={p.id}
-              style={{
-                background: "#fff",
-                borderRadius: 10,
-                overflow: "hidden",
-                boxShadow: "0 1px 3px rgba(36,31,53,0.08)",
-                display: view === "list" ? "flex" : "block",
-                transition: "box-shadow .15s ease, transform .15s ease",
-              }}
-            >
-              {/* image area */}
-              <div
-                style={{
-                  position: "relative",
-                  height: view === "list" ? 110 : 150,
-                  width: view === "list" ? 140 : "auto",
-                  flexShrink: 0,
-                }}
+      {/* ── product grid ── */}
+      {view === "grid" ? (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5">
+          {MOCK_PRODUCTS.map((p) => {
+            const isSaved = saved.has(p.id);
+            return (
+              <article
+                key={p.id}
+                className="group overflow-hidden rounded-xl bg-white shadow-[0_1px_4px_rgba(36,31,53,0.08)] transition-all hover:-translate-y-[2px] hover:shadow-[0_6px_20px_rgba(108,76,216,0.14)]"
               >
-                <Image
-                  src={p.image}
-                  alt={p.title}
-                  fill
-                  sizes="(max-width:640px) 50vw, 200px"
-                  className="object-cover"
-                  unoptimized={p.image.startsWith("http")}
-                />
-                {/* discount badge */}
-                {p.discountPercent && (
-                  <span
-                    style={{
-                      position: "absolute", top: 8, left: 8,
-                      background: BRAND, color: "#fff",
-                      fontSize: 10, fontWeight: 700,
-                      padding: "3px 7px", borderRadius: 5,
-                    }}
+                {/* image */}
+                <div className="relative aspect-[4/5] w-full overflow-hidden bg-[#F5F3FA]">
+                  <Image
+                    src={p.image}
+                    alt={p.title}
+                    fill
+                    sizes="(max-width:640px) 50vw, 200px"
+                    className="object-cover object-center transition-transform duration-300 group-hover:scale-[1.04]"
+                    unoptimized={p.image.startsWith("http")}
+                  />
+                  {/* discount badge */}
+                  {p.discountPercent && (
+                    <span className="absolute left-2 top-2 rounded-[5px] bg-[#6C4CD8] px-[7px] py-[3px] text-[10px] font-bold text-white">
+                      -{p.discountPercent}%
+                    </span>
+                  )}
+                  {/* save button */}
+                  <button
+                    onClick={() => toggleSave(p.id)}
+                    aria-label={isSaved ? "Remove from saved" : "Save"}
+                    className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 shadow-sm transition hover:scale-110"
                   >
-                    -{p.discountPercent}%
-                  </span>
-                )}
-                {/* save button */}
+                    <Heart
+                      size={13}
+                      color="#6C4CD8"
+                      fill={isSaved ? "#6C4CD8" : "none"}
+                    />
+                  </button>
+                </div>
+
+                {/* info */}
+                <div className="p-2.5">
+                  <Link
+                    href={`/products/${p.slug}`}
+                    className="line-clamp-2 text-[12.5px] font-semibold text-[#241F35] hover:text-[#6C4CD8]"
+                  >
+                    {p.title}
+                  </Link>
+
+                  {/* prices */}
+                  <div className="mt-1.5 flex items-baseline gap-1.5">
+                    <span className="text-[11px] text-[#B3ADC4] line-through">
+                      {usd(p.originalPrice)}
+                    </span>
+                    <span className="text-[14px] font-bold text-[#6C4CD8]">
+                      {usd(p.price)}
+                    </span>
+                  </div>
+
+                  {/* stars */}
+                  <div className="mt-1 flex items-center gap-0.5">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star key={i} size={9} fill="#F5B301" color="#F5B301" />
+                    ))}
+                    <span className="ml-1 text-[10px] text-[#8B85A0]">
+                      ({p.reviewCount})
+                    </span>
+                  </div>
+
+                  <p className="mt-0.5 text-[10px] text-[#8B85A0]">
+                    {p.storeName}
+                  </p>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      ) : (
+        /* ── list view ── */
+        <div className="flex flex-col gap-3">
+          {MOCK_PRODUCTS.map((p) => {
+            const isSaved = saved.has(p.id);
+            return (
+              <div
+                key={p.id}
+                className="flex gap-3 overflow-hidden rounded-xl bg-white shadow-[0_1px_4px_rgba(36,31,53,0.08)]"
+              >
+                <div className="relative h-28 w-28 flex-shrink-0 overflow-hidden bg-[#F5F3FA]">
+                  <Image
+                    src={p.image}
+                    alt={p.title}
+                    fill
+                    className="object-cover object-center"
+                    unoptimized={p.image.startsWith("http")}
+                  />
+                  {p.discountPercent && (
+                    <span className="absolute left-1.5 top-1.5 rounded bg-[#6C4CD8] px-1.5 py-0.5 text-[9px] font-bold text-white">
+                      -{p.discountPercent}%
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-1 flex-col justify-center py-3 pr-3">
+                  <Link
+                    href={`/products/${p.slug}`}
+                    className="text-[13px] font-semibold text-[#241F35] hover:text-[#6C4CD8]"
+                  >
+                    {p.title}
+                  </Link>
+                  <div className="mt-1 flex items-baseline gap-1.5">
+                    <span className="text-[11px] text-[#B3ADC4] line-through">
+                      {usd(p.originalPrice)}
+                    </span>
+                    <span className="text-[14px] font-bold text-[#6C4CD8]">
+                      {usd(p.price)}
+                    </span>
+                  </div>
+                  <div className="mt-1 flex items-center gap-0.5">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star key={i} size={9} fill="#F5B301" color="#F5B301" />
+                    ))}
+                    <span className="ml-1 text-[10px] text-[#8B85A0]">
+                      ({p.reviewCount})
+                    </span>
+                  </div>
+                  <p className="mt-0.5 text-[10px] text-[#8B85A0]">{p.storeName}</p>
+                </div>
                 <button
                   onClick={() => toggleSave(p.id)}
                   aria-label={isSaved ? "Remove from saved" : "Save"}
-                  style={{
-                    position: "absolute", top: 8, right: 8,
-                    background: "rgba(255,255,255,0.9)",
-                    border: "none", borderRadius: 999,
-                    width: 26, height: 26,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    cursor: "pointer",
-                  }}
+                  className="mr-3 self-center flex h-8 w-8 items-center justify-center rounded-full border border-[#E2DFEC] bg-white transition hover:border-[#6C4CD8]"
                 >
-                  <Heart size={12} fill={isSaved ? BRAND : "none"} color={BRAND} />
+                  <Heart
+                    size={14}
+                    color="#6C4CD8"
+                    fill={isSaved ? "#6C4CD8" : "none"}
+                  />
                 </button>
               </div>
-
-              {/* info */}
-              <div style={{ padding: "10px 12px 12px", flex: 1 }}>
-                <Link
-                  href={`/products/${p.slug}`}
-                  style={{ fontSize: 13, fontWeight: 600, color: "#241F35", textDecoration: "none", display: "block" }}
-                >
-                  {p.title}
-                </Link>
-
-                {/* prices */}
-                <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginTop: 6 }}>
-                  <span style={{ fontSize: 11, color: "#B3ADC4", textDecoration: "line-through" }}>
-                    {usd(p.originalPrice)}
-                  </span>
-                  <span style={{ fontSize: 15, fontWeight: 700, color: BRAND }}>
-                    {usd(p.price)}
-                  </span>
-                </div>
-
-                {/* stars */}
-                <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 5 }}>
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Star key={i} size={10} fill="#F5B301" color="#F5B301" />
-                  ))}
-                  <span style={{ fontSize: 11, color: "#8B85A0" }}>({p.reviewCount})</span>
-                </div>
-
-                <p style={{ fontSize: 11, color: "#8B85A0", margin: "4px 0 0" }}>{p.storeName}</p>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* ── pagination ── */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          margin: "22px 0 40px",
-          fontSize: 13, color: "#8B85A0",
-        }}
-      >
+      <div className="mt-6 mb-10 flex items-center justify-between text-[12px] text-[#8B85A0]">
         <span>Showing {start}–{end} of {TOTAL} item(s)</span>
-        <div style={{ display: "flex", gap: 6 }}>
+
+        <div className="flex items-center gap-1.5">
           <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
-            style={{
-              background: "#EDEBF3", border: "none",
-              color: "#8B85A0", borderRadius: 6,
-              padding: "6px 14px", fontSize: 12, cursor: "pointer",
-              opacity: page === 1 ? 0.5 : 1,
-            }}
+            className="rounded-md bg-[#EDEBF3] px-3 py-1.5 text-[11px] font-medium text-[#8B85A0] transition hover:bg-[#E0DCF0] disabled:opacity-40"
           >
             Prev
           </button>
+
           {Array.from({ length: PAGES }).map((_, i) => {
             const n = i + 1;
             return (
               <button
                 key={n}
                 onClick={() => setPage(n)}
-                style={{
-                  background: page === n ? ACCENT : "#EDEBF3",
-                  border: "none",
-                  color: page === n ? "#fff" : "#8B85A0",
-                  borderRadius: 6,
-                  padding: "6px 14px",
-                  fontSize: 12,
-                  fontWeight: page === n ? 700 : 400,
-                  cursor: "pointer",
-                }}
+                className={cn(
+                  "rounded-md px-3 py-1.5 text-[11px] font-semibold transition",
+                  page === n
+                    ? "bg-[#8FC93A] text-white"
+                    : "bg-[#EDEBF3] text-[#8B85A0] hover:bg-[#E0DCF0]"
+                )}
               >
                 {n}
               </button>
             );
           })}
+
           <button
             onClick={() => setPage((p) => Math.min(PAGES, p + 1))}
             disabled={page === PAGES}
-            style={{
-              background: ACCENT, border: "none",
-              color: "#fff", borderRadius: 6,
-              padding: "6px 14px", fontSize: 12, cursor: "pointer",
-              opacity: page === PAGES ? 0.5 : 1,
-            }}
+            className="rounded-md bg-[#8FC93A] px-3 py-1.5 text-[11px] font-semibold text-white transition hover:bg-[#7AB82E] disabled:opacity-40"
           >
             Next
           </button>
