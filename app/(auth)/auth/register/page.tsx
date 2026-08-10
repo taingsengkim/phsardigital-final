@@ -17,8 +17,21 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { cn } from "@/lib/utils";
 import AuthLeftPanel from "@/components/auth/AuthLeftPanel";
-import { registerUser } from "@/lib/api/auth";
+import { useRegisterMutation } from "@/lib/api/authApi";
 import { AuthToast, type ToastState } from "@/components/auth/AuthToast";
+
+function generateUsername(firstName: string, lastName: string): string {
+  const cleanFirst = firstName.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+  const cleanLast = lastName.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+  let username = `${cleanFirst}${cleanLast}`;
+  if (username.length < 3) {
+    username = `${username}user`;
+  }
+  if (username.length < 3) {
+    username = "user123";
+  }
+  return username.slice(0, 50);
+}
 
 const registerSchema = z
   .object({
@@ -47,6 +60,8 @@ export default function RegisterPage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [success, setSuccess] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
+
+  const [registerUser, { isLoading: isRegistering }] = useRegisterMutation();
 
   const {
     register,
@@ -82,25 +97,52 @@ export default function RegisterPage() {
     clearErrors("root");
     setToast(null);
 
+    const generatedUsername = generateUsername(
+      values.firstName,
+      values.lastName,
+    );
+
     try {
       await registerUser({
+        username: generatedUsername,
         password: values.password,
         confirmPassword: values.confirmPassword,
         email: values.email.trim(),
         firstName: values.firstName.trim(),
         lastName: values.lastName.trim(),
         phoneNumber: values.phoneNumber.trim(),
-      });
+      }).unwrap();
+
       setSuccess(true);
       setToast({
         type: "success",
         message: "Account created successfully. You can sign in now.",
       });
-    } catch (err) {
-      const msg =
-        err instanceof Error
-          ? err.message
-          : "Something went wrong. Please try again.";
+    } catch (err: any) {
+      let msg = "Something went wrong. Please try again.";
+      if (err && typeof err === "object") {
+        const errorData = err.data;
+        if (errorData && typeof errorData === "object") {
+          if (
+            Array.isArray(errorData.errorDetails) &&
+            errorData.errorDetails.length > 0
+          ) {
+            msg = errorData.errorDetails
+              .map((d: any) => d.fieldMessage || d.message || d.field)
+              .filter(Boolean)
+              .join(", ");
+          } else {
+            msg =
+              errorData.message ||
+              errorData.error ||
+              errorData.detail ||
+              msg;
+          }
+        } else if (err.message) {
+          msg = err.message;
+        }
+      }
+
       setError("root", { message: msg });
       setToast({ type: "error", message: msg });
     }
@@ -413,15 +455,15 @@ export default function RegisterPage() {
 
                 <button
                   type="submit"
-                  disabled={!agreed || isSubmitting}
+                  disabled={!agreed || isSubmitting || isRegistering}
                   className={cn(
                     "flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-[14px] font-semibold text-white transition-all shadow-[0_10px_24px_rgba(108,76,216,0.2)]",
-                    !agreed || isSubmitting
+                    !agreed || isSubmitting || isRegistering
                       ? "cursor-not-allowed bg-[#C7C2D6]"
                       : "bg-[#6C4CD8] hover:bg-[#5C3DC8] active:scale-[0.98]",
                   )}
                 >
-                  {isSubmitting ? (
+                  {isSubmitting || isRegistering ? (
                     <span className="flex items-center gap-2">
                       <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                       Creating account…

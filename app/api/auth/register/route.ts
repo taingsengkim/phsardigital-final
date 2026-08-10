@@ -27,21 +27,27 @@ export async function POST(request: NextRequest) {
     }
 
     if (!upstreamRes.ok) {
+      if (data && typeof data === "object") {
+        return NextResponse.json(data, { status: upstreamRes.status });
+      }
+
       const message =
         typeof data === "string"
           ? data
-          : (data as { message?: string; error?: string; detail?: string } | null)?.message ||
-            (data as { message?: string; error?: string; detail?: string } | null)?.error ||
-            (data as { message?: string; error?: string; detail?: string } | null)?.detail ||
-            `Registration failed (${upstreamRes.status})`;
+          : `Registration failed (${upstreamRes.status})`;
 
       return NextResponse.json({ message }, { status: upstreamRes.status });
     }
 
     return NextResponse.json(data ?? { success: true }, { status: upstreamRes.status });
-  } catch {
+  } catch (err: any) {
+    console.error("Registration error:", err);
     return NextResponse.json(
-      { message: "Registration service is unavailable right now. Please try again later." },
+      {
+        message:
+          err?.message ||
+          "Registration service is unavailable right now. Please try again later.",
+      },
       { status: 502 },
     );
   }

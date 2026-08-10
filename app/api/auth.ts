@@ -1,16 +1,24 @@
-const BASE_URL = "";
-
 export interface RegisterPayload {
   username: string;
   password: string;
   confirmPassword: string;
-  email?: string;
+  email: string;
   firstName: string;
   lastName: string;
   phoneNumber: string;
 }
 
-export async function registerUser(payload: RegisterPayload) {
+export interface RegisterResponse {
+  userId?: string;
+  username?: string;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  phoneNumber?: string;
+  [key: string]: unknown;
+}
+
+export async function registerUser(payload: RegisterPayload): Promise<RegisterResponse> {
   const res = await fetch(`/api/auth/register`, {
     method: "POST",
     headers: {
@@ -21,7 +29,7 @@ export async function registerUser(payload: RegisterPayload) {
   });
 
   const text = await res.text();
-  let data: unknown = null;
+  let data: any = null;
 
   if (text) {
     try {
@@ -32,16 +40,27 @@ export async function registerUser(payload: RegisterPayload) {
   }
 
   if (!res.ok) {
-    const message =
-      typeof data === "string"
-        ? data
-        : (data as { message?: string; error?: string; detail?: string } | null)?.message ||
-        (data as { message?: string; error?: string; detail?: string } | null)?.error ||
-        (data as { message?: string; error?: string; detail?: string } | null)?.detail ||
-        `Registration failed (${res.status})`;
+    let message = "Registration failed";
+    if (typeof data === "string") {
+      message = data;
+    } else if (data && typeof data === "object") {
+      if (Array.isArray(data.errorDetails) && data.errorDetails.length > 0) {
+        message = data.errorDetails
+          .map((d: any) => d.fieldMessage || d.message || d.field)
+          .filter(Boolean)
+          .join(", ");
+      } else {
+        message =
+          data.message ||
+          data.error ||
+          data.detail ||
+          `Registration failed (${res.status})`;
+      }
+    }
 
-    throw new Error(typeof message === "string" ? message : "Registration failed");
+    throw new Error(message);
   }
 
-  return data;
+  return data as RegisterResponse;
 }
+
