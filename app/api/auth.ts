@@ -36,9 +36,9 @@ export async function registerUser(payload: RegisterPayload) {
       typeof data === "string"
         ? data
         : (data as { message?: string; error?: string; detail?: string } | null)?.message ||
-          (data as { message?: string; error?: string; detail?: string } | null)?.error ||
-          (data as { message?: string; error?: string; detail?: string } | null)?.detail ||
-          `Registration failed (${res.status})`;
+        (data as { message?: string; error?: string; detail?: string } | null)?.error ||
+        (data as { message?: string; error?: string; detail?: string } | null)?.detail ||
+        `Registration failed (${res.status})`;
 
     throw new Error(typeof message === "string" ? message : "Registration failed");
   }

@@ -123,11 +123,22 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    /* Base font: Inter at 18px — every rem/em and Tailwind size class scales from here */
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    font-size: 24px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
   body {
     @apply bg-background text-foreground;
+    font-size: 1rem; /* 18px */
+    line-height: 1.65;
   }
-  html {
-    @apply font-sans;
+
+  /* Raise any hardcoded small sizes across the app */
+  p, span, a, li, td, th, label, input, select, textarea, button {
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
   }
 
   /* sidebar hover */
