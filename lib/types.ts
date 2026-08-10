@@ -5,7 +5,7 @@ export type Category = {
   name: string;
   slug: string;
   parent_id: number | null;
-  image_url?: st ring;
+  image_url?: string;
 };
 
 export type ListingImage = {
