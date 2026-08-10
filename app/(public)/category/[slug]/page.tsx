@@ -36,18 +36,37 @@ const PICS = [
   "/picture/pic8.jpg",
 ];
 
+const CAT_TITLES = [
+  "iPhone 12 Pro — Pacific Blue",
+  "Premium Leather Tote Bag",
+  "Women's Floral Summer Dress",
+  "Rose Gold Square Watch",
+  "Men's Classic White Sneakers",
+  "Minimalist Canvas Backpack",
+  "Pinstripe Wrap-Tie Blouse",
+  "Wireless Headphones",
+  "Smart LED Light Strip",
+  "Stainless Steel Bottle 1L",
+  "Women's Gold Earring Set",
+  "Men's Slim Fit Polo Shirt",
+  "Kids' Ceramic Bowl Set",
+  "Men's Leather Belt — Brown",
+  "Women's Casual Maxi Dress",
+  "Layer Ankle Strap Sandals",
+];
+
 function makeProducts(offset: number, count = 4): Product[] {
   return Array.from({ length: count }).map((_, i) => ({
     id: offset + i,
     slug: `product-${offset + i}`,
-    title: i === 1 ? "MacBook Pro 14″" : "MacBook Laptops",
+    title: CAT_TITLES[(offset + i - 1) % CAT_TITLES.length],
     image: PICS[(offset + i) % PICS.length],
-    price: 399,
-    oldPrice: 1399,
+    price: [399, 89, 45, 129, 79, 55, 39, 199, 35, 28, 210, 68, 24, 38, 55, 42][(offset + i - 1) % 16],
+    oldPrice: [999, 139, 75, 199, 120, 85, 65, 299, 59, 45, 320, 110, 40, 65, 90, 70][(offset + i - 1) % 16],
     discount: 10,
-    store: "Store Name",
+    store: ["TechHub KH", "Leather Craft Co.", "Fashion By Srey", "Jewel & Co.", "Sneaker World", "Urban Carry", "Cider Fashion", "Sound Studio", "Smart Home KH", "Eco Life", "Gold Corner", "Men's Hub", "Kids Corner", "Belt Studio", "Style Srey", "Sole House"][(offset + i - 1) % 16],
     rating: 4.5,
-    reviews: 128,
+    reviews: [248, 87, 312, 56, 194, 73, 421, 139, 28, 65, 183, 94, 47, 112, 76, 201][(offset + i - 1) % 16],
   }));
 }
 

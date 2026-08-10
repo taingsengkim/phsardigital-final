@@ -1,24 +1,15 @@
 import Link from "next/link";
-import { MapPin } from "lucide-react";
+import { MapPin, Store, Star, Package, Clock } from "lucide-react";
 
 type Props = {
-  /** Seller / store display name */
   name: string;
-  /** Single letter used as avatar fallback */
   initial?: string;
-  /** Number of products the seller has listed */
   productCount?: number;
-  /** Average rating, e.g. 4.8 */
   avgRating?: number;
-  /** How many years on the platform */
   yearsOnPlatform?: number;
-  /** City name (English) */
   city?: string;
-  /** City name (Khmer script) */
   cityKhmer?: string;
-  /** Street address */
   address?: string;
-  /** Link to the store page */
   storeHref?: string;
 };
 
@@ -36,106 +27,123 @@ export default function SellerPanel({
   const avatarLetter = initial ?? name.charAt(0).toUpperCase();
 
   return (
-    <div className="mt-11 overflow-hidden rounded-[14px] border border-border bg-card grid grid-cols-1 sm:grid-cols-[1.1fr_1fr]">
-      {/* ── left: seller info ── */}
-      <div className="flex flex-col gap-3 p-7 sm:border-r sm:border-border">
-        {/* avatar + name */}
-        <div className="flex items-center gap-4">
-          <div
-            className="flex h-13 w-13 shrink-0 items-center justify-center rounded-xl text-xl font-bold text-white"
-            style={{
-              background: "linear-gradient(135deg,#e8a33d,#c9822a)",
-            }}
-            aria-hidden="true"
-          >
-            {avatarLetter}
-          </div>
-          <div>
-            <p className="font-serif text-lg font-semibold text-[#2a1c63]">
-              {name}
-            </p>
-            <p className="text-[13px] text-[#c9822a]">★★★★★ Positive review</p>
-          </div>
-        </div>
+    <div className="mt-12 overflow-hidden rounded-2xl border border-[#E2DFEC] bg-white shadow-[0_2px_16px_rgba(108,76,216,0.08)]">
 
-        {/* stats */}
-        {(productCount !== undefined ||
-          avgRating !== undefined ||
-          yearsOnPlatform !== undefined) && (
-          <div className="flex flex-wrap gap-5 text-sm text-muted-foreground my-1">
-            {productCount !== undefined && (
-              <div>
-                <span className="block font-mono text-base font-bold text-foreground">
-                  {productCount}
-                </span>
-                Products listed
-              </div>
-            )}
-            {avgRating !== undefined && (
-              <div>
-                <span className="block font-mono text-base font-bold text-foreground">
-                  {avgRating.toFixed(1)}
-                </span>
-                Avg. rating
-              </div>
-            )}
-            {yearsOnPlatform !== undefined && (
-              <div>
-                <span className="block font-mono text-base font-bold text-foreground">
-                  {yearsOnPlatform} yr{yearsOnPlatform !== 1 ? "s" : ""}
-                </span>
-                On Phsar Digital
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* visit store CTA */}
-        <Link
-          href={storeHref}
-          className="self-start rounded-lg border border-[#3d2b87] px-5 py-2 text-sm font-semibold text-[#3d2b87] transition hover:bg-[#3d2b87] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3d2b87]"
-        >
-          Visit store
-        </Link>
+      {/* ── header bar ── */}
+      <div className="flex items-center gap-3 border-b border-[#F0EDFB] px-7 py-5">
+        <Store size={18} className="text-[#6C4CD8]" />
+        <h2 className="text-[18px] font-bold text-[#1A1330]">Sold by</h2>
       </div>
 
-      {/* ── right: decorative map ── */}
-      <div
-        className="relative flex min-h-[180px] flex-col items-center justify-center overflow-hidden"
-        style={{
-          background:
-            "linear-gradient(135deg,#cfe3d8 0%,#b9d6c9 45%,#a9c9bd 100%)",
-        }}
-        aria-hidden="true"
-      >
-        {/* grid overlay */}
-        <div
-          className="absolute inset-0 opacity-35"
-          style={{
-            backgroundImage:
-              "repeating-linear-gradient(0deg,transparent 0 18px,rgba(255,255,255,.5) 18px 19px),repeating-linear-gradient(90deg,transparent 0 18px,rgba(255,255,255,.5) 18px 19px)",
-          }}
-        />
+      <div className="grid grid-cols-1 sm:grid-cols-[1.1fr_1fr]">
 
-        {/* pin */}
-        <div
-          className="z-10 mb-3 h-9 w-9 rounded-[50%_50%_50%_0] bg-[#c1442c] shadow-[0_12px_28px_rgba(33,26,53,0.14)]"
-          style={{ transform: "rotate(-45deg)" }}
-        />
+        {/* ── left: seller info ── */}
+        <div className="flex flex-col gap-5 p-7 sm:border-r sm:border-[#F0EDFB]">
 
-        {/* city label */}
-        <div className="z-10 text-center">
-          <p className="font-serif font-semibold text-[#2a1c63]">{city}</p>
-          <p className="text-xs text-muted-foreground">{cityKhmer}</p>
+          {/* avatar + name */}
+          <div className="flex items-center gap-4">
+            <div
+              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-[26px] font-black text-white shadow-md"
+              style={{ background: "linear-gradient(135deg,#8267E8,#6C4CD8)" }}
+              aria-hidden="true"
+            >
+              {avatarLetter}
+            </div>
+            <div>
+              <p className="text-[20px] font-extrabold text-[#1A1330]">{name}</p>
+              <p className="mt-0.5 flex items-center gap-1 text-[14px] font-semibold text-[#F5B301]">
+                <Star size={13} fill="#F5B301" />
+                Positive Seller
+              </p>
+            </div>
+          </div>
+
+          {/* stats row */}
+          {(productCount !== undefined || avgRating !== undefined || yearsOnPlatform !== undefined) && (
+            <div className="flex flex-wrap gap-6">
+              {productCount !== undefined && (
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F1EFFA]">
+                    <Package size={16} className="text-[#6C4CD8]" />
+                  </div>
+                  <div>
+                    <p className="text-[18px] font-extrabold text-[#1A1330] leading-none">{productCount}</p>
+                    <p className="text-[13px] text-[#8B85A0]">Products</p>
+                  </div>
+                </div>
+              )}
+              {avgRating !== undefined && (
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FFFBEB]">
+                    <Star size={16} className="text-[#F5B301]" fill="#F5B301" />
+                  </div>
+                  <div>
+                    <p className="text-[18px] font-extrabold text-[#1A1330] leading-none">{avgRating.toFixed(1)}</p>
+                    <p className="text-[13px] text-[#8B85A0]">Avg. Rating</p>
+                  </div>
+                </div>
+              )}
+              {yearsOnPlatform !== undefined && (
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F0FDF4]">
+                    <Clock size={16} className="text-emerald-500" />
+                  </div>
+                  <div>
+                    <p className="text-[18px] font-extrabold text-[#1A1330] leading-none">
+                      {yearsOnPlatform} yr{yearsOnPlatform !== 1 ? "s" : ""}
+                    </p>
+                    <p className="text-[13px] text-[#8B85A0]">On Platform</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* CTA */}
+          <Link
+            href={storeHref}
+            className="inline-flex w-fit items-center gap-2 rounded-xl bg-[#6C4CD8] px-6 py-3 text-[15px] font-bold text-white shadow-md transition hover:bg-[#5B3DC0] hover:shadow-lg"
+          >
+            <Store size={16} />
+            Visit Store
+          </Link>
         </div>
 
-        {/* address chip */}
-        {address && (
-          <div className="absolute bottom-3 left-3 right-3 z-10 flex items-start gap-1.5 rounded-lg bg-white/90 px-3 py-2 text-xs text-foreground shadow-sm">
-            <MapPin size={12} className="mt-0.5 shrink-0 text-[#c1442c]" />
-            <span>{address}</span>
+        {/* ── right: map card ── */}
+        <div
+          className="relative flex min-h-[200px] flex-col items-center justify-center overflow-hidden p-6"
+          style={{ background: "linear-gradient(135deg,#cfe3d8 0%,#b9d6c9 45%,#a9c9bd 100%)" }}
+          aria-hidden="true"
+        >
+          {/* grid lines */}
+          <div
+            className="absolute inset-0 opacity-30"
+            style={{
+              backgroundImage:
+                "repeating-linear-gradient(0deg,transparent 0 18px,rgba(255,255,255,.6) 18px 19px),repeating-linear-gradient(90deg,transparent 0 18px,rgba(255,255,255,.6) 18px 19px)",
+            }}
+          />
+
+          {/* pin */}
+          <div
+            className="z-10 mb-4 h-10 w-10 rounded-[50%_50%_50%_0] bg-[#6C4CD8] shadow-[0_8px_24px_rgba(108,76,216,0.4)]"
+            style={{ transform: "rotate(-45deg)" }}
+          />
+
+          {/* city label */}
+          <div className="z-10 text-center">
+            <p className="text-[18px] font-extrabold text-[#1A1330]">{city}</p>
+            <p className="text-[14px] text-[#5A5470]">{cityKhmer}</p>
           </div>
-        )}
+
+          {/* address chip */}
+          {address && (
+            <div className="absolute bottom-4 left-4 right-4 z-10 flex items-start gap-2 rounded-xl bg-white/90 px-4 py-3 text-[13px] text-[#3F3A52] shadow-sm backdrop-blur-sm">
+              <MapPin size={14} className="mt-0.5 shrink-0 text-[#6C4CD8]" />
+              <span>{address}</span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -82,27 +82,27 @@ export default function ProductsClient() {
 
       {/* ── product grid ── */}
       {view === "grid" ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
           {MOCK_PRODUCTS.map((p) => {
             const isSaved = saved.has(p.id);
             return (
               <article
                 key={p.id}
-                className="group overflow-hidden rounded-xl bg-white shadow-[0_1px_4px_rgba(36,31,53,0.08)] transition-all hover:-translate-y-[2px] hover:shadow-[0_6px_20px_rgba(108,76,216,0.14)]"
+                className="group overflow-hidden rounded-2xl bg-white shadow-[0_2px_12px_rgba(36,31,53,0.08)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_32px_rgba(108,76,216,0.18)]"
               >
                 {/* image */}
-                <div className="relative aspect-[4/5] w-full overflow-hidden bg-[#F5F3FA]">
+                <div className="relative aspect-square w-full overflow-hidden bg-[#F5F3FA]">
                   <Image
                     src={p.image}
                     alt={p.title}
                     fill
-                    sizes="(max-width:640px) 50vw, 200px"
-                    className="object-cover object-center transition-transform duration-300 group-hover:scale-[1.04]"
+                    sizes="(max-width:640px) 50vw, 25vw"
+                    className="object-cover object-center transition-transform duration-500 group-hover:scale-[1.06]"
                     unoptimized={p.image.startsWith("http")}
                   />
                   {/* discount badge */}
                   {p.discountPercent && (
-                    <span className="absolute left-2 top-2 rounded-[5px] bg-[#6C4CD8] px-[7px] py-[3px] text-[10px] font-bold text-white">
+                    <span className="absolute left-3 top-3 rounded-lg bg-[#6C4CD8] px-2.5 py-1 text-[13px] font-bold text-white shadow-sm">
                       -{p.discountPercent}%
                     </span>
                   )}
@@ -110,48 +110,39 @@ export default function ProductsClient() {
                   <button
                     onClick={() => toggleSave(p.id)}
                     aria-label={isSaved ? "Remove from saved" : "Save"}
-                    className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 shadow-sm transition hover:scale-110"
+                    className={cn(
+                      "absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full shadow-md transition-all",
+                      isSaved ? "bg-[#6C4CD8]" : "bg-white/95 hover:bg-[#F1EFFA]"
+                    )}
                   >
-                    <Heart
-                      size={13}
-                      color="#6C4CD8"
-                      fill={isSaved ? "#6C4CD8" : "none"}
-                    />
+                    <Heart size={16} color={isSaved ? "#fff" : "#6C4CD8"} fill={isSaved ? "#fff" : "none"} />
                   </button>
                 </div>
 
                 {/* info */}
-                <div className="p-2.5">
+                <div className="p-4">
                   <Link
                     href={`/products/${p.slug}`}
-                    className="line-clamp-2 text-sm font-semibold text-[#241F35] hover:text-[#6C4CD8]"
+                    className="line-clamp-2 text-[15px] font-semibold leading-snug text-[#241F35] hover:text-[#6C4CD8] transition-colors"
                   >
                     {p.title}
                   </Link>
 
-                  {/* prices */}
-                  <div className="mt-1.5 flex items-baseline gap-1.5">
-                    <span className="text-xs text-[#B3ADC4] line-through">
-                      {usd(p.originalPrice)}
-                    </span>
-                    <span className="text-base font-bold text-[#6C4CD8]">
-                      {usd(p.price)}
-                    </span>
-                  </div>
-
                   {/* stars */}
-                  <div className="mt-1 flex items-center gap-0.5">
+                  <div className="mt-2 flex items-center gap-1">
                     {Array.from({ length: 5 }).map((_, i) => (
-                      <Star key={i} size={10} fill="#F5B301" color="#F5B301" />
+                      <Star key={i} size={12} fill="#F5B301" color="#F5B301" />
                     ))}
-                    <span className="ml-1 text-xs text-[#8B85A0]">
-                      ({p.reviewCount})
-                    </span>
+                    <span className="ml-1 text-[13px] text-[#8B85A0]">({p.reviewCount})</span>
                   </div>
 
-                  <p className="mt-0.5 text-xs text-[#8B85A0]">
-                    {p.storeName}
-                  </p>
+                  {/* prices */}
+                  <div className="mt-2 flex items-baseline gap-2">
+                    <span className="text-[18px] font-extrabold text-[#6C4CD8]">{usd(p.price)}</span>
+                    <span className="text-[13px] text-[#B3ADC4] line-through">{usd(p.originalPrice)}</span>
+                  </div>
+
+                  <p className="mt-1 text-[13px] text-[#8B85A0]">{p.storeName}</p>
                 </div>
               </article>
             );

@@ -42,16 +42,31 @@ export type MockProduct = {
 ];
 
 const TITLES = [
-  "MacBook Laptops",
-  "MacBook z",
-  "MacBook Laptops",
-  "MacBook Laptops",
-  "MacBook Laptops",
-  "MacBook Laptops",
-  "MacBook z",
-  "MacBook Laptops",
-  "MacBook Laptops",
-  "MacBook Laptops",
+  "iPhone 12 Pro — Pacific Blue 128GB",
+  "Premium Leather Tote Bag",
+  "Women's Floral Summer Dress",
+  "Rose Gold Square Watch & Bracelet Set",
+  "Men's Classic White Sneakers",
+  "Minimalist Canvas Backpack",
+  "Pinstripe Wrap-Tie Blouse",
+  "Wireless Noise-Cancelling Headphones",
+  "Stainless Steel Water Bottle 1L",
+  "Smart Home LED Light Strip",
+];
+
+const PRICES = [649, 89, 45, 129, 79, 55, 39, 199, 28, 35];
+const ORIGINAL_PRICES = [999, 139, 75, 199, 120, 85, 65, 299, 45, 59];
+const STORES = [
+  "TechHub KH",
+  "Leather Craft Co.",
+  "Fashion By Srey",
+  "Jewel & Co.",
+  "Sneaker World",
+  "Urban Carry",
+  "Cider Fashion",
+  "Sound Studio",
+  "Eco Life Store",
+  "Smart Home KH",
 ];
 
 export const MOCK_PRODUCTS: MockProduct[] = Array.from({ length: 10 }).map(
@@ -60,12 +75,11 @@ export const MOCK_PRODUCTS: MockProduct[] = Array.from({ length: 10 }).map(
     slug: `product-${i + 1}`,
     title: TITLES[i],
     image: IMAGES[i % IMAGES.length],
-    price: 399.0,
-    originalPrice: 1399.0,
-    discountPercent: 10,
-    rating: 5,
-    reviewCount: 1,
-    storeName: "Store1Name",
-    
+    price: PRICES[i],
+    originalPrice: ORIGINAL_PRICES[i],
+    discountPercent: Math.round((1 - PRICES[i] / ORIGINAL_PRICES[i]) * 100),
+    rating: [4.8, 4.5, 4.2, 4.9, 4.1, 4.6, 4.3, 4.7, 4.4, 4.0][i],
+    reviewCount: [248, 87, 312, 56, 194, 73, 421, 139, 65, 28][i],
+    storeName: STORES[i],
   })
 );

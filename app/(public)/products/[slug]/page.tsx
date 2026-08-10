@@ -31,26 +31,23 @@ export default async function ProductDetailPage({ params }: Props) {
   ];
 
   return (
-    <div className="min-h-screen bg-[#f8f5ee]">
+    <div className="min-h-screen bg-[#F6F5FA]">
       <div className="mx-auto max-w-[1240px] px-6 py-9">
 
         {/* ── breadcrumb ── */}
-        <nav aria-label="Breadcrumb" className="mb-5">
-          <ol className="flex flex-wrap items-center gap-1 text-[12.5px] text-muted-foreground">
+        <nav aria-label="Breadcrumb" className="mb-6">
+          <ol className="flex flex-wrap items-center gap-1.5 text-[15px] text-[#8B85A0]">
             {breadcrumbTrail.map((crumb, i) => (
-              <li key={i} className="flex items-center gap-1">
+              <li key={i} className="flex items-center gap-1.5">
                 {i > 0 && (
-                  <ChevronRight size={12} className="shrink-0 opacity-50" />
+                  <ChevronRight size={13} className="shrink-0 opacity-50" />
                 )}
                 {crumb.href ? (
-                  <Link
-                    href={crumb.href}
-                    className="hover:text-[#2a1c63] transition-colors"
-                  >
+                  <Link href={crumb.href} className="hover:text-[#6C4CD8] transition-colors">
                     {crumb.label}
                   </Link>
                 ) : (
-                  <span className="font-semibold text-[#2a1c63] line-clamp-1">
+                  <span className="font-semibold text-[#1A1330] line-clamp-1">
                     {crumb.label}
                   </span>
                 )}
@@ -60,7 +57,7 @@ export default async function ProductDetailPage({ params }: Props) {
         </nav>
 
         {/* ── gallery + detail — two columns on desktop ── */}
-        <div className="grid grid-cols-1 gap-12 lg:grid-cols-[440px_1fr]">
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-[480px_1fr]">
           {/* gallery */}
           <ProductGallery
             images={listing.images ?? []}

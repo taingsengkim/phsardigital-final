@@ -1,13 +1,11 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Star } from "lucide-react";
 import { getListings } from "@/app/api/listings";
 import type { Listing, ListingDiscount } from "@/lib/types";
 
 type Props = {
-  /** Category to pull related items from */
   categoryId?: number;
-  /** Exclude the current listing so it doesn't appear in the grid */
   excludeSlug?: string;
 };
 
@@ -28,51 +26,39 @@ function getActiveDiscount(discounts?: ListingDiscount[]) {
 async function RelatedProductCard({ listing }: { listing: Listing }) {
   const primaryImage =
     listing.images?.find((img) => img.is_primary) ?? listing.images?.[0];
-  const activeDiscount = getActiveDiscount(listing.discounts);
+  const activeDiscount  = getActiveDiscount(listing.discounts);
   const discountedPrice = activeDiscount
     ? listing.price * (1 - activeDiscount.discount_percent / 100)
     : null;
   const avgRating =
     listing.reviews && listing.reviews.length > 0
-      ? listing.reviews.reduce((s, r) => s + r.rating, 0) /
-        listing.reviews.length
+      ? listing.reviews.reduce((s, r) => s + r.rating, 0) / listing.reviews.length
       : null;
 
   return (
-    <article className="group relative flex flex-col overflow-hidden rounded-xl border border-border bg-card transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_12px_28px_rgba(33,26,53,0.14)] hover:border-transparent">
+    <article className="group relative flex flex-col overflow-hidden rounded-2xl bg-white shadow-[0_2px_12px_rgba(36,31,53,0.08)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_32px_rgba(108,76,216,0.18)]">
+
       {/* discount badge */}
       {activeDiscount && (
-        <span className="absolute left-2.5 top-2.5 z-10 rounded-[5px] bg-[#3d2b87] px-2 py-0.5 text-[11px] font-bold text-white">
+        <span className="absolute left-3 top-3 z-10 rounded-lg bg-[#6C4CD8] px-2.5 py-1 text-[13px] font-bold text-white shadow-sm">
           -{activeDiscount.discount_percent}%
         </span>
       )}
 
       {/* image */}
-      <Link
-        href={`/products/${listing.slug}`}
-        tabIndex={-1}
-        aria-hidden="true"
-        className="block"
-      >
-        <div className="aspect-square w-full overflow-hidden bg-[#efe9fb]">
+      <Link href={`/products/${listing.slug}`} tabIndex={-1} aria-hidden="true">
+        <div className="aspect-square w-full overflow-hidden bg-[#F5F3FA]">
           {primaryImage ? (
             <Image
               src={primaryImage.url}
               alt={primaryImage.alt_text ?? listing.title}
-              width={300}
-              height={300}
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              width={320}
+              height={320}
+              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.06]"
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-[#3d2b87] opacity-40">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.4"
-                className="h-12 w-12"
-                aria-hidden="true"
-              >
+            <div className="flex h-full w-full items-center justify-center text-[#C4B5FD]">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" className="h-14 w-14" aria-hidden="true">
                 <rect x="3" y="3" width="18" height="18" rx="3" />
                 <circle cx="8.5" cy="8.5" r="1.5" />
                 <path d="m21 15-5-5L5 21" />
@@ -83,32 +69,34 @@ async function RelatedProductCard({ listing }: { listing: Listing }) {
       </Link>
 
       {/* body */}
-      <div className="flex flex-1 flex-col gap-1.5 p-3.5">
+      <div className="flex flex-1 flex-col gap-2 p-4">
         <Link
           href={`/products/${listing.slug}`}
-          className="line-clamp-2 text-[13.5px] font-semibold leading-snug text-foreground hover:text-[#3d2b87]"
+          className="line-clamp-2 text-[15px] font-semibold leading-snug text-[#1A1330] hover:text-[#6C4CD8] transition-colors"
         >
           {listing.title}
         </Link>
 
+        {/* rating */}
+        {avgRating !== null && (
+          <div className="flex items-center gap-1.5">
+            <Star size={13} fill="#F5B301" color="#F5B301" />
+            <span className="text-[14px] font-semibold text-[#F5B301]">{avgRating.toFixed(1)}</span>
+            {listing.reviews && (
+              <span className="text-[13px] text-[#8B85A0]">({listing.reviews.length})</span>
+            )}
+          </div>
+        )}
+
         {/* price */}
-        <div className="flex items-baseline gap-2">
-          <span className="font-mono text-[15px] font-bold text-[#4a7c59]">
+        <div className="mt-auto flex items-baseline gap-2 pt-1">
+          <span className="text-[18px] font-extrabold text-[#6C4CD8]">
             ${(discountedPrice ?? listing.price).toFixed(2)}
           </span>
           {discountedPrice && (
-            <s className="text-xs text-muted-foreground">
+            <span className="text-[13px] text-[#B3ADC4] line-through">
               ${listing.price.toFixed(2)}
-            </s>
-          )}
-        </div>
-
-        {/* meta: rating + store */}
-        <div className="flex items-center justify-between text-[11.5px] text-muted-foreground">
-          {avgRating !== null ? (
-            <span className="text-[#c9822a]">★ {avgRating.toFixed(1)}</span>
-          ) : (
-            <span />
+            </span>
           )}
         </div>
       </div>
@@ -116,21 +104,13 @@ async function RelatedProductCard({ listing }: { listing: Listing }) {
   );
 }
 
-export default async function RelatedProducts({
-  categoryId,
-  excludeSlug,
-}: Props) {
+export default async function RelatedProducts({ categoryId, excludeSlug }: Props) {
   let listings: Listing[] = [];
 
   try {
-    const result = await getListings({
-      categoryId,
-      pageSize: 6,
-      sort: "top_rated",
-    });
-    listings = result.data.filter((l) => l.slug !== excludeSlug).slice(0, 5);
+    const result = await getListings({ categoryId, pageSize: 5, sort: "top_rated" });
+    listings = result.data.filter((l) => l.slug !== excludeSlug).slice(0, 4);
   } catch {
-    // If the API is unavailable just render nothing — non-fatal
     return null;
   }
 
@@ -138,44 +118,39 @@ export default async function RelatedProducts({
 
   return (
     <section aria-labelledby="related-heading" className="mt-16">
+
       {/* section header */}
-      <div className="mb-5">
-        <div className="mb-1.5 flex items-center gap-2.5">
-          {/* krama stripe accent */}
-          <span
-            className="inline-block h-1.5 w-7 rounded-sm"
-            style={{
-              background:
-                "repeating-linear-gradient(90deg,#3d2b87 0 10px,#e8a33d 10px 20px)",
-            }}
-            aria-hidden="true"
-          />
-          <span className="font-mono text-[11.5px] font-semibold uppercase tracking-[.16em] text-[#c9822a]">
-            You might also need
-          </span>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <p className="text-[14px] font-semibold uppercase tracking-widest text-[#6C4CD8]">
+            You might also like
+          </p>
+          <h2 id="related-heading" className="mt-1 text-[24px] font-extrabold text-[#1A1330]">
+            Related Products
+          </h2>
         </div>
-        <h2
-          id="related-heading"
-          className="font-serif text-2xl font-semibold text-[#2a1c63]"
+        <Link
+          href="/products"
+          className="hidden items-center gap-1.5 rounded-xl border border-[#E2DFEC] bg-white px-5 py-2.5 text-[15px] font-bold text-[#6C4CD8] transition hover:bg-[#F1EFFA] sm:flex"
         >
-          More from the kitchen aisle
-        </h2>
+          View all <ChevronRight size={16} />
+        </Link>
       </div>
 
-      {/* 5-column grid */}
-      <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+      {/* 4-column grid */}
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
         {listings.map((listing) => (
           <RelatedProductCard key={listing.id} listing={listing} />
         ))}
       </div>
 
-      {/* view more */}
-      <div className="mt-8 flex justify-center">
+      {/* mobile view-all */}
+      <div className="mt-6 flex justify-center sm:hidden">
         <Link
           href="/products"
-          className="flex items-center gap-2 rounded-full border border-[#3d2b87] bg-card px-8 py-3 text-[13.5px] font-bold text-[#2a1c63] transition hover:bg-[#3d2b87] hover:text-white"
+          className="flex items-center gap-2 rounded-xl border border-[#E2DFEC] bg-white px-6 py-3 text-[15px] font-bold text-[#6C4CD8]"
         >
-          View more <ChevronRight size={15} />
+          View all <ChevronRight size={16} />
         </Link>
       </div>
     </section>
