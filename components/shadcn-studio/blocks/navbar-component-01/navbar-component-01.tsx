@@ -24,7 +24,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import LogoSvg from "@/assets/svg/logo";
+import SvgComponentSvg from "@/assets/svg/phsardigitalLogo";
 import LoginButton from "@/components/auth/LoginButton";
 import { useSession, signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
@@ -79,7 +79,7 @@ export default function Navbar() {
             className="flex shrink-0 items-center gap-2 text-decoration-none group transition-transform hover:scale-105 active:scale-95"
             aria-label="Phsar Digital home"
           >
-            <LogoSvg className="h-8 w-8 text-[#6C4CD8]" />
+            <SvgComponentSvg className="h-8 w-8 text-[#6C4CD8]" />
             <span className="text-xl font-bold text-[#241F35]">
               Phsar Digital
             </span>
