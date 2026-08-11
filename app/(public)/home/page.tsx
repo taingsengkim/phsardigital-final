@@ -1,7 +1,32 @@
+// Reference only — merge this ordering into your real app/page.tsx around
+// your existing <Navbar /> / category strip / <Footer />. Not meant to
+// overwrite your file directly since I don't have it.
+
+import { FindWhatYouNeed } from "./feature/FindWhatYouNeed";
+import { HeroBanner } from "./feature/HeroBanner";  
+import { NewsletterSignup } from "./feature/NewsletterSignup";
+import { RecommendedSection } from "./feature/RecommendedSection";
+import { TopRatedSection } from "./feature/TopRatedSection";
+import { TopSellersSection } from "./feature/TopSellersSection";
+import { WearableSection } from "./feature/WearableSection";
+
+
 export default function HomePage() {
   return (
-    <h1 className="flex font-bold size justify-center text-center h-screen items-center">
-      
-    </h1>
+    <main>
+      {/* <Navbar /> */}
+      {/* <CategoryStrip /> */}
+
+      <HeroBanner />
+      <TopSellersSection />
+      <FindWhatYouNeed />
+      {/* <CategoriesIconRow /> */}
+      <RecommendedSection />
+      <TopRatedSection />
+      <WearableSection />
+      <NewsletterSignup />
+
+      {/* <Footer /> */}
+    </main>
   );
 }
