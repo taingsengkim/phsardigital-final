@@ -1,35 +1,79 @@
-import type { Order } from "@/lib/types";
-
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
-
 /**
- * Create an order from the current cart (checkout).
- * Returns the new Order with its order_items.
+ * Purchase / Order API — maps to /api/v1/purchases
+ * Real endpoints from: https://phsardigital.quizzy.it.com/swagger-ui/index.html
+ *
+ * POST   /api/v1/purchases/checkout/{sellerId}  → checkout (creates purchase)
+ * GET    /api/v1/purchases                       → my purchases (buyer)
+ * GET    /api/v1/purchases/{uuid}                → single purchase
+ * PATCH  /api/v1/purchases/{uuid}/confirm        → seller confirms
+ * PATCH  /api/v1/purchases/{uuid}/complete       → mark completed
+ * PATCH  /api/v1/purchases/{uuid}/cancel         → cancel
  */
-export async function createOrder(payload: {
-  shipping_address: string;
-  payment_method: string;
-}): Promise<Order> {
-  const res = await fetch(`${BASE_URL}/api/orders`, {
+
+import { clientFetch } from "@/lib/api";
+
+export type PurchaseItem = {
+  listingUuid: string;
+  title: string;
+  quantity: number;
+  unitPrice: number;
+  lineTotal: number;
+};
+
+export type Purchase = {
+  uuid: string;
+  buyerId: string;
+  sellerId: string;
+  businessName: string;
+  totalPrice: number;
+  status: "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELLED";
+  shippingAddress: string;
+  note?: string;
+  items: PurchaseItem[];
+  createdAt: string;
+};
+
+export type PagedPurchases = {
+  content: Purchase[];
+  page: {
+    size: number;
+    number: number;
+    totalElements: number;
+    totalPages: number;
+  };
+};
+
+/** POST /api/v1/purchases/checkout/{sellerId} */
+export async function checkout(
+  sellerId: string,
+  payload: { shippingAddress: string; note?: string }
+): Promise<Purchase> {
+  return clientFetch<Purchase>(`/api/v1/purchases/checkout/${sellerId}`, {
     method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  if (!res.ok) throw new Error("Failed to create order");
-  return res.json();
 }
 
-export async function getOrders(): Promise<Order[]> {
-  const res = await fetch(`${BASE_URL}/api/orders`, { credentials: "include" });
-  if (!res.ok) throw new Error("Failed to fetch orders");
-  return res.json();
-}
-
-export async function getOrderById(orderId: number): Promise<Order> {
-  const res = await fetch(`${BASE_URL}/api/orders/${orderId}`, {
-    credentials: "include",
+/** GET /api/v1/purchases */
+export async function getMyPurchases(
+  pageNumber = 0,
+  pageSize = 20
+): Promise<PagedPurchases> {
+  const params = new URLSearchParams({
+    pageNumber: String(pageNumber),
+    pageSize: String(pageSize),
   });
-  if (!res.ok) throw new Error(`Order not found: ${orderId}`);
-  return res.json();
+  return clientFetch<PagedPurchases>(`/api/v1/purchases?${params}`);
+}
+
+/** GET /api/v1/purchases/{uuid} */
+export async function getPurchase(uuid: string): Promise<Purchase> {
+  return clientFetch<Purchase>(`/api/v1/purchases/${uuid}`);
+}
+
+/** PATCH /api/v1/purchases/{uuid}/cancel */
+export async function cancelPurchase(uuid: string): Promise<Purchase> {
+  return clientFetch<Purchase>(`/api/v1/purchases/${uuid}/cancel`, {
+    method: "PATCH",
+  });
 }

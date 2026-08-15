@@ -8,25 +8,18 @@ import SellerPanel from "@/components/product/SellerPanel";
 import ProductDetailTabs from "@/components/product/ProductDetailTabs";
 import RelatedProducts from "@/components/product/RelatedProducts";
 
-type Props = {
-  params: Promise<{ slug: string }>;
-};
+type Props = { params: Promise<{ slug: string }> };
 
 export default async function ProductDetailPage({ params }: Props) {
   const { slug } = await params;
 
-  let listing;
-  try {
-    listing = await getListingBySlug(slug);
-  } catch {
-    notFound();
-  }
+  const listing = await getListingBySlug(slug).catch(() => null);
+  if (!listing) notFound();
 
-  /* ── breadcrumb segments ──────────────────────────────────────────── */
-  // Category name isn't joined on the listing type yet; fall back gracefully.
-  const breadcrumbTrail = [
-    { label: "Home", href: "/" },
+  const breadcrumb = [
+    { label: "Home",     href: "/home" },
     { label: "Products", href: "/products" },
+    ...(listing.category ? [{ label: listing.category.name, href: `/category/${listing.category.slug}` }] : []),
     { label: listing.title, href: null },
   ];
 
@@ -34,63 +27,46 @@ export default async function ProductDetailPage({ params }: Props) {
     <div className="min-h-screen bg-[#F6F5FA]">
       <div className="mx-auto max-w-[1240px] px-6 py-9">
 
-        {/* ── breadcrumb ── */}
-        <nav aria-label="Breadcrumb" className="mb-6">
+        {/* breadcrumb */}
+        <nav aria-label="Breadcrumb" className="mb-7">
           <ol className="flex flex-wrap items-center gap-1.5 text-[15px] text-[#8B85A0]">
-            {breadcrumbTrail.map((crumb, i) => (
+            {breadcrumb.map((c, i) => (
               <li key={i} className="flex items-center gap-1.5">
-                {i > 0 && (
-                  <ChevronRight size={13} className="shrink-0 opacity-50" />
-                )}
-                {crumb.href ? (
-                  <Link href={crumb.href} className="hover:text-[#6C4CD8] transition-colors">
-                    {crumb.label}
-                  </Link>
+                {i > 0 && <ChevronRight size={13} className="shrink-0 opacity-40" />}
+                {c.href ? (
+                  <Link href={c.href} className="transition hover:text-[#6C4CD8]">{c.label}</Link>
                 ) : (
-                  <span className="font-semibold text-[#1A1330] line-clamp-1">
-                    {crumb.label}
-                  </span>
+                  <span className="line-clamp-1 font-semibold text-[#1A1330]">{c.label}</span>
                 )}
               </li>
             ))}
           </ol>
         </nav>
 
-        {/* ── gallery + detail — two columns on desktop ── */}
+        {/* gallery + info */}
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-[480px_1fr]">
-          {/* gallery */}
           <ProductGallery
             images={listing.images ?? []}
+            thumbnail={listing.thumbnailUri}
             title={listing.title}
           />
-
-          {/* right-hand info panel (client interactive) */}
           <ProductDetailClient listing={listing} />
         </div>
 
-        {/* ── seller panel ── */}
-        <SellerPanel
-          name="Van Shop"
-          productCount={80}
-          avgRating={4.8}
-          yearsOnPlatform={3}
-          city="Phnom Penh"
-          cityKhmer="ភ្នំពេញ"
-          address="Tuol Sangkae 2, Ruessei Kaev, Phnom Penh"
-          storeHref="/stores/van-shop"
-        />
+        {/* seller */}
+        <SellerPanel seller={listing.sellerProfile} />
 
-        {/* ── detail / reviews tabs ── */}
+        {/* tabs: description + reviews */}
         <ProductDetailTabs
-          description={listing.description}
-          attributes={listing.attributes}
-          reviews={listing.reviews}
+          description={listing.description ?? ""}
+          attributes={listing.listingAttributes ?? []}
+          listingUuid={listing.uuid}
         />
 
-        {/* ── related products ── */}
+        {/* related */}
         <RelatedProducts
-          categoryId={listing.category_id}
-          excludeSlug={listing.slug}
+          categorySlug={listing.category?.slug}
+          excludeUuid={listing.uuid}
         />
 
       </div>

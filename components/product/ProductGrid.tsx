@@ -1,18 +1,27 @@
-import type { Listing } from "@/lib/types";
 import ProductCard from "./ProductCard";
 import { cn } from "@/lib/utils";
 
+type CardListing = {
+  id?: number;
+  uuid?: string;
+  slug: string;
+  title: string;
+  price: number;
+  images?: { uuid?: string; uri?: string; url?: string; isPrimary?: boolean; is_primary?: boolean }[];
+  thumbnailUri?: { uri?: string };
+};
+
 type Props = {
-  listings: Listing[];
+  listings: CardListing[];
   className?: string;
 };
 
 export default function ProductGrid({ listings, className }: Props) {
   if (listings.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 text-muted-foreground gap-2">
+      <div className="flex flex-col items-center justify-center py-24 text-[#8B85A0] gap-3">
         <span className="text-4xl">🛍️</span>
-        <p className="text-sm">No products found.</p>
+        <p className="text-[15px]">No products found.</p>
       </div>
     );
   }
@@ -20,13 +29,15 @@ export default function ProductGrid({ listings, className }: Props) {
   return (
     <div
       className={cn(
-        // 2 cols mobile → 3 sm → 4 md → 5 xl  (matches mockup 5-col grid)
-        "grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5",
+        "grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4",
         className
       )}
     >
       {listings.map((listing) => (
-        <ProductCard key={listing.id} listing={listing} />
+        <ProductCard
+          key={listing.uuid ?? String(listing.id ?? listing.slug)}
+          listing={listing}
+        />
       ))}
     </div>
   );

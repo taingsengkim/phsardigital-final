@@ -1,22 +1,40 @@
-import { auth } from "@/auth";
+/**
+ * Client-side API fetch helper.
+ * Safe to import in "use client" components.
+ *
+ * Reads the Bearer token that the login page stores in sessionStorage
+ * after a successful Keycloak ROPC (Resource Owner Password Credentials) exchange.
+ */
 
-export async function apiFetch(path: string, options: RequestInit = {}) {
-  const session = await auth();
-  if (!session?.accessToken) throw new Error("Not authenticated");
+const BASE = process.env.NEXT_PUBLIC_API_URL ?? "https://phsardigital.quizzy.it.com";
 
-  const res = await fetch(`${process.env.API_BASE_URL}${path}`, {
-    ...options,
-    headers: {
-      ...options.headers,
-      Authorization: `Bearer ${session.accessToken}`,
-      "Content-Type": "application/json",
-    },
-    cache: "no-store",
-  });
+function getAccessToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return sessionStorage.getItem("kc_access_token");
+}
+
+export async function clientFetch<T = unknown>(
+  path: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const token = getAccessToken();
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(options.headers as Record<string, string>),
+  };
+
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const res = await fetch(`${BASE}${path}`, { ...options, headers });
 
   if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`API error ${res.status}: ${text}`);
+    const text = await res.text().catch(() => "");
+    throw new Error(`API ${res.status} ${res.statusText}: ${text}`);
   }
-  return res.json();
+
+  if (res.status === 204) return null as T;
+  return res.json() as Promise<T>;
 }

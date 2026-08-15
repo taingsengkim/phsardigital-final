@@ -1,47 +1,45 @@
-const BASE_URL = "";
+/**
+ * Auth API — maps to /api/v1/auth
+ * Real endpoints from: https://phsardigital.quizzy.it.com/swagger-ui/index.html
+ *
+ * POST /api/v1/auth/register  → register a new user
+ *
+ * Login is handled by Keycloak SSO via NextAuth — see auth.ts in root.
+ */
 
-export interface RegisterPayload {
-  username: string;
-  password: string;
+const BASE = process.env.NEXT_PUBLIC_API_URL ?? "https://phsardigital.quizzy.it.com";
+
+export type RegisterPayload = {
+  username: string;       // 3–50 chars, letters/numbers/._-
+  password: string;       // 8–128 chars
   confirmPassword: string;
-  email?: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;    // 9–11 digits
+};
+
+export type RegisterResponse = {
+  userId: string;
+  username: string;
+  email: string;
   firstName: string;
   lastName: string;
   phoneNumber: string;
-}
+};
 
-export async function registerUser(payload: RegisterPayload) {
-  const res = await fetch(`/api/auth/register`, {
+/** POST /api/v1/auth/register */
+export async function registerUser(payload: RegisterPayload): Promise<RegisterResponse> {
+  const res = await fetch(`${BASE}/api/v1/auth/register`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
 
-  const text = await res.text();
-  let data: unknown = null;
-
-  if (text) {
-    try {
-      data = JSON.parse(text);
-    } catch {
-      data = text;
-    }
-  }
-
   if (!res.ok) {
-    const message =
-      typeof data === "string"
-        ? data
-        : (data as { message?: string; error?: string; detail?: string } | null)?.message ||
-        (data as { message?: string; error?: string; detail?: string } | null)?.error ||
-        (data as { message?: string; error?: string; detail?: string } | null)?.detail ||
-        `Registration failed (${res.status})`;
-
-    throw new Error(typeof message === "string" ? message : "Registration failed");
+    const err = await res.json().catch(() => ({ message: "Registration failed" }));
+    throw new Error(err?.message ?? `Register failed: ${res.status}`);
   }
 
-  return data;
+  return res.json();
 }

@@ -1,45 +1,75 @@
-import type { Cart, CartItem } from "@/lib/types";
+/**
+ * Cart API — maps to /api/v1/carts
+ * Real endpoints from: https://phsardigital.quizzy.it.com/swagger-ui/index.html
+ *
+ * The cart is seller-scoped: each seller has their own cart.
+ * GET  /api/v1/carts                         → all carts (array)
+ * GET  /api/v1/carts/{sellerId}              → cart for one seller
+ * POST /api/v1/carts/items                   → add item
+ * PATCH /api/v1/carts/{sellerId}/items/{uuid} → update qty
+ * DELETE /api/v1/carts/{sellerId}/items/{uuid} → remove item
+ * DELETE /api/v1/carts/{sellerId}            → clear cart
+ */
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
+import { clientFetch } from "@/lib/api";
 
-export async function getCart(): Promise<Cart> {
-  const res = await fetch(`${BASE_URL}/api/cart`, { credentials: "include" });
-  if (!res.ok) throw new Error("Failed to fetch cart");
-  return res.json();
+export type CartItem = {
+  uuid: string;
+  listingUuid: string;
+  title: string;
+  unitPrice: number;
+  quantity: number;
+  lineTotal: number;
+};
+
+export type Cart = {
+  uuid: string;
+  sellerId: string;
+  items: CartItem[];
+  totalPrice: number;
+};
+
+/** GET /api/v1/carts — returns all seller carts for the logged-in buyer */
+export async function getMyCarts(): Promise<Cart[]> {
+  return clientFetch<Cart[]>("/api/v1/carts");
 }
 
-export async function addToCart(
-  listingId: number,
-  quantity = 1
-): Promise<CartItem> {
-  const res = await fetch(`${BASE_URL}/api/cart/items`, {
+/** GET /api/v1/carts/{sellerId} */
+export async function getCartBySeller(sellerId: string): Promise<Cart> {
+  return clientFetch<Cart>(`/api/v1/carts/${sellerId}`);
+}
+
+/** POST /api/v1/carts/items */
+export async function addToCart(listingUuid: string, quantity = 1): Promise<Cart> {
+  return clientFetch<Cart>("/api/v1/carts/items", {
     method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ listing_id: listingId, quantity }),
+    body: JSON.stringify({ listingUuid, quantity }),
   });
-  if (!res.ok) throw new Error("Failed to add to cart");
-  return res.json();
 }
 
+/** PATCH /api/v1/carts/{sellerId}/items/{itemUuid} */
 export async function updateCartItem(
-  itemId: number,
+  sellerId: string,
+  itemUuid: string,
   quantity: number
-): Promise<CartItem> {
-  const res = await fetch(`${BASE_URL}/api/cart/items/${itemId}`, {
+): Promise<Cart> {
+  return clientFetch<Cart>(`/api/v1/carts/${sellerId}/items/${itemUuid}`, {
     method: "PATCH",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ quantity }),
   });
-  if (!res.ok) throw new Error("Failed to update cart item");
-  return res.json();
 }
 
-export async function removeCartItem(itemId: number): Promise<void> {
-  const res = await fetch(`${BASE_URL}/api/cart/items/${itemId}`, {
+/** DELETE /api/v1/carts/{sellerId}/items/{itemUuid} */
+export async function removeCartItem(
+  sellerId: string,
+  itemUuid: string
+): Promise<Cart> {
+  return clientFetch<Cart>(`/api/v1/carts/${sellerId}/items/${itemUuid}`, {
     method: "DELETE",
-    credentials: "include",
   });
-  if (!res.ok) throw new Error("Failed to remove cart item");
+}
+
+/** DELETE /api/v1/carts/{sellerId} — clear entire cart */
+export async function clearCart(sellerId: string): Promise<void> {
+  return clientFetch<void>(`/api/v1/carts/${sellerId}`, { method: "DELETE" });
 }

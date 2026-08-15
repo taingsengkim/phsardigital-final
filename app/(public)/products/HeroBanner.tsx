@@ -32,7 +32,7 @@ const SLIDES: Slide[] = [
     ctaHref: "/category/bag-and-accessories",
     ctaLabel: "Shop Now",
     image: "/picture/pic1.jpg",
-    bg: "from-[#4F2FBF] via-[#6C4CD8] to-[#8B6EE8]",
+    bg: "from-[#1A1330] via-[#2D1F5E] to-[#3B2A80]",
     tag: "Up to 40% OFF",
     imgPosition: "center center",   // iPhones centred
   },
@@ -46,7 +46,7 @@ const SLIDES: Slide[] = [
     ctaHref: "/category/fashion-and-beauty",
     ctaLabel: "Explore Now",
     image: "/picture/pic4.jpg",
-    bg: "from-[#1A1330] via-[#2D1F5E] to-[#3B2A80]",
+    bg: "from-[#0F0A2A] via-[#2D1F5E] to-[#3B2A80]",
     tag: "New Arrivals",
     imgPosition: "center 25%",      // watch — keep wrist/bracelet area in frame
   },
@@ -60,7 +60,7 @@ const SLIDES: Slide[] = [
     ctaHref: "/category/computer-and-accessories",
     ctaLabel: "Browse Deals",
     image: "/picture/pic7.jpg",
-    bg: "from-[#0F0A2A] via-[#1E1450] to-[#2C1F6E]",
+    bg: "from-[#0F0A2A] via-[#1E1450] to-[#3B2A80]",
     tag: "Best Sellers",
     imgPosition: "center top",      // fashion top — show from collar down
   },
