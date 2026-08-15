@@ -3,10 +3,11 @@
 import { useState } from "react";
 import {
   Minus, Plus, ShoppingCart, Share2,
-  ShieldCheck, RotateCcw, Truck, Star,
+  ShieldCheck, RotateCcw, Truck, Star, Heart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { addToCart } from "@/app/api/cart";
+import { addFavorite, removeFavorites } from "@/app/api/savedListings";
 import type { Listing } from "@/app/api/listings";
 
 type Props = { listing: Listing };
@@ -16,19 +17,51 @@ export default function ProductDetailClient({ listing }: Props) {
   const [adding, setAdding] = useState(false);
   const [added,  setAdded]  = useState(false);
   const [copied, setCopied] = useState(false);
+  const [saved,  setSaved]  = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const inStock = listing.stockQty > 0;
 
+  function isLoggedIn() {
+    return typeof window !== "undefined" &&
+      !!sessionStorage.getItem("kc_access_token");
+  }
+
   async function handleAddToCart() {
+    if (!isLoggedIn()) {
+      window.location.href = "/auth/login";
+      return;
+    }
     setAdding(true);
     try {
       await addToCart(listing.uuid, qty);
       setAdded(true);
       setTimeout(() => setAdded(false), 2500);
     } catch {
-      // handle silently — could show toast here
+      // silent
     } finally {
       setAdding(false);
+    }
+  }
+
+  async function handleToggleSave() {
+    if (!isLoggedIn()) {
+      window.location.href = "/auth/login";
+      return;
+    }
+    setSaving(true);
+    try {
+      if (saved) {
+        await removeFavorites([listing.uuid]);
+        setSaved(false);
+      } else {
+        await addFavorite(listing.uuid);
+        setSaved(true);
+      }
+    } catch {
+      // silent
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -47,13 +80,30 @@ export default function ProductDetailClient({ listing }: Props) {
         <h1 className="text-[28px] font-extrabold leading-tight text-[#1A1330] lg:text-[32px]">
           {listing.title}
         </h1>
-        <button
-          onClick={handleShare}
-          aria-label="Share product"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#E2DFEC] bg-white text-[#6C4CD8] transition hover:bg-[#F1EFFA]"
-        >
-          <Share2 size={16} />
-        </button>
+        <div className="flex shrink-0 items-center gap-2 pt-1">
+          {/* ── wishlist button ── */}
+          <button
+            onClick={handleToggleSave}
+            disabled={saving}
+            aria-label={saved ? "Remove from wishlist" : "Add to wishlist"}
+            className={cn(
+              "flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all disabled:opacity-50",
+              saved
+                ? "border-[#6C4CD8] bg-[#6C4CD8] text-white"
+                : "border-[#E2DFEC] bg-white text-[#6C4CD8] hover:border-[#6C4CD8]"
+            )}
+          >
+            <Heart size={16} fill={saved ? "currentColor" : "none"} />
+          </button>
+          {/* ── share button ── */}
+          <button
+            onClick={handleShare}
+            aria-label="Share product"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-[#E2DFEC] bg-white text-[#6C4CD8] transition hover:bg-[#F1EFFA]"
+          >
+            <Share2 size={16} />
+          </button>
+        </div>
       </div>
       {copied && (
         <p className="text-[13px] text-emerald-600 -mt-4">Link copied to clipboard!</p>
