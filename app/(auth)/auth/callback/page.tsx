@@ -8,11 +8,6 @@ const KC_ISSUER = "https://auth.quizzy.it.com/realms/phsardigital";
 const KC_CLIENT = "phsardigital-client";
 const KC_SECRET = "idh56ELtGEuuUVGVSeIWoRw2F8Ul5H5M";
 
-function getCallbackUri() {
-  if (typeof window === "undefined") return "";
-  return `${window.location.origin}/auth/callback`;
-}
-
 function CallbackContent() {
   const router       = useRouter();
   const searchParams = useSearchParams();
@@ -24,6 +19,7 @@ function CallbackContent() {
     const state = searchParams.get("state");
     const error = searchParams.get("error");
 
+    /* Keycloak returned an error (user cancelled etc.) */
     if (error) {
       setStatus("error");
       setMessage(searchParams.get("error_description") ?? "Login was cancelled.");
@@ -36,22 +32,23 @@ function CallbackContent() {
       return;
     }
 
-    /* verify state to prevent CSRF */
-    const saved = sessionStorage.getItem("kc_state");
-    if (saved && state && state !== saved) {
+    /* CSRF check */
+    const savedState = sessionStorage.getItem("kc_state");
+    if (savedState && state && state !== savedState) {
       setStatus("error");
-      setMessage("Security mismatch. Please try again.");
+      setMessage("Security check failed. Please try again.");
       setTimeout(() => router.replace("/auth/login"), 2500);
       return;
     }
 
     async function exchange() {
       try {
+        const callbackUri = `${window.location.origin}/auth/callback`;
         const body = new URLSearchParams({
           grant_type:    "authorization_code",
           client_id:     KC_CLIENT,
           client_secret: KC_SECRET,
-          redirect_uri:  getCallbackUri(),
+          redirect_uri:  callbackUri,
           code:          code!,
         });
 
@@ -71,25 +68,24 @@ function CallbackContent() {
 
         const tokens = await res.json();
 
-        /* store tokens — clientFetch reads these */
+        /* store tokens — clientFetch + SavedButton + AddToCartButton all read these */
         sessionStorage.setItem("kc_access_token",  tokens.access_token);
         sessionStorage.setItem("kc_refresh_token", tokens.refresh_token ?? "");
         sessionStorage.setItem("kc_expires_at",
           String(Date.now() + tokens.expires_in * 1000));
-
         sessionStorage.removeItem("kc_state");
 
         setStatus("success");
-        setMessage("Signed in! Taking you home…");
+        setMessage("Signed in! Taking you back…");
 
-        /* go to wherever they were trying to go, or home */
+        /* return to the page user was on, or home */
         const returnTo = sessionStorage.getItem("kc_return_to") ?? "/home";
         sessionStorage.removeItem("kc_return_to");
         router.replace(returnTo);
 
       } catch (err: unknown) {
         setStatus("error");
-        setMessage(err instanceof Error ? err.message : "Login failed.");
+        setMessage(err instanceof Error ? err.message : "Login failed. Redirecting…");
         setTimeout(() => router.replace("/auth/login"), 3000);
       }
     }
@@ -99,7 +95,7 @@ function CallbackContent() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#F4F3F8]">
-      <div className="flex flex-col items-center gap-5 rounded-2xl bg-white px-12 py-14 shadow-sm ring-1 ring-black/5 text-center">
+      <div className="flex flex-col items-center gap-5 rounded-2xl bg-white px-12 py-14 text-center shadow-sm ring-1 ring-black/5">
 
         {status === "loading" && (
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#F0EDFB]">
@@ -122,7 +118,7 @@ function CallbackContent() {
           <p className="mt-1.5 text-[13px] text-[#8B85A0]">
             {status === "loading" && "Exchanging credentials securely…"}
             {status === "success" && "You are now signed in."}
-            {status === "error"   && "Redirecting you back to login…"}
+            {status === "error"   && "You will be redirected shortly."}
           </p>
         </div>
       </div>

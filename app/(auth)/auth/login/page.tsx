@@ -7,37 +7,37 @@ import { cn } from "@/lib/utils";
 import AuthLeftPanel from "@/components/auth/AuthLeftPanel";
 import { AuthToast, type ToastState } from "@/components/auth/AuthToast";
 
-const KC_ISSUER  = "https://auth.quizzy.it.com/realms/phsardigital";
-const KC_CLIENT  = "phsardigital-client";
-const KC_SECRET  = "idh56ELtGEuuUVGVSeIWoRw2F8Ul5H5M";
-const CALLBACK   = typeof window !== "undefined"
-  ? `${window.location.origin}/auth/callback`
-  : "http://localhost:3000/auth/callback";
+const KC_ISSUER = "https://auth.quizzy.it.com/realms/phsardigital";
+const KC_CLIENT = "phsardigital-client";
+const KC_SECRET = "idh56ELtGEuuUVGVSeIWoRw2F8Ul5H5M";
 
-function startLogin() {
+function buildKeycloakUrl(): string {
+  const callbackUri = `${window.location.origin}/auth/callback`;
   const state = crypto.randomUUID();
-  sessionStorage.setItem("kc_state", state);
+  sessionStorage.setItem("kc_state",     state);
+  sessionStorage.setItem("kc_return_to", window.location.pathname === "/auth/login"
+    ? "/home"
+    : window.location.pathname);
+
   const params = new URLSearchParams({
     client_id:     KC_CLIENT,
-    redirect_uri:  typeof window !== "undefined"
-      ? `${window.location.origin}/auth/callback`
-      : "http://localhost:3000/auth/callback",
+    redirect_uri:  callbackUri,
     response_type: "code",
     scope:         "openid email profile",
     state,
   });
-  window.location.assign(`${KC_ISSUER}/protocol/openid-connect/auth?${params}`);
+  return `${KC_ISSUER}/protocol/openid-connect/auth?${params}`;
 }
 
 export default function LoginPage() {
   const [identifier, setIdentifier] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPw, setShowPw] = useState(false);
+  const [password,   setPassword]   = useState("");
+  const [showPw,     setShowPw]     = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [toast, setToast] = useState<ToastState | null>(null);
+  const [error,      setError]      = useState<string | null>(null);
+  const [toast,      setToast]      = useState<ToastState | null>(null);
 
-  /* redirect if already logged in */
+  /* ── if already logged in, skip the form ── */
   useEffect(() => {
     const token = sessionStorage.getItem("kc_access_token");
     const exp   = Number(sessionStorage.getItem("kc_expires_at") ?? "0");
@@ -48,8 +48,8 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!toast) return;
-    const timer = window.setTimeout(() => setToast(null), 3200);
-    return () => window.clearTimeout(timer);
+    const t = window.setTimeout(() => setToast(null), 3200);
+    return () => window.clearTimeout(t);
   }, [toast]);
 
   async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
@@ -63,8 +63,11 @@ export default function LoginPage() {
 
     setSubmitting(true);
     setToast({ type: "success", message: "Redirecting to secure sign-in…" });
-    // small delay so toast is visible before redirect
-    setTimeout(() => startLogin(), 600);
+
+    /* small delay so the toast is visible, then redirect */
+    setTimeout(() => {
+      window.location.assign(buildKeycloakUrl());
+    }, 500);
   }
 
   const statsBlock = (
