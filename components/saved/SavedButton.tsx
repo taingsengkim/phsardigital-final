@@ -22,7 +22,8 @@ export default function SavedButton({ listingId, initialSaved = false, className
   async function toggle() {
     const token = getToken();
     if (!token) {
-      // not logged in — redirect to login
+      // save current page so we can return after login
+      sessionStorage.setItem("kc_return_to", window.location.pathname);
       window.location.href = "/auth/login";
       return;
     }

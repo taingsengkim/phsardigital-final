@@ -18,8 +18,9 @@ export default function AddToCartButton({ listingUuid, className, size = "md" }:
     e.preventDefault();
     e.stopPropagation();
 
-    /* redirect to login if no token */
+    /* redirect to login if no token, remember current page */
     if (typeof window !== "undefined" && !sessionStorage.getItem("kc_access_token")) {
+      sessionStorage.setItem("kc_return_to", window.location.pathname);
       window.location.href = "/auth/login";
       return;
     }

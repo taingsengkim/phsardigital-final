@@ -7,8 +7,27 @@ import { cn } from "@/lib/utils";
 import AuthLeftPanel from "@/components/auth/AuthLeftPanel";
 import { AuthToast, type ToastState } from "@/components/auth/AuthToast";
 
-const KEYCLOAK_LOGIN_URL =
-  "https://auth.quizzy.it.com/realms/phsardigital/protocol/openid-connect/auth?client_id=phsardigital-client&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2F&response_type=code&scope=openid&code_challenge_method=S256";
+const KC_ISSUER  = "https://auth.quizzy.it.com/realms/phsardigital";
+const KC_CLIENT  = "phsardigital-client";
+const KC_SECRET  = "idh56ELtGEuuUVGVSeIWoRw2F8Ul5H5M";
+const CALLBACK   = typeof window !== "undefined"
+  ? `${window.location.origin}/auth/callback`
+  : "http://localhost:3000/auth/callback";
+
+function startLogin() {
+  const state = crypto.randomUUID();
+  sessionStorage.setItem("kc_state", state);
+  const params = new URLSearchParams({
+    client_id:     KC_CLIENT,
+    redirect_uri:  typeof window !== "undefined"
+      ? `${window.location.origin}/auth/callback`
+      : "http://localhost:3000/auth/callback",
+    response_type: "code",
+    scope:         "openid email profile",
+    state,
+  });
+  window.location.assign(`${KC_ISSUER}/protocol/openid-connect/auth?${params}`);
+}
 
 export default function LoginPage() {
   const [identifier, setIdentifier] = useState("");
@@ -17,6 +36,15 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
+
+  /* redirect if already logged in */
+  useEffect(() => {
+    const token = sessionStorage.getItem("kc_access_token");
+    const exp   = Number(sessionStorage.getItem("kc_expires_at") ?? "0");
+    if (token && Date.now() < exp) {
+      window.location.replace("/home");
+    }
+  }, []);
 
   useEffect(() => {
     if (!toast) return;
@@ -34,11 +62,9 @@ export default function LoginPage() {
     }
 
     setSubmitting(true);
-    setToast({
-      type: "success",
-      message: "Redirecting you to the secure sign-in page…",
-    });
-    window.location.assign(KEYCLOAK_LOGIN_URL);
+    setToast({ type: "success", message: "Redirecting to secure sign-in…" });
+    // small delay so toast is visible before redirect
+    setTimeout(() => startLogin(), 600);
   }
 
   const statsBlock = (
