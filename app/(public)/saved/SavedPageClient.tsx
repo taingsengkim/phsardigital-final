@@ -7,7 +7,7 @@ import { Heart, ShoppingCart, Star, Trash2 } from "lucide-react";
 import { clientFetch } from "@/lib/api";
 import { addToCart } from "@/app/api/cart";
 
-/* ── types matching real API ListingResponse ── */
+/* ── types matching EXACT Swagger ListingResponse + SellerProfileSummaryResponse ── */
 type FavListing = {
   uuid: string;
   slug: string;
@@ -18,9 +18,17 @@ type FavListing = {
   isFeatured: boolean;
   sold: number;
   thumbnailUri?: { uuid: string; objectName: string; uri: string };
-  images?: { uuid: string; uri: string; isPrimary: boolean; sortOrder: number }[];
+  images?: { uuid: string; uri: string; objectName?: string; isPrimary: boolean; sortOrder: number }[];
   category?: { name: string; slug: string };
-  sellerProfile?: { sellerId: string; businessName?: string };
+  /* SellerProfileSummaryResponse — NOT SellerProfileResponse */
+  sellerProfile?: {
+    sellerId: string;
+    phoneNumber?: string;
+    biography?: string;
+    socialLink?: string[];
+  };
+  createdAt?: string;
+  lastModifiedAt?: string;
 };
 
 type PagedFavorites = {
@@ -150,8 +158,10 @@ function FavCard({
         </div>
 
         {/* seller */}
-        {listing.sellerProfile?.businessName && (
-          <p className="text-[12px] text-[#8B85A0]">{listing.sellerProfile.businessName}</p>
+        {listing.sellerProfile && (
+          <p className="text-[12px] text-[#8B85A0]">
+            {listing.sellerProfile.biography ?? `Seller ${listing.sellerProfile.sellerId.slice(0, 8)}…`}
+          </p>
         )}
 
         {/* price + add to cart */}
@@ -207,13 +217,16 @@ export default function SavedPageClient() {
     }
 
     clientFetch<PagedFavorites>("/api/v1/favorites?page=0&size=40")
-      .then((data) => setListings(data?.content ?? []))
+      .then((data) => {
+        console.log("[SavedPage] favorites response:", data);
+        setListings(data?.content ?? []);
+      })
       .catch((err) => {
-        // 401 → show login prompt, anything else → show error
+        console.error("[SavedPage] favorites error:", err);
         if (String(err).includes("401")) {
           setNotLoggedIn(true);
         } else {
-          setError("Failed to load saved items.");
+          setError(`Failed to load saved items: ${err}`);
         }
       })
       .finally(() => setLoading(false));
