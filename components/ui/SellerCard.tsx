@@ -9,6 +9,11 @@ interface SellerCardProps {
   seller: Seller;
 }
 
+/**
+ * Renders from the UI-only `Seller` type — see `../types/index.ts`.
+ * Swap `seller` for a real domain type + fetched data once a
+ * "browse sellers/stores" endpoint exists on the backend.
+ */
 export function SellerCard({ seller }: SellerCardProps) {
   const { name, bannerImage, logoImage, rating, reviewCount, productCount } = seller;
 
