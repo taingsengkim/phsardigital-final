@@ -16,7 +16,7 @@ export function SellerProfileCard({ seller }: { seller: Seller }) {
       >
         {/* Cover image */}
         <Image
-          src={seller.avatar_url ?? "https://picsum.photos/seed/seller/400/300"}
+          src={seller.avatar_url ?? "/picture/pic1.jpg"}
           alt={seller.name}
           fill
           sizes="(max-width: 640px) 50vw, 25vw"
@@ -25,7 +25,7 @@ export function SellerProfileCard({ seller }: { seller: Seller }) {
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
 
         {/* Avatar badge */}
-        <div className="absolute left-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-card text-sm font-bold text-primary shadow">
+        <div className="absolute left-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white text-sm font-bold text-[#6C4CD8] shadow">
           {seller.name.charAt(0)}
         </div>
 
@@ -36,7 +36,7 @@ export function SellerProfileCard({ seller }: { seller: Seller }) {
               <Star
                 key={i}
                 size={11}
-                className={i < Math.round(seller.rating) ? "fill-secondary text-secondary" : "text-white/40"}
+                className={i < Math.round(seller.rating) ? "fill-[#F5B301] text-[#F5B301]" : "text-white/40"}
               />
             ))}
           </div>

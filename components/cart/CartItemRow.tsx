@@ -63,12 +63,19 @@ export default function CartItemRow({ item, onUpdate }: Props) {
       {/* details */}
       <div className="flex-1 min-w-0">
         {listing && (
-          <Link
-            href={`/products/${listing.slug}`}
-            className="text-sm font-medium line-clamp-2 hover:underline"
-          >
-            {listing.title}
-          </Link>
+          <>
+            <Link
+              href={`/products/${listing.slug}`}
+              className="text-sm font-medium line-clamp-2 hover:underline"
+            >
+              {listing.title}
+            </Link>
+            {listing.store_name && (
+              <span className="mt-0.5 inline-block text-[11px] font-bold text-[#6C4CD8]">
+                Sold by {listing.store_name}
+              </span>
+            )}
+          </>
         )}
         <p className="mt-1 text-sm text-muted-foreground">
           ${listing?.price.toFixed(2)} each

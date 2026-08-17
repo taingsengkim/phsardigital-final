@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Minus, Plus, ShoppingCart, Heart, Share2, ShieldCheck, RotateCcw, Truck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import RatingStars from "@/components/product/RatingStars";
@@ -26,9 +27,19 @@ function getActiveDiscount(listing: Listing) {
 }
 
 export default function ProductDetailClient({ listing }: Props) {
+  const router = useRouter();
   const [qty, setQty]       = useState(1);
   const [adding, setAdding] = useState(false);
   const [added, setAdded]   = useState(false);
+
+  async function handleBuyNow() {
+    try {
+      await addToCart(listing.id, qty, listing.slug);
+    } catch {
+      // continue to checkout
+    }
+    router.push(`/checkout?slug=${encodeURIComponent(listing.slug)}&qty=${qty}`);
+  }
 
   const avgRating =
     listing.reviews && listing.reviews.length > 0
@@ -43,7 +54,7 @@ export default function ProductDetailClient({ listing }: Props) {
   async function handleAddToCart() {
     setAdding(true);
     try {
-      await addToCart(listing.id, qty);
+      await addToCart(listing.id, qty, listing.slug);
       setAdded(true);
       setTimeout(() => setAdded(false), 2500);
     } catch {
@@ -82,7 +93,7 @@ export default function ProductDetailClient({ listing }: Props) {
           {listing.reviews && listing.reviews.length > 0 && (
             <span className="border-l border-[#E2DFEC] pl-3 text-[15px] text-[#8B85A0]">
               {listing.reviews.length} reviews
-              {listing.sku ? ` · SKU ${listing.sku}` : ""}
+              {/* {listing.sku ? ` · SKU ${listing.sku}` : ""} */}
             </span>
           )}
         </div>
@@ -188,6 +199,7 @@ export default function ProductDetailClient({ listing }: Props) {
 
       {/* ── buy now ── */}
       <button
+        onClick={handleBuyNow}
         disabled={listing.stock === 0}
         className="w-full rounded-xl border-2 border-[#6C4CD8] py-3.5 text-[17px] font-bold text-[#6C4CD8] transition hover:bg-[#6C4CD8] hover:text-white disabled:opacity-40"
       >

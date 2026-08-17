@@ -8,6 +8,20 @@ export type Category = {
   image_url?: string;
 };
 
+export type Seller = {
+  id: number | string;
+  name: string;
+  slug: string;
+  bannerImage?: string;
+  logoImage?: string;
+  avatar_url?: string;
+  rating: number;
+  reviewCount?: number;
+  review_count?: number;
+  productCount?: number;
+  product_count?: number;
+};
+
 export type ListingImage = {
   id: number;
   listing_id: number;
@@ -49,6 +63,8 @@ export type Listing = {
   price: number;
   category_id: number;
   stock: number;
+  store_id?: number;
+  store_name?: string;
   created_at: string;
   // joined relations (optional, present when fetched with includes)
   images?: ListingImage[];

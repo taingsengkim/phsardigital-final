@@ -2,7 +2,7 @@ import type { Listing } from "@/lib/types";
 
 export function getPrimaryImage(listing: Listing): string {
   const primary = listing.images?.find((img) => img.is_primary) ?? listing.images?.[0];
-  return primary?.url ?? "https://picsum.photos/seed/fallback/600/600";
+  return primary?.url ?? "/picture/pic1.jpg";
 }
 
 export function getAverageRating(listing: Listing): number {

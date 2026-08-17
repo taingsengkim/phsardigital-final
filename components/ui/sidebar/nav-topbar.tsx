@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { logoutFromKeycloak } from "@/lib/auth-client"
 
 export function NavTopbar() {
   return (
@@ -102,7 +103,7 @@ export function NavTopbar() {
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-red-600">Log out</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => logoutFromKeycloak("/")} className="cursor-pointer text-red-600">Log out</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

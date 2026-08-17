@@ -14,10 +14,12 @@ type Props = {
 export default function ProductGallery({ images, title }: Props) {
   const sorted = [...images].sort((a, b) => a.sort_order - b.sort_order);
   const primary = sorted.find((img) => img.is_primary) ?? sorted[0];
-  const [selected, setSelected] = useState<ListingImage | undefined>(primary);
+  const [selected, setSelected] = useState<ListingImage | undefined>(undefined);
   const [zoomed, setZoomed] = useState(false);
 
-  if (!selected) {
+  const activeImage = selected && sorted.some((img) => img.id === selected.id) ? selected : primary;
+
+  if (!activeImage) {
     return (
       <div className="aspect-square w-full rounded-2xl bg-[#F5F3FA] flex items-center justify-center text-[#8B85A0] text-[15px]">
         No image available
@@ -33,8 +35,8 @@ export default function ProductGallery({ images, title }: Props) {
         onClick={() => setZoomed(true)}
       >
         <Image
-          src={selected.url}
-          alt={selected.alt_text ?? title}
+          src={activeImage.url}
+          alt={activeImage.alt_text ?? title}
           fill
           className={cn(
             "object-cover transition-transform duration-500",
@@ -59,7 +61,7 @@ export default function ProductGallery({ images, title }: Props) {
               onClick={() => setSelected(img)}
               className={cn(
                 "relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-xl border-2 transition-all duration-200",
-                img.id === selected.id
+                img.id === activeImage.id
                   ? "border-[#6C4CD8] shadow-[0_0_0_3px_rgba(108,76,216,0.15)]"
                   : "border-transparent hover:border-[#C4B5FD]"
               )}
@@ -85,8 +87,8 @@ export default function ProductGallery({ images, title }: Props) {
         >
           <div className="relative max-h-[90vh] max-w-[90vw] overflow-hidden rounded-2xl">
             <Image
-              src={selected.url}
-              alt={selected.alt_text ?? title}
+              src={activeImage.url}
+              alt={activeImage.alt_text ?? title}
               width={900}
               height={900}
               className="object-contain"

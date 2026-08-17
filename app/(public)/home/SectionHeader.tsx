@@ -20,12 +20,12 @@ type SectionHeaderProps = {
 export function SectionHeader({ title, href = "#", onPrev, onNext, className }: SectionHeaderProps) {
   return (
     <div className={`flex items-center justify-between ${className ?? ""}`}>
-      <h2 className="text-xl font-bold text-foreground sm:text-2xl">{title}</h2>
+      <h2 className="text-xl font-extrabold text-[#1A1330] sm:text-2xl">{title}</h2>
       <div className="flex items-center gap-2">
         <Link href={href}>
           <motion.span
             whileHover={{ x: 2 }}
-            className="rounded-full bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground"
+            className="rounded-full bg-[#6C4CD8] px-4 py-1.5 text-sm font-bold text-white shadow-sm hover:bg-[#5B3DC0] transition-colors"
           >
             View All
           </motion.span>
@@ -37,7 +37,7 @@ export function SectionHeader({ title, href = "#", onPrev, onNext, className }: 
               whileTap={{ scale: 0.9 }}
               onClick={onPrev}
               aria-label="Previous"
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-foreground hover:bg-accent"
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#241F35] border border-[#EDEBF3] hover:bg-[#F1EFFA] shadow-sm"
             >
               <ChevronsUpDown size={16} />
             </motion.button>
@@ -46,7 +46,7 @@ export function SectionHeader({ title, href = "#", onPrev, onNext, className }: 
               whileTap={{ scale: 0.9 }}
               onClick={onNext}
               aria-label="Next"
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground"
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-[#6C4CD8] text-white shadow-sm hover:bg-[#5B3DC0]"
             >
               <ChevronsUpDown size={16} />
             </motion.button>
