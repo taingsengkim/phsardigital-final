@@ -1,4 +1,4 @@
-﻿import { betterAuth } from "better-auth";
+import { betterAuth } from "better-auth";
 import { genericOAuth, keycloak } from "better-auth/plugins/generic-oauth";
 
 const clientId = process.env.KEYCLOAK_CLIENT_ID;
@@ -35,6 +35,7 @@ export const auth = betterAuth({
           clientSecret,
           issuer,
           scopes: ["openid", "profile", "email"],
+          pkce: true,
         }),
       ],
     }),

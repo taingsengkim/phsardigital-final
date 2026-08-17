@@ -3,16 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ChevronsUpDown } from "lucide-react";
+import { ArrowRight, ChevronsUpDown } from "lucide-react";
 import { mockCategories } from "../categories-mock";
 import { ArrowRight } from "lucide-react";
 
-/**
- * TODO when your API is ready: replace `mockCategories` with
- * `const { data: categories = [] } = useGetCategoriesQuery();`
- * from "@/lib/api/homeApi" — everything else stays the same since both
- * are typed as Category[].
- */
 export function HeroBanner() {
   const categories = mockCategories;
 
