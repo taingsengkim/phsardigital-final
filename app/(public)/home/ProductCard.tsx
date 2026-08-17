@@ -28,10 +28,10 @@ export function ProductCard({ listing, sellerName }: ProductCardProps) {
     <motion.div
       whileHover={{ y: -4 }}
       transition={{ type: "spring", stiffness: 300, damping: 22 }}
-      className="group relative overflow-hidden rounded-xl border border-border bg-card"
+      className="group relative overflow-hidden rounded-xl border border-[#EDEBF3] bg-white shadow-sm"
     >
       <Link href={`/products/${listing.slug}`} className="block">
-        <div className="relative aspect-square w-full overflow-hidden bg-muted">
+        <div className="relative aspect-square w-full overflow-hidden bg-[#F5F3FA]">
           <Image
             src={image}
             alt={listing.images?.[0]?.alt_text ?? listing.title}
@@ -41,7 +41,7 @@ export function ProductCard({ listing, sellerName }: ProductCardProps) {
           />
 
           {discountPercent && (
-            <span className="absolute left-2 top-2 rounded-md bg-destructive px-2 py-0.5 text-xs font-semibold text-destructive-foreground">
+            <span className="absolute left-2 top-2 rounded-md bg-[#6C4CD8] px-2 py-0.5 text-xs font-bold text-white shadow-sm">
               -{discountPercent}%
             </span>
           )}
@@ -53,7 +53,7 @@ export function ProductCard({ listing, sellerName }: ProductCardProps) {
               whileTap={{ scale: 0.9 }}
               onClick={(e) => e.preventDefault()}
               aria-label="Save"
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-card text-foreground shadow"
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#241F35] shadow hover:bg-[#F1EFFA] hover:text-[#6C4CD8]"
             >
               <Heart size={15} />
             </motion.button>
@@ -62,7 +62,7 @@ export function ProductCard({ listing, sellerName }: ProductCardProps) {
               whileTap={{ scale: 0.9 }}
               onClick={(e) => e.preventDefault()}
               aria-label="Quick view"
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-card text-foreground shadow"
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#241F35] shadow hover:bg-[#F1EFFA] hover:text-[#6C4CD8]"
             >
               <Eye size={15} />
             </motion.button>
@@ -70,22 +70,22 @@ export function ProductCard({ listing, sellerName }: ProductCardProps) {
         </div>
 
         <div className="space-y-1 p-3">
-          <p className="truncate text-sm font-medium text-foreground">{listing.title}</p>
+          <p className="truncate text-sm font-semibold text-[#241F35]">{listing.title}</p>
 
           <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-primary">{formatPrice(finalPrice)}</span>
+            <span className="text-sm font-extrabold text-[#6C4CD8]">{formatPrice(finalPrice)}</span>
             {discountPercent && (
-              <span className="text-xs text-muted-foreground line-through">
+              <span className="text-xs text-[#8B85A0] line-through">
                 {formatPrice(listing.price)}
               </span>
             )}
           </div>
 
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <div className="flex items-center justify-between text-xs text-[#8B85A0]">
             {sellerName && <span>{sellerName}</span>}
             {rating > 0 && (
               <span className="flex items-center gap-0.5">
-                <Star size={12} className="fill-gold text-gold" />
+                <Star size={12} className="fill-[#F5B301] text-[#F5B301]" />
                 {rating}
               </span>
             )}

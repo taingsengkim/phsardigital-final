@@ -13,7 +13,7 @@ import { WearableSection } from "./feature/WearableSection";
 
 export default function HomePage() {
   return (
-    <main>
+    <main className="min-h-screen bg-[#F6F5FA] text-[#241F35]">
       {/* <Navbar /> */}
       {/* <CategoryStrip /> */}
 

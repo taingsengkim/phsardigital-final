@@ -3,11 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, ArrowRight } from "lucide-react";
 import { mockCategoryPanelListings } from "../listing-mock";
 import { getPrimaryImage } from "../listing-helpers";
 import { SectionHeader } from "../SectionHeader";
-import { Button } from "@/components/ui/ButtonPurple";
 
 const panels: { slug: string; label: string; count: number }[] = [
   { slug: "personal-care", label: "Personal Care", count: 26 },
@@ -20,15 +19,15 @@ function CategoryPanel({ slug, label, count }: { slug: string; label: string; co
   const listings = mockCategoryPanelListings[slug] ?? [];
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4">
+    <div className="rounded-xl border border-[#EDEBF3] bg-white p-4 shadow-sm">
       <div className="mb-3 flex items-start justify-between">
         <div>
-          <p className="font-semibold text-foreground">{label}</p>
-          <p className="text-xs text-muted-foreground">{count} Products</p>
+          <p className="font-bold text-[#241F35]">{label}</p>
+          <p className="text-xs text-[#8B85A0]">{count} Products</p>
         </div>
         <Link
           href={`/categories/${slug}`}
-          className="flex items-center gap-0.5 text-xs font-medium text-primary hover:underline"
+          className="flex items-center gap-0.5 text-xs font-semibold text-[#6C4CD8] hover:underline"
         >
           View All <ChevronRight size={12} />
         </Link>
@@ -38,7 +37,7 @@ function CategoryPanel({ slug, label, count }: { slug: string; label: string; co
           <motion.div
             key={listing.id}
             whileHover={{ scale: 1.06 }}
-            className="aspect-square overflow-hidden rounded-lg bg-muted"
+            className="aspect-square overflow-hidden rounded-lg bg-[#F5F3FA]"
           >
             <Image
               src={getPrimaryImage(listing)}
@@ -63,18 +62,28 @@ export function FindWhatYouNeed() {
           initial={{ opacity: 0, x: -12 }}
           whileInView={{ opacity: 1, x: 0 }}
           viewport={{ once: true }}
-          className="relative flex min-h-[280px] flex-col justify-between overflow-hidden rounded-xl bg-emerald-50 p-6 dark:bg-emerald-950/40"
+          className="relative flex min-h-[300px] flex-col justify-between overflow-hidden rounded-2xl bg-[#EDE8FA] p-6 shadow-sm"
         >
-          <div className="relative z-10 max-w-[70%] space-y-4">
-            <h3 className="text-2xl font-bold text-foreground">Bring nature into your home</h3>
-            <Button variant="primary">Shop Now →</Button>
-          </div>
           <Image
-            src="https://picsum.photos/seed/plant-leaf/500/500"
-            alt="Decorative plant"
+            src="/picture/pic5.jpg"
+            alt="Promo product"
             fill
-            className="object-cover object-bottom opacity-90"
+            className="object-cover object-center opacity-100"
           />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10" />
+
+          <div className="relative z-10 space-y-4">
+            <h3 className="text-2xl font-black leading-snug text-white">Bring nature into your home</h3>
+            <div>
+              <Link
+                href="/products"
+                className="group inline-flex items-center gap-2 rounded-full bg-[#6C4CD8] px-6 py-2.5 text-sm font-bold text-white shadow-[0_6px_20px_rgba(108,76,216,0.4)] transition-all duration-300 hover:scale-105 hover:bg-[#5B3DC0]"
+              >
+                Shop Now
+                <ArrowRight size={15} className="transition-transform duration-200 group-hover:translate-x-1" />
+              </Link>
+            </div>
+          </div>
         </motion.div>
 
         {/* Category panels */}

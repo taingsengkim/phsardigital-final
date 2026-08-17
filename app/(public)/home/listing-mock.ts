@@ -3,11 +3,25 @@ import type { Listing, ListingImage, Review } from "@/lib/types";
 let nextId = 1;
 const now = new Date().toISOString();
 
+const LOCAL_IMAGES = [
+  "/picture/pic1.jpg",
+  "/picture/pic2.jpg",
+  "/picture/pic3.jpg",
+  "/picture/pic4.jpg",
+  "/picture/pic5.jpg",
+  "/picture/pic6.jpg",
+  "/picture/pic7.jpg",
+  "/picture/pic8.jpg",
+];
+
 function makeImage(listingId: number, seed: string): ListingImage {
+  const hash = seed.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const imgPath = LOCAL_IMAGES[Math.abs(hash) % LOCAL_IMAGES.length];
+
   return {
     id: nextId++,
     listing_id: listingId,
-    url: `https://picsum.photos/seed/${seed}/600/600`,
+    url: imgPath,
     alt_text: seed,
     is_primary: true,
     sort_order: 0,
