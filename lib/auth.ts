@@ -16,15 +16,17 @@ export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET,
   baseURL: process.env.BETTER_AUTH_URL,
   session: {
+    expiresIn: 7 * 24 * 60 * 60, // 7 days (604800s)
+    updateAge: 24 * 60 * 60, // Refresh session age every 24 hours
     cookieCache: {
       enabled: true,
-      maxAge: 5 * 60,
+      maxAge: 7 * 24 * 60 * 60, // 7 days
       strategy: "jwe",
       refreshCache: true,
     },
   },
   account: {
-    encryptOAuthTokens: true,
+    encryptOAuthTokens: false,
     storeStateStrategy: "cookie",
   },
   plugins: [

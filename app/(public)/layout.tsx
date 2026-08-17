@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
-import NavbarPage from "../../components/navbar-component-01/page";
+import Navbar from "@/components/layout/navbar-component-01";
 import Footer from "@/components/layout/Footer";
 
 export default function PublicLayout({ children }: { children: ReactNode }) {
   return (
     <>
-      <NavbarPage />
+      <Navbar />
       <main className="flex-1">{children}</main>
       <Footer />
     </>

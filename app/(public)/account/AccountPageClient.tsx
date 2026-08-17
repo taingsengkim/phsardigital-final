@@ -2,7 +2,34 @@
 
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
-import { User, ShoppingBag, Heart, Lock, Bell, Camera, CheckCircle2, ChevronsUpDown, Loader2, Save, Trash2, Copy, Check, ShieldCheck, Mail, Phone, Calendar, Sparkles } from "lucide-react";
+import {
+  User,
+  ShoppingBag,
+  Heart,
+  Lock,
+  Bell,
+  Camera,
+  CheckCircle2,
+  ChevronsUpDown,
+  Loader2,
+  Save,
+  Trash2,
+  Copy,
+  Check,
+  ShieldCheck,
+  Mail,
+  Phone,
+  Calendar,
+  Sparkles,
+  Store,
+  MapPin,
+  ExternalLink,
+  Clock,
+  ArrowRight,
+  BadgeCheck,
+  Building2,
+  FileCheck,
+} from "lucide-react";
 import { useSession } from "@/lib/auth-client";
 import {
   useGetMeQuery,
@@ -11,10 +38,9 @@ import {
   useDeleteAvatarMutation,
   type UserProfile,
 } from "@/lib/api/authApi";
+import { useGetSellerApplicationQuery } from "@/lib/api/sellerApi";
 import { AuthToast, type ToastState } from "@/components/auth/AuthToast";
 import { cn } from "@/lib/utils";
-
-const BRAND = "#6C4CD8";
 
 export default function AccountPageClient() {
   const { data: session, isPending: sessionPending } = useSession();
@@ -23,6 +49,10 @@ export default function AccountPageClient() {
     isLoading: profileLoading,
     refetch,
   } = useGetMeQuery(undefined, {
+    skip: !session?.user,
+  });
+
+  const { data: sellerApp } = useGetSellerApplicationQuery(undefined, {
     skip: !session?.user,
   });
 
@@ -85,6 +115,13 @@ export default function AccountPageClient() {
     "User";
   const userAvatarUrl = profile?.avatarUrl || session?.user?.image || "";
   const username = profile?.username || userEmail.split("@")[0] || "user";
+
+  const isSeller = Boolean((profile as any)?.isSeller || sellerApp?.status === "APPROVED");
+  const isPendingSeller = sellerApp?.status === "PENDING";
+  const isRejectedSeller = sellerApp?.status === "REJECTED";
+
+  const storeName = sellerApp?.storeDisplayName || sellerApp?.businessName || `${userFullName}'s Store`;
+  const storeLogo = sellerApp?.logoUri || userAvatarUrl;
 
   function getInitials() {
     if (firstName || lastName) {
@@ -192,7 +229,7 @@ export default function AccountPageClient() {
 
   return (
     <div className="min-h-screen bg-[#F8F7FB] pb-16 font-sans">
-      {/* â”€â”€ Header Banner â”€â”€ */}
+      {/* ── Header Banner ── */}
       <div className="bg-gradient-to-r from-[#1A1330] via-[#2A1D4E] to-[#6C4CD8] text-white">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           {/* Breadcrumb */}
@@ -204,69 +241,110 @@ export default function AccountPageClient() {
             <span className="font-semibold text-white">My Account</span>
           </nav>
 
-          {/* Profile Quick Summary Header */}
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-4">
-              {/* Avatar with click trigger */}
-              <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-                {userAvatarUrl ? (
+          {/* Profile & Store Overview Header */}
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-5">
+              {/* Avatar / Store Logo */}
+              <div
+                className="relative group cursor-pointer shrink-0"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {storeLogo ? (
                   <img
-                    src={userAvatarUrl}
-                    alt={userFullName}
-                    className="h-20 w-20 rounded-full border-4 border-white/20 object-cover shadow-xl"
+                    src={storeLogo}
+                    alt={isSeller ? storeName : userFullName}
+                    className="h-20 w-20 rounded-2xl border-4 border-white/20 object-cover shadow-xl ring-2 ring-white/10"
                   />
                 ) : (
-                  <div className="flex h-20 w-20 items-center justify-center rounded-full border-4 border-white/20 bg-[#6C4CD8] text-2xl font-bold shadow-xl">
+                  <div className="flex h-20 w-20 items-center justify-center rounded-2xl border-4 border-white/20 bg-[#6C4CD8] text-2xl font-bold shadow-xl">
                     {getInitials()}
                   </div>
                 )}
                 <button
                   type="button"
-                  className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full bg-white text-[#6C4CD8] shadow-md transition hover:scale-110 active:scale-95"
-                  title="Change avatar image"
+                  className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-white text-[#6C4CD8] shadow-md transition hover:scale-110 active:scale-95"
+                  title="Change avatar photo"
                 >
                   <Camera size={14} />
                 </button>
               </div>
 
               <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-2xl font-bold text-white">
-                    {userFullName}
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <h1 className="text-2xl font-bold text-white sm:text-3xl">
+                    {isSeller ? storeName : userFullName}
                   </h1>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-xs font-semibold text-emerald-300 backdrop-blur">
-                    <ShieldCheck size={14} /> Verified
-                  </span>
-                </div>
-
-                <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-white/80">
-                  <span className="flex items-center gap-1.5">
-                    <Mail size={16} className="text-white/60" /> {userEmail}
-                  </span>
-                  {username && (
-                    <span className="flex items-center gap-1 text-sm text-white/60">
-                      @{username}
+                  {isSeller ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-400/20 px-3 py-1 text-xs font-bold text-emerald-300 backdrop-blur ring-1 ring-emerald-400/30">
+                      <BadgeCheck size={15} /> Verified Store
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white/90 backdrop-blur">
+                      <ShieldCheck size={14} /> Buyer Account
                     </span>
                   )}
                 </div>
+
+                <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-white/80">
+                  {isSeller && sellerApp?.businessName && (
+                    <span className="flex items-center gap-1.5 font-medium text-white/90">
+                      <Building2 size={15} className="text-white/60" />{" "}
+                      {sellerApp.businessName}
+                    </span>
+                  )}
+                  <span className="flex items-center gap-1.5">
+                    <Mail size={15} className="text-white/60" /> {userEmail}
+                  </span>
+                  {username && (
+                    <span className="text-sm text-white/60">@{username}</span>
+                  )}
+                </div>
+
+                {isSeller && sellerApp?.city && (
+                  <div className="mt-1.5 flex items-center gap-1.5 text-xs text-white/70">
+                    <MapPin size={13} className="text-emerald-400" />
+                    <span>
+                      {[sellerApp.address, sellerApp.city, sellerApp.province]
+                        .filter(Boolean)
+                        .join(", ")}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Quick Actions */}
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isUploadingAvatar}
-                className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2.5 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20 active:scale-95 disabled:opacity-50"
-              >
-                {isUploadingAvatar ? (
-                  <Loader2 size={16} className="animate-spin" />
-                ) : (
-                  <Camera size={16} />
-                )}
-                Upload Photo
-              </button>
+            {/* Seller / Account Quick Actions */}
+            <div className="flex flex-wrap items-center gap-3">
+              {isSeller ? (
+                <>
+                  <Link
+                    href="/seller-dashboard/home"
+                    className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-[#6C4CD8] shadow-lg transition hover:bg-[#F4F0FF] active:scale-95"
+                  >
+                    <Store size={18} /> Seller Dashboard
+                  </Link>
+                  <Link
+                    href="/account/seller-application"
+                    className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-3 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20 active:scale-95"
+                  >
+                    Store Settings
+                  </Link>
+                </>
+              ) : isPendingSeller ? (
+                <Link
+                  href="/account/seller-application"
+                  className="inline-flex items-center gap-2 rounded-xl bg-amber-400 px-5 py-3 text-sm font-bold text-[#1A1330] shadow-lg transition hover:bg-amber-300 active:scale-95"
+                >
+                  <Clock size={18} /> Store Application Under Review
+                </Link>
+              ) : (
+                <Link
+                  href="/account/seller-application"
+                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 to-teal-400 px-5 py-3 text-sm font-bold text-[#1A1330] shadow-lg transition hover:brightness-105 active:scale-95"
+                >
+                  <Store size={18} /> Become a Seller
+                </Link>
+              )}
 
               <input
                 ref={fileInputRef}
@@ -280,10 +358,101 @@ export default function AccountPageClient() {
         </div>
       </div>
 
-      {/* â”€â”€ Main Layout Body â”€â”€ */}
+      {/* ── Main Layout Body ── */}
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        {/* Banner Callout for Sellers or Applicants */}
+        {isSeller && (
+          <div className="mb-8 overflow-hidden rounded-2xl bg-gradient-to-r from-[#6C4CD8] to-[#4F35A5] p-6 text-white shadow-md">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 backdrop-blur shrink-0 text-white">
+                  <Store size={28} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-bold text-white sm:text-xl">
+                      {storeName} Dashboard & Operations
+                    </h2>
+                    <span className="rounded-md bg-emerald-400/20 px-2 py-0.5 text-[11px] font-bold text-emerald-300 uppercase tracking-wider">
+                      Active Store
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-white/80 sm:text-sm">
+                    Manage store listings, view customer orders, process sales, and update store business profile.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3 shrink-0">
+                <Link
+                  href="/seller-dashboard/home"
+                  className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-xs font-bold text-[#6C4CD8] shadow-sm transition hover:bg-[#F4F0FF]"
+                >
+                  Open Dashboard <ArrowRight size={14} />
+                </Link>
+                <Link
+                  href="/seller-dashboard/products/dashboard"
+                  className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2.5 text-xs font-bold text-white backdrop-blur transition hover:bg-white/20"
+                >
+                  Manage Products
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isPendingSeller && (
+          <div className="mb-8 rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-900 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-700 shrink-0">
+                <Clock size={24} />
+              </div>
+              <div>
+                <h2 className="text-base font-bold">
+                  Seller Registration Submitted — Under Review
+                </h2>
+                <p className="mt-0.5 text-xs text-amber-800">
+                  Your store application for <strong>{storeName}</strong> is being reviewed by the Phsar Digital administration team.
+                </p>
+              </div>
+            </div>
+
+            <Link
+              href="/account/seller-application"
+              className="inline-flex items-center gap-2 rounded-xl bg-amber-600 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-amber-700 shrink-0"
+            >
+              View Application Status <ArrowRight size={14} />
+            </Link>
+          </div>
+        )}
+
+        {isRejectedSeller && (
+          <div className="mb-8 rounded-2xl border border-rose-200 bg-rose-50 p-6 text-rose-900 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-100 text-rose-700 shrink-0">
+                <Store size={24} />
+              </div>
+              <div>
+                <h2 className="text-base font-bold">
+                  Seller Application Needs Revision
+                </h2>
+                <p className="mt-0.5 text-xs text-rose-800">
+                  {sellerApp?.rejectionNote || "Your application was reviewed and requires updated business details or documents."}
+                </p>
+              </div>
+            </div>
+
+            <Link
+              href="/account/seller-application"
+              className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-rose-700 shrink-0"
+            >
+              Re-apply / Fix Application <ArrowRight size={14} />
+            </Link>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
-          {/* â”€â”€ Sidebar Navigation Tabs â”€â”€ */}
+          {/* ── Sidebar Navigation Tabs ── */}
           <div className="space-y-4 lg:col-span-1">
             <div className="overflow-hidden rounded-2xl bg-white p-3 shadow-sm ring-1 ring-black/5">
               {[
@@ -306,6 +475,21 @@ export default function AccountPageClient() {
                   href: "/saved",
                 },
                 {
+                  id: "seller",
+                  label: isSeller ? "Seller Dashboard" : "Become a Seller",
+                  icon: Store,
+                  href: isSeller
+                    ? "/seller-dashboard/home"
+                    : "/account/seller-application",
+                  badge: isSeller
+                    ? "Store Active"
+                    : isPendingSeller
+                    ? "Pending"
+                    : isRejectedSeller
+                    ? "Rejected"
+                    : "New",
+                },
+                {
                   id: "security",
                   label: "Security & Passwords",
                   icon: Lock,
@@ -326,13 +510,31 @@ export default function AccountPageClient() {
                     <Link
                       key={item.id}
                       href={item.href}
-                      className="flex w-full items-center justify-between gap-2 rounded-xl px-4 py-3 text-sm font-medium text-[#5A5470] transition hover:bg-[#F8F7FB] hover:text-[#1A1330]"
+                      className={cn(
+                        "flex w-full items-center justify-between gap-2 rounded-xl px-4 py-3 text-sm font-medium transition",
+                        item.id === "seller" && isSeller
+                          ? "bg-[#EDE9FB] text-[#6C4CD8] font-bold hover:bg-[#6C4CD8] hover:text-white group"
+                          : "text-[#5A5470] hover:bg-[#F8F7FB] hover:text-[#1A1330]"
+                      )}
                     >
                       <div className="flex min-w-0 flex-1 items-center gap-3">
-                        <Icon size={18} className="shrink-0 text-[#8D86A8]" />
+                        <Icon size={18} className="shrink-0 text-[#8D86A8] group-hover:text-white" />
                         <span className="truncate text-left">{item.label}</span>
                       </div>
-                      <ChevronsUpDown size={16} className="shrink-0 text-[#B5B0CA]" />
+                      {item.badge ? (
+                        <span
+                          className={cn(
+                            "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wide",
+                            isSeller
+                              ? "bg-[#6C4CD8] text-white group-hover:bg-white group-hover:text-[#6C4CD8]"
+                              : "bg-[#F1EFFA] text-[#6C4CD8]"
+                          )}
+                        >
+                          {item.badge}
+                        </span>
+                      ) : (
+                        <ChevronsUpDown size={16} className="shrink-0 text-[#B5B0CA]" />
+                      )}
                     </Link>
                   );
                 }
@@ -388,25 +590,36 @@ export default function AccountPageClient() {
                 href="/contact-us"
                 className="mt-4 inline-block text-sm font-semibold text-[#6C4CD8] hover:underline"
               >
-                Contact Customer Support â†’
+                Contact Customer Support →
               </Link>
             </div>
           </div>
 
-          {/* â”€â”€ Main Content Area â”€â”€ */}
+          {/* ── Main Content Area ── */}
           <div className="lg:col-span-3">
             {activeTab === "details" && (
               <div className="space-y-6">
                 {/* Form Card */}
                 <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-black/5 sm:p-8">
-                  <div className="border-b border-[#EAE7F3] pb-5">
-                    <h2 className="text-xl font-bold text-[#1A1330]">
-                      Personal Details
-                    </h2>
-                    <p className="mt-1 text-sm text-[#6B6580]">
-                      Update your account profile and contact details used across
-                      Phsar Digital.
-                    </p>
+                  <div className="border-b border-[#EAE7F3] pb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                      <h2 className="text-xl font-bold text-[#1A1330]">
+                        Personal Details
+                      </h2>
+                      <p className="mt-1 text-sm text-[#6B6580]">
+                        Update your account profile and contact details used across
+                        Phsar Digital.
+                      </p>
+                    </div>
+
+                    {isSeller && (
+                      <Link
+                        href="/account/seller-application"
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-[#6C4CD8] bg-[#EDE9FB] px-3.5 py-2 rounded-xl hover:bg-[#6C4CD8] hover:text-white transition"
+                      >
+                        <Building2 size={14} /> Edit Business Info
+                      </Link>
+                    )}
                   </div>
 
                   {/* Avatar Upload Banner inside form */}
@@ -714,7 +927,7 @@ export default function AccountPageClient() {
                         rel="noreferrer"
                         className="mt-4 inline-flex items-center gap-2 rounded-lg bg-[#6C4CD8] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#5C3DC8]"
                       >
-                        Open Keycloak Security Portal â†’
+                        Open Keycloak Security Portal →
                       </a>
                     </div>
                   </div>
