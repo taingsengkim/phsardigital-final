@@ -8,6 +8,20 @@ export type Category = {
   image_url?: string;
 };
 
+export type Seller = {
+  id: number | string;
+  name: string;
+  slug: string;
+  bannerImage?: string;
+  logoImage?: string;
+  avatar_url?: string;
+  rating: number;
+  reviewCount?: number;
+  review_count?: number;
+  productCount?: number;
+  product_count?: number;
+};
+
 export type ListingImage = {
   id: number;
   listing_id: number;
