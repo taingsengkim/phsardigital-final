@@ -12,7 +12,7 @@ export function TopRatedSection() {
   const listings = mockTopRatedListings;
 
   return (
-    <section className="bg-accent/60 py-8">
+    <section className="bg-[#F1EFFA]/60 py-8">
       <div className="mx-auto max-w-7xl space-y-5 px-4">
         <SectionHeader title="Top Rated Products" />
         <div className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">

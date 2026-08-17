@@ -21,7 +21,7 @@ const item = {
  */
 export function TopSellersSection() {
   return (
-    <section className="bg-accent/60 py-8">
+    <section className="bg-[#F1EFFA]/60 py-8">
       <div className="mx-auto max-w-7xl space-y-5 px-4">
         <SectionHeader title="Top Sellers" />
         <motion.div

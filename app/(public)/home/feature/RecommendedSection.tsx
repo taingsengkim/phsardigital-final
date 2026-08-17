@@ -24,22 +24,22 @@ export function RecommendedSection() {
   return (
     <section className="mx-auto max-w-7xl px-4 py-10">
       <div className="mb-6 text-center">
-        <h2 className="text-2xl font-bold text-foreground sm:text-3xl">Recommended For You</h2>
-        <div className="mt-4 inline-flex gap-6 border-b border-border">
+        <h2 className="text-2xl font-bold text-[#1A1330] sm:text-3xl">Recommended For You</h2>
+        <div className="mt-4 inline-flex gap-6 border-b border-[#EDEBF3]">
           {TABS.map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={cn(
                 "relative pb-3 text-sm font-medium transition-colors",
-                activeTab === tab ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                activeTab === tab ? "text-[#6C4CD8] font-bold" : "text-[#8B85A0] hover:text-[#241F35]"
               )}
             >
               {tab}
               {activeTab === tab && (
                 <motion.span
                   layoutId="recommended-tab-underline"
-                  className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-primary"
+                  className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-[#6C4CD8]"
                 />
               )}
             </button>
