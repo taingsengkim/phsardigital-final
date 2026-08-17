@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import SvgComponentSvg from "@/assets/svg/phsardigitalLogo";
 import LoginButton from "@/components/auth/LoginButton";
-import { authClient, useSession } from "@/lib/auth-client";
+import { authClient, useSession, logoutFromKeycloak } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 
 const BRAND = "#6C4CD8";
@@ -52,8 +52,7 @@ export default function Navbar() {
   const user = session?.user;
 
   async function handleLogout() {
-    await authClient.signOut();
-    window.location.href = "/";
+    await logoutFromKeycloak("/");
   }
 
   return (
