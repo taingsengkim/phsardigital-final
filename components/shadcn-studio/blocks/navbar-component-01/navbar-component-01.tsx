@@ -2,7 +2,22 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Search, Heart, ShoppingBag, ShoppingCart, MapPin, Menu, ChevronsUpDown, LogOut, User, Settings, Package } from "lucide-react";
+import {
+  Search,
+  Heart,
+  ShoppingBag,
+  ShoppingCart,
+  MapPin,
+  Menu,
+  ChevronsUpDown,
+  LogOut,
+  User,
+  Settings,
+  Package,
+  Store,
+  Clock,
+  BadgeCheck,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,8 +29,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import SvgComponentSvg from "@/assets/svg/phsardigitalLogo";
 import LoginButton from "@/components/auth/LoginButton";
-import { authClient, useSession, logoutFromKeycloak } from "@/lib/auth-client";
-import { cn } from "@/lib/utils";
+import { useSession, logoutFromKeycloak } from "@/lib/auth-client";
+import { useGetMeQuery } from "@/lib/api/authApi";
+import { useGetSellerApplicationQuery } from "@/lib/api/sellerApi";
 
 const BRAND = "#6C4CD8";
 
@@ -35,7 +51,8 @@ const CATEGORIES = [
 function getInitials(name?: string | null, email?: string | null): string {
   if (name) {
     const parts = name.trim().split(" ");
-    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    if (parts.length >= 2)
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
     return parts[0][0].toUpperCase();
   }
   if (email) return email[0].toUpperCase();
@@ -51,13 +68,27 @@ export default function Navbar() {
   const isLoggedIn = !!session?.user;
   const user = session?.user;
 
+  const { data: profile } = useGetMeQuery(undefined, {
+    skip: !isLoggedIn,
+  });
+
+  const { data: sellerApp } = useGetSellerApplicationQuery(undefined, {
+    skip: !isLoggedIn,
+  });
+
+  const isSeller = Boolean((profile as any)?.isSeller || sellerApp?.status === "APPROVED");
+  const isPendingSeller = sellerApp?.status === "PENDING";
+
+  const userAvatar = profile?.avatarUrl || sellerApp?.logoUri || user?.image || "";
+  const storeName = sellerApp?.storeDisplayName || sellerApp?.businessName;
+
   async function handleLogout() {
     await logoutFromKeycloak("/");
   }
 
   return (
     <header className="sticky top-0 z-50 shadow-sm transition-all duration-300">
-      {/* â”€â”€ top bar: white â”€â”€ */}
+      {/* ── top bar: white ── */}
       <div className="border-b border-[#EDEBF3] bg-white">
         <div className="mx-auto flex max-w-[1240px] items-center gap-4 px-6 py-3">
           {/* logo */}
@@ -89,7 +120,33 @@ export default function Navbar() {
 
           <div className="flex-1" />
 
-          {/* Saved â€” only when logged in */}
+          {/* Seller Dashboard Shortcut in Header if User is Seller */}
+          {isSeller && (
+            <Link
+              href="/seller-dashboard/home"
+              aria-label="Seller Dashboard"
+              title={storeName ? `Seller Dashboard (${storeName})` : "Seller Dashboard"}
+              className="hidden sm:flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold text-white shadow-md transition-all hover:brightness-105 active:scale-95"
+              style={{ background: "linear-gradient(90deg, #6C4CD8, #4F35A5)" }}
+            >
+              <Store size={15} />
+              <span>{storeName || "Seller Dashboard"}</span>
+            </Link>
+          )}
+
+          {isPendingSeller && !isSeller && (
+            <Link
+              href="/account/seller-application"
+              aria-label="Store Pending"
+              title="Seller application under review"
+              className="hidden sm:flex items-center gap-1.5 rounded-full bg-amber-100 border border-amber-300 px-3 py-1.5 text-xs font-bold text-amber-800 transition hover:bg-amber-200"
+            >
+              <Clock size={14} className="text-amber-600" />
+              <span>Store Pending</span>
+            </Link>
+          )}
+
+          {/* Saved — only when logged in */}
           {isLoggedIn && (
             <Link
               href="/saved"
@@ -105,7 +162,7 @@ export default function Navbar() {
             </Link>
           )}
 
-          {/* Orders â€” only when logged in */}
+          {/* Orders — only when logged in */}
           {isLoggedIn && (
             <Link
               href="/orders"
@@ -127,10 +184,10 @@ export default function Navbar() {
                   aria-label="Profile menu"
                   className="flex shrink-0 items-center gap-2 rounded-full p-1 transition-all hover:bg-[#F8F7FB] active:scale-95"
                 >
-                  {user?.image ? (
+                  {userAvatar ? (
                     <img
-                      src={user.image}
-                      alt={user.name ?? "Profile"}
+                      src={userAvatar}
+                      alt={user?.name ?? storeName ?? "Profile"}
                       className="h-9 w-9 rounded-full border-2 border-[#6C4CD8] object-cover shadow-sm transition-transform hover:scale-105"
                     />
                   ) : (
@@ -142,45 +199,69 @@ export default function Navbar() {
                 </button>
               </DropdownMenuTrigger>
 
-              <DropdownMenuContent className="w-56 mt-2" align="end">
+              <DropdownMenuContent className="w-60 mt-2 p-2" align="end">
                 <DropdownMenuLabel>
-                  <div className="flex flex-col gap-1">
-                    <span className="text-sm font-semibold text-[#1A1330]">
-                      {user?.name || "My Account"}
-                    </span>
-                    <span className="truncate text-xs text-[#9B94B4]">
-                      {user?.email}
-                    </span>
+                  <div className="flex items-center gap-3 py-1">
+                    {userAvatar ? (
+                      <img
+                        src={userAvatar}
+                        alt="Avatar"
+                        className="h-10 w-10 rounded-full border border-[#6C4CD8]/30 object-cover shrink-0"
+                      />
+                    ) : (
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#6C4CD8] text-xs font-bold text-white">
+                        {getInitials(user?.name, user?.email)}
+                      </div>
+                    )}
+                    <div className="flex flex-col min-w-0">
+                      <span className="truncate text-sm font-bold text-[#1A1330]">
+                        {isSeller ? storeName || user?.name : user?.name || "My Account"}
+                      </span>
+                      <span className="truncate text-xs text-[#9B94B4]">
+                        {user?.email}
+                      </span>
+                    </div>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
                   <DropdownMenuItem asChild>
-                    <Link href="/account" className="flex items-center gap-2 cursor-pointer transition-colors hover:text-[#6C4CD8]">
-                      <User size={15} />
-                      <span className="text-sm">My Profile</span>
+                    <Link href="/account" className="flex items-center gap-2.5 cursor-pointer py-2 transition-colors hover:text-[#6C4CD8]">
+                      <User size={16} className="text-[#6C4CD8]" />
+                      <span className="text-sm font-medium">My Account</span>
                     </Link>
                   </DropdownMenuItem>
+
+                  {isSeller && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/seller-dashboard/home" className="flex items-center gap-2.5 cursor-pointer py-2 transition-colors text-[#6C4CD8] font-bold">
+                        <Store size={16} />
+                        <span className="text-sm">Seller Dashboard</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+
                   <DropdownMenuItem asChild>
-                    <Link href="/orders" className="flex items-center gap-2 cursor-pointer transition-colors hover:text-[#6C4CD8]">
-                      <Package size={15} />
-                      <span className="text-sm">My Orders</span>
+                    <Link href="/orders" className="flex items-center gap-2.5 cursor-pointer py-2 transition-colors hover:text-[#6C4CD8]">
+                      <Package size={16} className="text-[#8D86A8]" />
+                      <span className="text-sm font-medium">My Orders</span>
                     </Link>
                   </DropdownMenuItem>
+
                   <DropdownMenuItem asChild>
-                    <Link href="/account/settings" className="flex items-center gap-2 cursor-pointer transition-colors hover:text-[#6C4CD8]">
-                      <Settings size={15} />
-                      <span className="text-sm">Settings</span>
+                    <Link href="/account" className="flex items-center gap-2.5 cursor-pointer py-2 transition-colors hover:text-[#6C4CD8]">
+                      <Settings size={16} className="text-[#8D86A8]" />
+                      <span className="text-sm font-medium">Settings</span>
                     </Link>
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={handleLogout}
-                  className="flex items-center gap-2 cursor-pointer text-rose-600 transition-colors focus:bg-rose-50 focus:text-rose-700"
+                  className="flex items-center gap-2.5 cursor-pointer py-2 text-rose-600 transition-colors focus:bg-rose-50 focus:text-rose-700"
                 >
-                  <LogOut size={15} />
-                  <span className="text-sm font-medium">Sign Out</span>
+                  <LogOut size={16} />
+                  <span className="text-sm font-semibold">Sign Out</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -204,7 +285,7 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* â”€â”€ purple nav rail â”€â”€ */}
+      {/* ── purple nav rail ── */}
       <div className="bg-[#6C4CD8] shadow-inner">
         <div className="mx-auto flex max-w-[1240px] items-center gap-6 px-6 py-2.5">
           {/* category dropdown */}
@@ -257,6 +338,25 @@ export default function Navbar() {
           </div>
 
           <div className="flex-1" />
+
+          {/* Seller Link in Nav Rail */}
+          {isSeller ? (
+            <Link
+              href="/seller-dashboard/home"
+              className="flex shrink-0 items-center gap-1.5 rounded-full bg-white px-4 py-1 text-xs font-bold text-[#6C4CD8] transition hover:bg-white/90 shadow-sm"
+            >
+              <Store size={14} />
+              <span>{storeName || "Seller Dashboard"}</span>
+            </Link>
+          ) : (
+            <Link
+              href="/account/seller-application"
+              className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/20 px-3.5 py-1 text-xs font-bold text-white transition hover:bg-white/30"
+            >
+              <Store size={14} />
+              <span>Become a Seller</span>
+            </Link>
+          )}
 
           {/* location pill */}
           <div className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-white shadow-inner backdrop-blur-sm transition-colors hover:bg-white/20 cursor-default">

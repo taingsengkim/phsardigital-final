@@ -3,7 +3,19 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
-import { Search, Heart, ShoppingBag, User, MapPin, Menu, ChevronsUpDown, ShoppingCart, X } from "lucide-react";
+import {
+  Search,
+  Heart,
+  ShoppingBag,
+  User,
+  MapPin,
+  Menu,
+  ChevronsUpDown,
+  ShoppingCart,
+  X,
+  Store,
+  Clock,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,6 +23,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useSession } from "@/lib/auth-client";
+import { useGetMeQuery } from "@/lib/api/authApi";
+import { useGetSellerApplicationQuery } from "@/lib/api/sellerApi";
 
 const BRAND = "#6C4CD8";
 const NAV_LINKS = ["Home", "Offers", "Brands", "Stores", "All Products"];
@@ -32,12 +47,20 @@ export default function Navbar() {
   const savedCount = 2;
   const cartCount = 2;
 
-  const iconButtons = [
-    { Icon: Heart, label: "Saved", badge: savedCount, href: "/saved" },
-    { Icon: ShoppingBag, label: "Orders", badge: 0, href: "/orders" },
-    { Icon: User, label: "Account", badge: 0, href: "/auth/login" },
-    { Icon: ShoppingCart, label: "Cart", badge: cartCount, href: "/cart" },
-  ];
+  const { data: session } = useSession();
+  const { data: profile } = useGetMeQuery(undefined, {
+    skip: !session?.user,
+  });
+  const { data: sellerApp } = useGetSellerApplicationQuery(undefined, {
+    skip: !session?.user,
+  });
+
+  const isLoggedIn = Boolean(session?.user);
+  const isSeller = Boolean((profile as any)?.isSeller || sellerApp?.status === "APPROVED");
+  const isPendingSeller = sellerApp?.status === "PENDING";
+
+  const userAvatar = profile?.avatarUrl || sellerApp?.logoUri || session?.user?.image || "";
+  const storeName = sellerApp?.storeDisplayName || sellerApp?.businessName;
 
   const categoryHref = (cat: string) =>
     `/category/${cat.toLowerCase().replace(/\s+/g, "-").replace(/[&]/g, "and")}`;
@@ -56,7 +79,7 @@ export default function Navbar() {
       {/* ── top bar: white ── */}
       <div style={{ background: "#fff", borderBottom: "1px solid #EDEBF3" }}>
         <div className="mx-auto max-w-[1240px] px-4 py-2 sm:px-6 sm:py-3">
-          {/* row 1: hamburger (mobile) + logo + icons */}
+          {/* row 1: hamburger (mobile) + logo + search + icons */}
           <div className="flex items-center gap-2 sm:gap-4">
             {/* hamburger - mobile/tablet only */}
             <button
@@ -93,7 +116,7 @@ export default function Navbar() {
               </span>
             </Link>
 
-            {/* search - desktop/tablet only, inline */}
+            {/* search - desktop/tablet only */}
             <div className="relative hidden flex-1 sm:block sm:max-w-[480px]">
               <input
                 value={search}
@@ -112,31 +135,99 @@ export default function Navbar() {
 
             <div className="hidden flex-1 sm:block" />
 
-            {/* icon buttons */}
+            {/* icon buttons & User profile */}
             <div className="flex flex-shrink-0 items-center gap-1.5 sm:gap-2">
-              {iconButtons.map(({ Icon, label, badge, href }) => (
+              {/* Seller Dashboard Shortcut if user is a seller */}
+              {isSeller && (
                 <Link
-                  key={label}
-                  href={href}
-                  aria-label={label}
-                  className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9"
-                  style={{ background: "#F1EFFA" }}
+                  href="/seller-dashboard/home"
+                  aria-label="Seller Dashboard"
+                  title={storeName ? `Seller Dashboard (${storeName})` : "Seller Dashboard"}
+                  className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold text-white transition hover:brightness-105 shadow-xs"
+                  style={{ background: "linear-gradient(90deg, #6C4CD8, #4F35A5)" }}
                 >
-                  <Icon size={15} color={BRAND} />
-                  {badge > 0 && (
-                    <span
-                      className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white"
-                      style={{ background: BRAND }}
-                    >
-                      {badge}
-                    </span>
-                  )}
+                  <Store size={14} />
+                  <span className="hidden md:inline">{storeName || "My Store"}</span>
                 </Link>
-              ))}
+              )}
+
+              {isPendingSeller && !isSeller && (
+                <Link
+                  href="/account/seller-application"
+                  aria-label="Store Pending"
+                  title="Seller application under review"
+                  className="flex items-center gap-1.5 rounded-full bg-amber-100 border border-amber-300 px-3 py-1.5 text-xs font-bold text-amber-800 transition hover:bg-amber-200"
+                >
+                  <Clock size={13} className="text-amber-600" />
+                  <span className="hidden md:inline">Store Pending</span>
+                </Link>
+              )}
+
+              <Link
+                href="/saved"
+                aria-label="Saved"
+                className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9 transition hover:scale-105"
+                style={{ background: "#F1EFFA" }}
+              >
+                <Heart size={15} color={BRAND} />
+                {savedCount > 0 && (
+                  <span
+                    className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white"
+                    style={{ background: BRAND }}
+                  >
+                    {savedCount}
+                  </span>
+                )}
+              </Link>
+
+              <Link
+                href="/orders"
+                aria-label="Orders"
+                className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9 transition hover:scale-105"
+                style={{ background: "#F1EFFA" }}
+              >
+                <ShoppingBag size={15} color={BRAND} />
+              </Link>
+
+              {/* Account / Profile Button */}
+              <Link
+                href={isLoggedIn ? "/account" : "/auth/login"}
+                aria-label="Account"
+                title={isLoggedIn ? `Account (${session?.user?.name || "User"})` : "Sign In"}
+                className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9 transition hover:scale-105 overflow-hidden ring-2 ring-[#6C4CD8]/20"
+                style={{ background: "#F1EFFA" }}
+              >
+                {isLoggedIn && userAvatar ? (
+                  <img
+                    src={userAvatar}
+                    alt="User Avatar"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <User size={15} color={BRAND} />
+                )}
+              </Link>
+
+              <Link
+                href="/cart"
+                aria-label="Cart"
+                className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9 transition hover:scale-105"
+                style={{ background: "#F1EFFA" }}
+              >
+                <ShoppingCart size={15} color={BRAND} />
+                {cartCount > 0 && (
+                  <span
+                    className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white"
+                    style={{ background: BRAND }}
+                  >
+                    {cartCount}
+                  </span>
+                )}
+              </Link>
             </div>
           </div>
 
-          {/* row 2: search - mobile only, full width */}
+          {/* row 2: search - mobile only */}
           <div className="relative mt-2 block sm:hidden">
             <input
               value={search}
@@ -155,7 +246,7 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* ── purple nav rail: desktop/tablet only ── */}
+      {/* ── purple nav rail ── */}
       <div className="hidden lg:block" style={{ background: BRAND }}>
         <div className="mx-auto flex max-w-[1240px] items-center gap-5 px-6 py-2">
           <DropdownMenu>
@@ -185,13 +276,33 @@ export default function Navbar() {
             <Link
               key={name}
               href={navLinkHref(name)}
-              className="whitespace-nowrap text-[12px] font-semibold text-white/90 no-underline"
+              className="whitespace-nowrap text-[12px] font-semibold text-white/90 no-underline hover:text-white"
             >
               {name}
             </Link>
           ))}
 
           <div className="flex-1" />
+
+          {/* Quick link to Seller Registration / Dashboard in nav rail */}
+          {isSeller ? (
+            <Link
+              href="/seller-dashboard/home"
+              className="flex flex-shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1 text-[12px] font-bold text-[#6C4CD8] bg-white transition hover:bg-white/90 shadow-xs"
+            >
+              <Store size={13} />
+              {storeName || "Seller Dashboard"}
+            </Link>
+          ) : (
+            <Link
+              href="/account/seller-application"
+              className="flex flex-shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-semibold text-white transition hover:bg-white/20"
+              style={{ background: "rgba(255,255,255,0.18)" }}
+            >
+              <Store size={13} />
+              Become a Seller
+            </Link>
+          )}
 
           <div
             className="flex flex-shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-semibold text-white"
@@ -210,9 +321,46 @@ export default function Navbar() {
           style={{ background: BRAND, borderTop: "1px solid rgba(255,255,255,0.15)" }}
         >
           <div className="flex flex-col gap-1 px-4 py-3">
-            <div
-              className="mb-1 flex items-center gap-1.5 px-1 pb-1 text-[11px] font-semibold uppercase tracking-wide text-white/70"
-            >
+            {/* Account Quick Status inside Mobile Drawer */}
+            <div className="mb-2 rounded-xl bg-white/10 p-3 text-white">
+              <div className="flex items-center gap-3">
+                {userAvatar ? (
+                  <img
+                    src={userAvatar}
+                    alt="User Avatar"
+                    className="h-10 w-10 rounded-full object-cover ring-2 ring-white/30"
+                  />
+                ) : (
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-white font-bold">
+                    <User size={20} />
+                  </div>
+                )}
+                <div>
+                  <p className="text-sm font-bold">{session?.user?.name || "Guest Account"}</p>
+                  <p className="text-xs text-white/70">{session?.user?.email || "Sign in to manage orders"}</p>
+                </div>
+              </div>
+              <div className="mt-3 flex items-center gap-2">
+                <Link
+                  href={isLoggedIn ? "/account" : "/auth/login"}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex-1 rounded-lg bg-white py-1.5 text-center text-xs font-bold text-[#6C4CD8]"
+                >
+                  {isLoggedIn ? "My Account" : "Sign In"}
+                </Link>
+                {isSeller && (
+                  <Link
+                    href="/seller-dashboard/home"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex-1 rounded-lg bg-emerald-400 py-1.5 text-center text-xs font-bold text-[#1A1330]"
+                  >
+                    Seller Dashboard
+                  </Link>
+                )}
+              </div>
+            </div>
+
+            <div className="mb-1 flex items-center gap-1.5 px-1 pb-1 text-[11px] font-semibold uppercase tracking-wide text-white/70">
               Categories
             </div>
             {CATEGORIES.map((cat) => (
@@ -228,9 +376,7 @@ export default function Navbar() {
 
             <div className="my-2 h-px bg-white/15" />
 
-            <div
-              className="mb-1 flex items-center gap-1.5 px-1 pb-1 text-[11px] font-semibold uppercase tracking-wide text-white/70"
-            >
+            <div className="mb-1 flex items-center gap-1.5 px-1 pb-1 text-[11px] font-semibold uppercase tracking-wide text-white/70">
               Browse
             </div>
             {NAV_LINKS.map((name) => (
