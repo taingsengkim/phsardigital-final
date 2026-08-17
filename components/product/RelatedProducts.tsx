@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ChevronRight, Star } from "lucide-react";
+import { ChevronsUpDown, Star } from "lucide-react";
 import { getListings } from "@/app/api/listings";
 import type { Listing, ListingDiscount } from "@/lib/types";
 
@@ -133,7 +133,7 @@ export default async function RelatedProducts({ categoryId, excludeSlug }: Props
           href="/products"
           className="hidden items-center gap-1.5 rounded-xl border border-[#E2DFEC] bg-white px-5 py-2.5 text-[15px] font-bold text-[#6C4CD8] transition hover:bg-[#F1EFFA] sm:flex"
         >
-          View all <ChevronRight size={16} />
+          View all <ChevronsUpDown size={16} />
         </Link>
       </div>
 
@@ -150,7 +150,7 @@ export default async function RelatedProducts({ categoryId, excludeSlug }: Props
           href="/products"
           className="flex items-center gap-2 rounded-xl border border-[#E2DFEC] bg-white px-6 py-3 text-[15px] font-bold text-[#6C4CD8]"
         >
-          View all <ChevronRight size={16} />
+          View all <ChevronsUpDown size={16} />
         </Link>
       </div>
     </section>

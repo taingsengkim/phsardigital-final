@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronsUpDown } from "lucide-react";
 import { motion } from "framer-motion";
 
 type SectionHeaderProps = {
@@ -39,7 +39,7 @@ export function SectionHeader({ title, href = "#", onPrev, onNext, className }: 
               aria-label="Previous"
               className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-foreground hover:bg-accent"
             >
-              <ChevronLeft size={16} />
+              <ChevronsUpDown size={16} />
             </motion.button>
             <motion.button
               whileHover={{ scale: 1.1 }}
@@ -48,7 +48,7 @@ export function SectionHeader({ title, href = "#", onPrev, onNext, className }: 
               aria-label="Next"
               className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground"
             >
-              <ChevronRight size={16} />
+              <ChevronsUpDown size={16} />
             </motion.button>
           </div>
         )}

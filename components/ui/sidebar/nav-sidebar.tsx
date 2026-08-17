@@ -3,17 +3,8 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import {
-  ChevronDown,
-  ChevronRight,
-  ChevronUp,
-  CirclePlus,
-  Home,
-  LogOut,
-  Store,
-  Tags,
-  UserRound,
-} from "lucide-react"
+import { ChevronDown, ChevronUp, CirclePlus, CircleHelp, Home, Moon, Store, Sun, Tags, UserRound } from "lucide-react"
+import { useTheme } from "next-themes"
 
 import {
   Sidebar,
@@ -22,42 +13,57 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@/components/ui/sidebar"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 
-const productLinks = [
-  { title: "Dashboard", url: "/dashboard/products" },
-  { title: "Drafts", url: "/dashboard/products/drafts", count: 2, badge: "bg-[#ffb28e] text-[#252525]" },
-  { title: "Released", url: "/dashboard/products/released" },
-  { title: "Scheduled", url: "/dashboard/products/scheduled", count: 8, badge: "bg-[#afe5cc] text-[#252525]" },
+type SidebarChildLink = {
+  title: string
+  url: string
+  count?: number
+}
+
+const productLinks: SidebarChildLink[] = [
+  { title: "Dashboard", url: "/seller-dashboard/products/dashboard" },
+  { title: "Drafts", url: "/seller-dashboard/products/drafts" },
+  { title: "Released", url: "/seller-dashboard/products/released" },
+  { title: "Comments", url: "/seller-dashboard/products/comments" },
+  { title: "Scheduled", url: "/seller-dashboard/products/scheduled" },
 ]
+
+const customerLinks: SidebarChildLink[] = [
+  { title: "Overview", url: "/seller-dashboard/customers/overview" },
+  { title: "Customer list", url: "/seller-dashboard/customers" },
+]
+
+const subscribe = () => () => {}
 
 export function SellerSidebar() {
   const pathname = usePathname()
-  const [productsOpen, setProductsOpen] = React.useState(true)
-  const [customersOpen, setCustomersOpen] = React.useState(false)
+  const { resolvedTheme, setTheme } = useTheme()
+  const mounted = React.useSyncExternalStore(subscribe, () => true, () => false)
+  const [productsOpen, setProductsOpen] = React.useState(pathname.startsWith("/seller-dashboard/products"))
+  const [customersOpen, setCustomersOpen] = React.useState(pathname.startsWith("/seller-dashboard/customers"))
 
   return (
-    <Sidebar collapsible="icon" className="border-r ]">
-      <SidebarHeader className="flex h-16 items-center border-b border-sidebar-border px-4">
+    <Sidebar collapsible="icon" className="border-r bg-white">
+      <SidebarHeader className="flex h-18 items-center border-b border-sidebar-border bg-white px-4">
         <Link href="/dashboard" className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
           <div className="flex size-8 items-center justify-center rounded-lg bg-[#6C4CD8] text-white">
             <Store className="size-5" />
           </div>
           <div className="flex flex-col gap-0.5 leading-none group-data-[collapsible=icon]:hidden">
             <span className="font-semibold text-[#6C4CD8]">Seller Portal</span>
-            <span className="text-xs text-muted-foreground">Phsar Digital</span>
+            <span className="text-xs text-muted-foreground">Seller Dashboard</span>
           </div>
         </Link>
       </SidebarHeader>
 
-      <SidebarContent className="overflow-x-hidden px-3 py-5">
-        <nav aria-label="Seller dashboard" className="space-y-2">
+      <SidebarContent className="overflow-x-hidden bg-white px-3 py-5">
+        <nav aria-label="Seller dashboard" className="space-y-[4px]">
           <Link
-            href="/dashboard"
+            href="/seller-dashboard/home"
             className={cn(
               "flex h-12 items-center gap-4 rounded-xl px-3 text-[15px] font-semibold text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0",
-              pathname === "/dashboard" && "text-foreground",
+              pathname === "/seller-dashboard/home" && "bg-sidebar-accent text-foreground",
             )}
           >
             <Home className="size-5 shrink-0" strokeWidth={2} />
@@ -77,11 +83,9 @@ export function SellerSidebar() {
               </button>
               <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
                 <Link
-                  href="/dashboard/products/new"
+                  href="/seller-dashboard/products/new"
                   aria-label="Add product"
-                  className="grid size-8 place-items-center rounded-full border border-border hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                 >
-                  <CirclePlus className="size-5" />
                 </Link>
                 <button
                   type="button"
@@ -95,8 +99,7 @@ export function SellerSidebar() {
             </div>
 
             {productsOpen && (
-              <div className="relative ml-[27px] mt-1 space-y-1 pl-5 group-data-[collapsible=icon]:hidden">
-                <span className="absolute bottom-6 left-0 top-0 w-px bg-border" aria-hidden="true" />
+              <div className="relative ml-[27px] space-y-[2px] pl-5 pb-[2px] group-data-[collapsible=icon]:hidden">
                 {productLinks.map((item) => {
                   const active = pathname === item.url
                   return (
@@ -104,17 +107,16 @@ export function SellerSidebar() {
                       key={item.url}
                       href={item.url}
                       className={cn(
-                        "relative flex h-11 items-center rounded-xl px-3 text-[15px] font-semibold text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground before:absolute before:-left-5 before:top-0 before:h-1/2 before:w-4 before:rounded-bl-xl before:border-b before:border-l before:border-border",
-                        active && "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm",
+                        "relative flex h-[42px] items-center rounded-[11px] px-3 text-[14px] font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground before:absolute before:-left-5 before:bottom-1/2 before:top-[-3px] before:w-5 before:rounded-bl-[14px] before:border-b before:border-l before:border-[#e7e8ea]",
+                        active && "bg-[#f0f0f1] font-semibold text-[#25272a] shadow-[0_2px_0_rgba(0,0,0,0.07)]",
                       )}
                     >
                       <span>{item.title}</span>
-                      {item.count && (
-                        <span className={cn("ml-auto grid min-w-7 place-items-center rounded-lg px-2 py-1 text-sm font-semibold", item.badge)}>
+                      {item.count !== undefined && (
+                        <span className="ml-auto grid min-w-[25px] place-items-center rounded-[6px] bg-[#afe5cc] px-[6px] py-[3px] text-[12px] font-semibold text-[#252525]">
                           {item.count}
                         </span>
                       )}
-                      {active && item.title === "Dashboard" && <ChevronRight className="ml-auto size-5" />}
                     </Link>
                   )
                 })}
@@ -131,22 +133,34 @@ export function SellerSidebar() {
             >
               <UserRound className="size-5 shrink-0" strokeWidth={2} />
               <span className="group-data-[collapsible=icon]:hidden">Customers</span>
-              <ChevronDown className={cn("ml-auto size-5 transition-transform group-data-[collapsible=icon]:hidden", customersOpen && "rotate-180")} />
+              {customersOpen ? <ChevronUp className="ml-auto size-5 group-data-[collapsible=icon]:hidden" /> : <ChevronDown className="ml-auto size-5 group-data-[collapsible=icon]:hidden" />}
             </button>
             {customersOpen && (
-              <div className="ml-[47px] group-data-[collapsible=icon]:hidden">
-                <Link href="/dashboard/customers" className="flex h-10 items-center rounded-xl px-3 text-sm font-medium text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
-                  All customers
-                </Link>
+              <div className="relative ml-[27px] space-y-[2px] pl-5 pb-[2px] group-data-[collapsible=icon]:hidden">
+                {customerLinks.map((item) => {
+                  const active = pathname === item.url
+                  return (
+                    <Link
+                      key={item.url}
+                      href={item.url}
+                      className={cn(
+                        "relative flex h-[42px] items-center rounded-[11px] px-3 text-[14px] font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground before:absolute before:-left-5 before:bottom-1/2 before:top-[-3px] before:w-5 before:rounded-bl-[14px] before:border-b before:border-l before:border-[#e7e8ea]",
+                        active && "bg-[#f0f0f1] font-semibold text-[#25272a] shadow-[0_2px_0_rgba(0,0,0,0.07)]",
+                      )}
+                    >
+                      {item.title}
+                    </Link>
+                  )
+                })}
               </div>
             )}
           </div>
 
           <Link
-            href="/dashboard/shop"
+            href="/seller-dashboard/shop"
             className={cn(
               "flex h-12 items-center gap-4 rounded-xl px-3 text-[15px] font-semibold text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0",
-              pathname === "/dashboard/shop" && "bg-sidebar-accent text-sidebar-accent-foreground",
+              pathname === "/seller-dashboard/shop" && "bg-sidebar-accent text-sidebar-accent-foreground",
             )}
           >
             <Store className="size-5 shrink-0" strokeWidth={2} />
@@ -155,19 +169,45 @@ export function SellerSidebar() {
         </nav>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border p-4">
-        <div className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center">
-          <Avatar className="size-8">
-            <AvatarImage src="/picture/lisa.PNG" alt="Seller" />
-            <AvatarFallback>S</AvatarFallback>
-          </Avatar>
-          <div className="flex min-w-0 flex-col gap-0.5 leading-none group-data-[collapsible=icon]:hidden">
-            <span className="text-sm font-medium">Seller Name</span>
-            <span className="truncate text-xs text-muted-foreground">seller@example.com</span>
+      <SidebarFooter className="border-t border-sidebar-border bg-white p-4">
+        <div className="space-y-4 pb-4 group-data-[collapsible=icon]:hidden">
+          <Link
+            href="/dashboard/help"
+            className="flex h-11 items-center gap-3 rounded-xl px-2 text-sm font-semibold text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+          >
+            <CircleHelp className="size-5 shrink-0" strokeWidth={2} />
+            <span>Help &amp; getting started</span>
+          </Link>
+
+          <div
+            className="grid grid-cols-2 rounded-full bg-muted p-1"
+            aria-label="Color theme"
+          >
+            <button
+              type="button"
+              onClick={() => setTheme("light")}
+              aria-pressed={mounted && resolvedTheme === "light"}
+              className={cn(
+                "flex h-10 items-center justify-center gap-2 rounded-full text-sm font-semibold text-muted-foreground transition-all",
+                mounted && resolvedTheme === "light" && "bg-background text-foreground shadow-sm",
+              )}
+            >
+              <Sun className="size-5" />
+              Light
+            </button>
+            <button
+              type="button"
+              onClick={() => setTheme("dark")}
+              aria-pressed={mounted && resolvedTheme === "dark"}
+              className={cn(
+                "flex h-10 items-center justify-center gap-2 rounded-full text-sm font-semibold text-muted-foreground transition-all",
+                mounted && resolvedTheme === "dark" && "bg-background text-foreground shadow-sm",
+              )}
+            >
+              <Moon className="size-5" />
+              Dark
+            </button>
           </div>
-          <button type="button" aria-label="Log out" className="ml-auto group-data-[collapsible=icon]:hidden">
-            <LogOut className="size-4 text-muted-foreground" />
-          </button>
         </div>
       </SidebarFooter>
       <SidebarRail />

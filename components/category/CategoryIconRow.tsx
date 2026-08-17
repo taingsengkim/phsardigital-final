@@ -1,16 +1,5 @@
 import Link from "next/link";
-import {
-  Monitor,
-  Home as HomeIcon,
-  Smartphone,
-  Sofa,
-  Shirt,
-  Laptop,
-  UtensilsCrossed,
-  ShoppingBag as BagIcon,
-  Car,
-  LayoutGrid,
-} from "lucide-react";
+import { Monitor, Home as HomeIcon, Smartphone, Sofa, Shirt, Laptop, UtensilsCrossed, ShoppingBag as BagIcon, Car, LayoutGrid } from "lucide-react";
 
 const CATEGORIES = [
   { name: "Recommend",                 icon: null,            bg: "#EDEBF3",  active: true },

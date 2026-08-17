@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ChevronRight } from "lucide-react";
+import { ChevronsUpDown } from "lucide-react";
 import { mockCategories } from "../categories-mock";
 import { Button } from "@/components/ui/ButtonPurple";
 
@@ -28,7 +28,7 @@ export function HeroBanner() {
                 className="flex items-center justify-between rounded-lg px-3 py-2.5 text-sm text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
               >
                 {category.name}
-                <ChevronRight size={14} className="text-muted-foreground" />
+                <ChevronsUpDown size={14} className="text-muted-foreground" />
               </Link>
             </li>
           ))}

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Shield } from "lucide-react";
+import { ArrowUpDown, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AuthLeftPanel from "@/components/auth/AuthLeftPanel";
 import { AuthToast, type ToastState } from "@/components/auth/AuthToast";
@@ -105,7 +105,7 @@ export default function LoginPage() {
                 <>
                   <KeycloakIcon />
                   Sign in with Keycloak
-                  <ArrowRight size={16} />
+                  <ArrowUpDown size={16} />
                 </>
               )}
             </button>
@@ -128,7 +128,7 @@ export default function LoginPage() {
                 href="/auth/register"
                 className="inline-flex items-center gap-1.5 rounded-lg bg-[#EDE9FB] px-6 py-2.5 text-[13px] font-semibold text-[#6C4CD8] transition hover:bg-[#6C4CD8] hover:text-white"
               >
-                Create an account <ArrowRight size={14} />
+                Create an account <ArrowUpDown size={14} />
               </Link>
             </div>
           </div>

@@ -3,16 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  Info,
-  User,
-  Mail,
-  Lock,
-  Eye,
-  EyeOff,
-  ArrowRight,
-  CheckCircle2,
-} from "lucide-react";
+import { Info, User, Mail, Lock, Eye, EyeOff, ArrowUpDown, CheckCircle2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { cn } from "@/lib/utils";
@@ -223,7 +214,7 @@ export default function RegisterPage() {
                 href="/auth/login"
                 className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#6C4CD8] px-7 py-3 text-[14px] font-semibold text-white hover:bg-[#5C3DC8]"
               >
-                Go to Sign In <ArrowRight size={15} />
+                Go to Sign In <ArrowUpDown size={15} />
               </Link>
             </div>
           ) : (
@@ -470,7 +461,7 @@ export default function RegisterPage() {
                     </span>
                   ) : (
                     <>
-                      Create Account <ArrowRight size={16} />
+                      Create Account <ArrowUpDown size={16} />
                     </>
                   )}
                 </button>
@@ -484,7 +475,7 @@ export default function RegisterPage() {
                   href="/auth/login"
                   className="inline-flex items-center gap-1.5 rounded-lg bg-[#EDE9FB] px-6 py-2.5 text-[13px] font-semibold text-[#6C4CD8] transition hover:bg-[#6C4CD8] hover:text-white"
                 >
-                  Sign in instead <ArrowRight size={14} />
+                  Sign in instead <ArrowUpDown size={14} />
                 </Link>
               </div>
             </div>

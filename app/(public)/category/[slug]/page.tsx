@@ -3,10 +3,7 @@
 import { useState, use } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import {
-  Heart, Star, ChevronRight, Headphones, ShieldCheck,
-  RotateCcw, LayoutGrid, List, ChevronDown, ShoppingCart,
-} from "lucide-react";
+import { Heart, Star, ChevronsUpDown, Headphones, ShieldCheck, RotateCcw, LayoutGrid, List, ShoppingCart } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /* ── types ──────────────────────────────────────────────────────────────── */
@@ -279,9 +276,9 @@ export default function CategoryPage({ params }: { params: Promise<{ slug: strin
         {/* ── breadcrumb ── */}
         <nav className="mb-5 flex items-center gap-1.5 text-[15px] text-[#8B85A0]">
           <Link href="/home" className="hover:text-[#6C4CD8]">Home</Link>
-          <ChevronRight size={13} />
+          <ChevronsUpDown size={13} />
           <Link href="/products" className="hover:text-[#6C4CD8]">Products</Link>
-          <ChevronRight size={13} />
+          <ChevronsUpDown size={13} />
           <span className="font-semibold text-[#241F35]">{categoryName}</span>
         </nav>
 
@@ -324,7 +321,7 @@ export default function CategoryPage({ params }: { params: Promise<{ slug: strin
               <option value="priceDesc">Price: High to Low</option>
               <option value="newest">Newest</option>
             </select>
-            <ChevronDown size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#8B85A0]" />
+            <ChevronsUpDown size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#8B85A0]" />
           </div>
         </div>
 

@@ -2,26 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
-import {
-  User,
-  ShoppingBag,
-  Heart,
-  Lock,
-  Bell,
-  Camera,
-  CheckCircle2,
-  ChevronRight,
-  Loader2,
-  Save,
-  Trash2,
-  Copy,
-  Check,
-  ShieldCheck,
-  Mail,
-  Phone,
-  Calendar,
-  Sparkles,
-} from "lucide-react";
+import { User, ShoppingBag, Heart, Lock, Bell, Camera, CheckCircle2, ChevronsUpDown, Loader2, Save, Trash2, Copy, Check, ShieldCheck, Mail, Phone, Calendar, Sparkles } from "lucide-react";
 import { useSession } from "@/lib/auth-client";
 import {
   useGetMeQuery,
@@ -219,7 +200,7 @@ export default function AccountPageClient() {
             <Link href="/home" className="transition hover:text-white">
               Home
             </Link>
-            <ChevronRight size={14} className="text-white/40" />
+            <ChevronsUpDown size={14} className="text-white/40" />
             <span className="font-semibold text-white">My Account</span>
           </nav>
 
@@ -351,7 +332,7 @@ export default function AccountPageClient() {
                         <Icon size={18} className="shrink-0 text-[#8D86A8]" />
                         <span className="truncate text-left">{item.label}</span>
                       </div>
-                      <ChevronRight size={16} className="shrink-0 text-[#B5B0CA]" />
+                      <ChevronsUpDown size={16} className="shrink-0 text-[#B5B0CA]" />
                     </Link>
                   );
                 }

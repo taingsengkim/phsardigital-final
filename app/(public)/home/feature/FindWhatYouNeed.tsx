@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ChevronRight } from "lucide-react";
+import { ChevronsUpDown } from "lucide-react";
 import { mockCategoryPanelListings } from "../listing-mock";
 import { getPrimaryImage } from "../listing-helpers";
 import { SectionHeader } from "../SectionHeader";
@@ -30,7 +30,7 @@ function CategoryPanel({ slug, label, count }: { slug: string; label: string; co
           href={`/categories/${slug}`}
           className="flex items-center gap-0.5 text-xs font-medium text-primary hover:underline"
         >
-          View All <ChevronRight size={12} />
+          View All <ChevronsUpDown size={12} />
         </Link>
       </div>
       <div className="grid grid-cols-4 gap-2">

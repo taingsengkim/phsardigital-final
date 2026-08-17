@@ -16,7 +16,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { MoreHorizontalIcon, FolderIcon, ArrowRightIcon, Trash2Icon } from "lucide-react"
+import { MoreHorizontalIcon, FolderIcon, ArrowUpDownIcon, Trash2Icon } from "lucide-react"
 
 export function NavProjects({
   projects,
@@ -63,7 +63,7 @@ export function NavProjects({
                   <span>View Project</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem>
-                  <ArrowRightIcon
+                  <ArrowUpDownIcon
                   />
                   <span>Share Project</span>
                 </DropdownMenuItem>

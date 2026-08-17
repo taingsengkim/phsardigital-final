@@ -3,17 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
-import {
-  Search,
-  Heart,
-  ShoppingBag,
-  User,
-  MapPin,
-  Menu,
-  ChevronDown,
-  ShoppingCart,
-  X,
-} from "lucide-react";
+import { Search, Heart, ShoppingBag, User, MapPin, Menu, ChevronsUpDown, ShoppingCart, X } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -177,7 +167,7 @@ export default function Navbar() {
               >
                 <Menu size={13} />
                 Select Category
-                <ChevronDown size={12} />
+                <ChevronsUpDown size={12} />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="start">

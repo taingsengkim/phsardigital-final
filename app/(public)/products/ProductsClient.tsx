@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { LayoutGrid, List, ChevronDown, Heart, Star } from "lucide-react";
+import { LayoutGrid, List, ChevronsUpDown, Heart, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MOCK_PRODUCTS } from "@/lib/mock-products";
 
@@ -73,7 +73,7 @@ export default function ProductsClient() {
             <option value="priceDesc">Price: High to Low</option>
             <option value="newest">Newest</option>
           </select>
-          <ChevronDown
+          <ChevronsUpDown
             size={12}
             className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8B85A0]"
           />

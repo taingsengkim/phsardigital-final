@@ -6,7 +6,6 @@ import { Bell, Flag, Plus, Settings, User } from "lucide-react"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { ModeToggle } from "@/components/ui/mode-toogle"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,7 +18,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 export function NavTopbar() {
   return (
-    <header className="flex h-[72px] shrink-0 items-center gap-3 border-b bg-background px-4 sm:px-6 lg:px-9">
+    <header className="sticky top-0 z-50 flex h-18 shrink-0 items-center gap-3 border-b bg-background px-4 shadow-[0_1px_0_rgba(0,0,0,0.02)] sm:px-6 lg:px-9">
       <SidebarTrigger className="shrink-0 md:hidden" />
 
       <div className="relative w-full max-w-[340px]">
@@ -50,8 +49,6 @@ export function NavTopbar() {
             <span className="hidden sm:inline">Create</span>
           </Link>
         </Button>
-
-        <ModeToggle />
 
         <Button
           type="button"

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { ChevronsUpDown } from "lucide-react";
 import { getListingBySlug } from "@/app/api/listings";
 import ProductGallery from "@/components/product/ProductGallery";
 import ProductDetailClient from "@/components/product/ProductDetailClient";
@@ -40,7 +40,7 @@ export default async function ProductDetailPage({ params }: Props) {
             {breadcrumbTrail.map((crumb, i) => (
               <li key={i} className="flex items-center gap-1.5">
                 {i > 0 && (
-                  <ChevronRight size={13} className="shrink-0 opacity-50" />
+                  <ChevronsUpDown size={13} className="shrink-0 opacity-50" />
                 )}
                 {crumb.href ? (
                   <Link href={crumb.href} className="hover:text-[#6C4CD8] transition-colors">

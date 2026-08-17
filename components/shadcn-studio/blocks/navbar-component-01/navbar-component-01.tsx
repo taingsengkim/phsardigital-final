@@ -2,19 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import {
-  Search,
-  Heart,
-  ShoppingBag,
-  ShoppingCart,
-  MapPin,
-  Menu,
-  ChevronDown,
-  LogOut,
-  User,
-  Settings,
-  Package,
-} from "lucide-react";
+import { Search, Heart, ShoppingBag, ShoppingCart, MapPin, Menu, ChevronsUpDown, LogOut, User, Settings, Package } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -151,7 +139,7 @@ export default function Navbar() {
                       {getInitials(user?.name, user?.email)}
                     </div>
                   )}
-                  <ChevronDown size={14} className="text-[#6B7280] transition-transform group-hover:rotate-180" />
+                  <ChevronsUpDown size={14} className="text-[#6B7280] transition-transform group-hover:rotate-180" />
                 </button>
               </DropdownMenuTrigger>
 
@@ -229,7 +217,7 @@ export default function Navbar() {
               >
                 <Menu size={16} />
                 Select Category
-                <ChevronDown size={14} className="opacity-70 transition-transform group-hover:rotate-180" />
+                <ChevronsUpDown size={14} className="opacity-70 transition-transform group-hover:rotate-180" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56 mt-2" align="start">
