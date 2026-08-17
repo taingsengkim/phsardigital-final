@@ -22,7 +22,7 @@ import {
   Calendar,
   Sparkles,
 } from "lucide-react";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/auth-client";
 import {
   useGetMeQuery,
   useUpdateMeMutation,
@@ -36,8 +36,7 @@ import { cn } from "@/lib/utils";
 const BRAND = "#6C4CD8";
 
 export default function AccountPageClient() {
-  const { data: session, status } = useSession();
-  const sessionPending = status === "loading";
+  const { data: session, isPending: sessionPending } = useSession();
   const {
     data: profile,
     isLoading: profileLoading,
@@ -212,7 +211,7 @@ export default function AccountPageClient() {
 
   return (
     <div className="min-h-screen bg-[#F8F7FB] pb-16 font-sans">
-      {/* ── Header Banner ── */}
+      {/* â”€â”€ Header Banner â”€â”€ */}
       <div className="bg-gradient-to-r from-[#1A1330] via-[#2A1D4E] to-[#6C4CD8] text-white">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           {/* Breadcrumb */}
@@ -300,10 +299,10 @@ export default function AccountPageClient() {
         </div>
       </div>
 
-      {/* ── Main Layout Body ── */}
+      {/* â”€â”€ Main Layout Body â”€â”€ */}
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
-          {/* ── Sidebar Navigation Tabs ── */}
+          {/* â”€â”€ Sidebar Navigation Tabs â”€â”€ */}
           <div className="space-y-4 lg:col-span-1">
             <div className="overflow-hidden rounded-2xl bg-white p-3 shadow-sm ring-1 ring-black/5">
               {[
@@ -408,12 +407,12 @@ export default function AccountPageClient() {
                 href="/contact-us"
                 className="mt-4 inline-block text-sm font-semibold text-[#6C4CD8] hover:underline"
               >
-                Contact Customer Support →
+                Contact Customer Support â†’
               </Link>
             </div>
           </div>
 
-          {/* ── Main Content Area ── */}
+          {/* â”€â”€ Main Content Area â”€â”€ */}
           <div className="lg:col-span-3">
             {activeTab === "details" && (
               <div className="space-y-6">
@@ -734,7 +733,7 @@ export default function AccountPageClient() {
                         rel="noreferrer"
                         className="mt-4 inline-flex items-center gap-2 rounded-lg bg-[#6C4CD8] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#5C3DC8]"
                       >
-                        Open Keycloak Security Portal →
+                        Open Keycloak Security Portal â†’
                       </a>
                     </div>
                   </div>

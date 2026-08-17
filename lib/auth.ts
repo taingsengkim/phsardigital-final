@@ -1,34 +1,42 @@
-import NextAuth from "next-auth";
-import KeycloakProvider from "next-auth/providers/keycloak";
+﻿import { betterAuth } from "better-auth";
+import { genericOAuth, keycloak } from "better-auth/plugins/generic-oauth";
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
-  providers: [
-    KeycloakProvider({
-      clientId: process.env.KEYCLOAK_CLIENT_ID!,
-      clientSecret: process.env.KEYCLOAK_CLIENT_SECRET!,
-      issuer: process.env.KEYCLOAK_ISSUER!,
+const clientId = process.env.KEYCLOAK_CLIENT_ID;
+const clientSecret = process.env.KEYCLOAK_CLIENT_SECRET;
+const issuer = process.env.KEYCLOAK_ISSUER;
+
+if (!clientId || !clientSecret || !issuer) {
+  throw new Error(
+    "KEYCLOAK_CLIENT_ID, KEYCLOAK_CLIENT_SECRET, and KEYCLOAK_ISSUER are required.",
+  );
+}
+
+export const auth = betterAuth({
+  appName: "Phsar Digital",
+  secret: process.env.BETTER_AUTH_SECRET,
+  baseURL: process.env.BETTER_AUTH_URL,
+  session: {
+    cookieCache: {
+      enabled: true,
+      maxAge: 5 * 60,
+      strategy: "jwe",
+      refreshCache: true,
+    },
+  },
+  account: {
+    encryptOAuthTokens: true,
+    storeStateStrategy: "cookie",
+  },
+  plugins: [
+    genericOAuth({
+      config: [
+        keycloak({
+          clientId,
+          clientSecret,
+          issuer,
+          scopes: ["openid", "profile", "email"],
+        }),
+      ],
     }),
   ],
-  session: {
-    strategy: "jwt",
-  },
-  callbacks: {
-    async jwt({ token, account }) {
-      // Persist the OAuth access_token right after signin
-      if (account) {
-        token.accessToken = account.access_token;
-      }
-      return token;
-    },
-    async session({ session, token }) {
-      // Send properties to the client, like an access_token from a provider.
-      if (token?.accessToken) {
-        // We cast as any because we're augmenting the session types
-        (session as any).accessToken = token.accessToken;
-      }
-      return session;
-    },
-  },
-  // Ensure NextAuth knows the URL for redirect matching
-  secret: process.env.NEXTAUTH_SECRET || process.env.BETTER_AUTH_SECRET,
 });

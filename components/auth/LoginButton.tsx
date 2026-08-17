@@ -1,10 +1,11 @@
-import { signIn } from "next-auth/react";
-import Link from "next/link";
+"use client";
+
+import { authClient } from "@/lib/auth-client";
 import { Button } from "../ui/button";
 
 export default function LoginButton() {
   async function handleKeycloakSignIn() {
-    await signIn("keycloak", { callbackUrl: "/" });
+    await authClient.signIn.oauth2({ providerId: "keycloak", callbackURL: "/" });
   }
   return (
     <Button

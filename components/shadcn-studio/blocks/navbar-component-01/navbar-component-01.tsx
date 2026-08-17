@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import SvgComponentSvg from "@/assets/svg/phsardigitalLogo";
 import LoginButton from "@/components/auth/LoginButton";
-import { useSession, signOut } from "next-auth/react";
+import { authClient, useSession } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 
 const BRAND = "#6C4CD8";
@@ -59,18 +59,18 @@ export default function Navbar() {
   const savedCount = 2;
   const cartCount = 2;
 
-  const { data: session, status } = useSession();
-  const isPending = status === "loading";
-  const isLoggedIn = status === "authenticated" && !!session?.user;
+  const { data: session, isPending } = useSession();
+  const isLoggedIn = !!session?.user;
   const user = session?.user;
 
   async function handleLogout() {
-    await signOut({ callbackUrl: "/" });
+    await authClient.signOut();
+    window.location.href = "/";
   }
 
   return (
     <header className="sticky top-0 z-50 shadow-sm transition-all duration-300">
-      {/* ── top bar: white ── */}
+      {/* â”€â”€ top bar: white â”€â”€ */}
       <div className="border-b border-[#EDEBF3] bg-white">
         <div className="mx-auto flex max-w-[1240px] items-center gap-4 px-6 py-3">
           {/* logo */}
@@ -102,7 +102,7 @@ export default function Navbar() {
 
           <div className="flex-1" />
 
-          {/* Saved — only when logged in */}
+          {/* Saved â€” only when logged in */}
           {isLoggedIn && (
             <Link
               href="/saved"
@@ -118,7 +118,7 @@ export default function Navbar() {
             </Link>
           )}
 
-          {/* Orders — only when logged in */}
+          {/* Orders â€” only when logged in */}
           {isLoggedIn && (
             <Link
               href="/orders"
@@ -217,7 +217,7 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* ── purple nav rail ── */}
+      {/* â”€â”€ purple nav rail â”€â”€ */}
       <div className="bg-[#6C4CD8] shadow-inner">
         <div className="mx-auto flex max-w-[1240px] items-center gap-6 px-6 py-2.5">
           {/* category dropdown */}

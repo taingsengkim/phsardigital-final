@@ -6,7 +6,7 @@ import { ArrowRight, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AuthLeftPanel from "@/components/auth/AuthLeftPanel";
 import { AuthToast, type ToastState } from "@/components/auth/AuthToast";
-import { signIn } from "next-auth/react";
+import { authClient } from "@/lib/auth-client";
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
@@ -15,7 +15,11 @@ export default function LoginPage() {
   async function handleKeycloakLogin() {
     setLoading(true);
     try {
-      await signIn("keycloak", { callbackUrl: "/" });
+      const { error } = await authClient.signIn.oauth2({
+        providerId: "keycloak",
+        callbackURL: "/",
+      });
+      if (error) throw new Error(error.message);
     } catch (err: any) {
       setToast({
         type: "error",
@@ -72,7 +76,7 @@ export default function LoginPage() {
                 <Shield size={28} className="text-[#6C4CD8]" />
               </div>
               <h1 className="text-[26px] font-bold leading-tight text-[#1A1330]">
-                Welcome back 👋
+                Welcome back ðŸ‘‹
               </h1>
               <p className="mt-2 text-[14px] text-[#6B6580]">
                 Sign in securely via your Phsar Digital account.
@@ -95,7 +99,7 @@ export default function LoginPage() {
               {loading ? (
                 <span className="flex items-center gap-2">
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                  Redirecting…
+                  Redirectingâ€¦
                 </span>
               ) : (
                 <>
@@ -174,4 +178,3 @@ function KeycloakIcon() {
     </svg>
   );
 }
-

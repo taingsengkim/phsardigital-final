@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth as getNextAuthSession } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 
 const BASE_URL =
   process.env.API_BASE_URL ??
@@ -10,11 +10,11 @@ async function getAuthHeader(request: NextRequest): Promise<string | null> {
   const authHeader = request.headers.get("authorization");
   if (authHeader) return authHeader;
 
-  // Use NextAuth to get the session and the accessToken
-  const session = await getNextAuthSession();
-  
-  // @ts-ignore
-  const token = session?.accessToken;
+  const account = await auth.api.getAccessToken({
+    headers: request.headers,
+    body: { providerId: "keycloak" },
+  });
+  const token = account?.accessToken;
 
   if (token) {
     return `Bearer ${token}`;

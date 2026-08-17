@@ -1,14 +1,18 @@
-import { auth } from "@/auth";
+﻿import { headers } from "next/headers";
+import { auth } from "@/lib/auth";
 
 export async function apiFetch(path: string, options: RequestInit = {}) {
-  const session = await auth();
-  if (!session?.accessToken) throw new Error("Not authenticated");
+  const account = await auth.api.getAccessToken({
+    headers: await headers(),
+    body: { providerId: "keycloak" },
+  });
+  if (!account?.accessToken) throw new Error("Not authenticated");
 
-  const res = await fetch(`${process.env.API_BASE_URL}${path}`, {
+  const res = await fetch(process.env.API_BASE_URL + path, {
     ...options,
     headers: {
       ...options.headers,
-      Authorization: `Bearer ${session.accessToken}`,
+      Authorization: "Bearer " + account.accessToken,
       "Content-Type": "application/json",
     },
     cache: "no-store",
@@ -16,7 +20,7 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`API error ${res.status}: ${text}`);
+    throw new Error("API error " + res.status + ": " + text);
   }
   return res.json();
 }
