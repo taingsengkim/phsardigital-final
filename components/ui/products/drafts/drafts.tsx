@@ -60,7 +60,8 @@ function ProductArtwork({ art, index }: { art: string; index: number }) {
   )
 }
 
-export function Drafts() {
+export function Drafts({ variant = "drafts" }: { variant?: "drafts" | "schedualed" }) {
+  const isScheduled = variant === "schedualed"
   const [products, setProducts] = React.useState(initialProducts)
   const [selected, setSelected] = React.useState<Set<number>>(new Set([2, 3]))
   const [query, setQuery] = React.useState("")
@@ -96,7 +97,7 @@ export function Drafts() {
 
   return (
     <section className="flex min-h-[calc(100vh-104px)] flex-col bg-[#f7f7f8] px-[28px] py-[24px] text-[#27282b] sm:px-[38px] sm:py-[34px]">
-      <h1 className="mb-[22px] text-[32px] font-bold leading-none tracking-[-0.8px]">Drafts</h1>
+      <h1 className="mb-[22px] text-[32px] font-bold leading-none tracking-[-0.8px]">{isScheduled ? "Scheduled" : "Drafts"}</h1>
 
       <div className="flex-1 rounded-[10px] bg-white px-[12px] pb-[20px] pt-[18px] shadow-[0_1px_2px_rgba(0,0,0,0.02)] sm:px-[20px]">
         <div className="flex flex-wrap items-center gap-[16px] px-[2px] pb-[25px]">
@@ -126,7 +127,7 @@ export function Drafts() {
           <Checkbox checked={allVisibleSelected} onChange={toggleAll} label="Select all products" />
           <span className="ml-[32px] flex-1">Product</span>
           <span className="hidden w-[88px] md:block">Price</span>
-          <span className="hidden w-[244px] md:block">Last edited</span>
+          <span className="hidden w-[244px] md:block">{isScheduled ? "Scheduled for" : "Last edited"}</span>
           <span className="w-[112px]" />
         </div>
 
@@ -179,8 +180,12 @@ export function Drafts() {
       <div className="sticky bottom-0 -mx-[28px] -mb-[24px] mt-[32px] flex min-h-[82px] items-center border-t border-[#eceef0] bg-white px-[28px] sm:-mx-[38px] sm:-mb-[34px] sm:px-[38px]">
         <div className="flex items-center gap-[12px] text-[12px] text-[#69727c]"><CheckCircle2 className="size-[18px]" /> {selected.size} products selected</div>
         <div className="ml-auto flex items-center gap-[10px]">
-          <button type="button" onClick={deleteSelected} disabled={selected.size === 0} className="flex h-[45px] items-center gap-[9px] rounded-[9px] border border-[#e4e5e7] px-[17px] text-[12px] font-semibold text-[#f06455] shadow-sm disabled:opacity-40">Deleted <Trash2 className="size-[17px] text-[#757d87]" /></button>
-          <button type="button" disabled={selected.size === 0} className="h-[45px] rounded-[9px] bg-[#8068e8] px-[23px] text-[12px] font-semibold text-white shadow-sm hover:bg-[#7057df] disabled:opacity-40">Publish</button>
+          {isScheduled ? (
+            <button type="button" disabled={selected.size === 0} className="flex h-[45px] items-center gap-[9px] rounded-[9px] border border-[#e4e5e7] px-[17px] text-[12px] font-semibold shadow-sm disabled:opacity-40"><CalendarDays className="size-[17px] text-[#757d87]" /> Reschedule</button>
+          ) : (
+            <button type="button" onClick={deleteSelected} disabled={selected.size === 0} className="flex h-[45px] items-center gap-[9px] rounded-[9px] border border-[#e4e5e7] px-[17px] text-[12px] font-semibold text-[#f06455] shadow-sm disabled:opacity-40">Deleted <Trash2 className="size-[17px] text-[#757d87]" /></button>
+          )}
+          <button type="button" disabled={selected.size === 0} className="h-[45px] rounded-[9px] bg-[#8068e8] px-[23px] text-[12px] font-semibold text-white shadow-sm hover:bg-[#7057df] disabled:opacity-40">{isScheduled ? "Publish now" : "Publish"}</button>
         </div>
       </div>
     </section>

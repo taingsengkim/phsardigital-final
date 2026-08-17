@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { ChevronDown, ChevronUp, CirclePlus, CircleHelp, Home, Moon, Store, Sun, Tags, UserRound } from "lucide-react"
+import { ChevronDown, ChevronUp, CircleHelp, Home, Moon, Store, Sun, Tags, UserRound } from "lucide-react"
 import { useTheme } from "next-themes"
 
 import {
@@ -25,13 +25,13 @@ const productLinks: SidebarChildLink[] = [
   { title: "Dashboard", url: "/seller-dashboard/products/dashboard" },
   { title: "Drafts", url: "/seller-dashboard/products/drafts" },
   { title: "Released", url: "/seller-dashboard/products/released" },
-  { title: "Comments", url: "/seller-dashboard/products/comments" },
-  { title: "Scheduled", url: "/seller-dashboard/products/scheduled" },
+  { title: "Comments", url: "/seller-dashboard/products/comment" },
+  { title: "Scheduled", url: "/seller-dashboard/products/schedualed" },
 ]
 
 const customerLinks: SidebarChildLink[] = [
   { title: "Overview", url: "/seller-dashboard/customers/overview" },
-  { title: "Customer list", url: "/seller-dashboard/customers" },
+  { title: "Customer list", url: "/seller-dashboard/customer/customer-list" },
 ]
 
 const subscribe = () => () => {}
@@ -41,7 +41,7 @@ export function SellerSidebar() {
   const { resolvedTheme, setTheme } = useTheme()
   const mounted = React.useSyncExternalStore(subscribe, () => true, () => false)
   const [productsOpen, setProductsOpen] = React.useState(pathname.startsWith("/seller-dashboard/products"))
-  const [customersOpen, setCustomersOpen] = React.useState(pathname.startsWith("/seller-dashboard/customers"))
+  const [customersOpen, setCustomersOpen] = React.useState(pathname.startsWith("/seller-dashboard/customer"))
 
   return (
     <Sidebar collapsible="icon" className="border-r bg-white">
