@@ -156,6 +156,9 @@ export function generateDynamicMockListing(slug: string): Listing {
     },
   ];
 
+  const STORES = ["TechHub KH", "Van Shop", "Fashion By Srey", "Sneaker World", "Leather Craft Co."];
+  const storeName = STORES[absHash % STORES.length];
+
   return {
     id: absHash + 100,
     slug,
@@ -164,6 +167,8 @@ export function generateDynamicMockListing(slug: string): Listing {
     price: priceBase,
     category_id: (absHash % 8) + 1,
     stock: 24,
+    store_id: (absHash % STORES.length) + 1,
+    store_name: storeName,
     created_at: new Date().toISOString(),
     images,
     discounts: [

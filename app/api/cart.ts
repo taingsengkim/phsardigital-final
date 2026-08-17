@@ -12,7 +12,7 @@ const DEFAULT_MOCK_ITEMS: CartItem[] = [
     cart_id: 1,
     listing_id: 101,
     quantity: 1,
-    listing: generateDynamicMockListing("poco-smart-phone"),
+    listing: generateDynamicMockListing("women-s-floral-summer-dress"),
   },
   {
     id: 2,
@@ -25,8 +25,15 @@ const DEFAULT_MOCK_ITEMS: CartItem[] = [
     id: 3,
     cart_id: 1,
     listing_id: 103,
-    quantity: 2,
-    listing: generateDynamicMockListing("fitbit-versa-4"),
+    quantity: 1,
+    listing: generateDynamicMockListing("iphone-12-pro-pacific-blue-128gb"),
+  },
+  {
+    id: 4,
+    cart_id: 1,
+    listing_id: 104,
+    quantity: 1,
+    listing: generateDynamicMockListing("minimalist-canvas-backpack"),
   },
 ];
 

@@ -32,7 +32,12 @@ export default function ProductDetailClient({ listing }: Props) {
   const [adding, setAdding] = useState(false);
   const [added, setAdded]   = useState(false);
 
-  function handleBuyNow() {
+  async function handleBuyNow() {
+    try {
+      await addToCart(listing.id, qty, listing.slug);
+    } catch {
+      // continue to checkout
+    }
     router.push(`/checkout?slug=${encodeURIComponent(listing.slug)}&qty=${qty}`);
   }
 

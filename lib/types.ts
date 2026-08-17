@@ -49,6 +49,8 @@ export type Listing = {
   price: number;
   category_id: number;
   stock: number;
+  store_id?: number;
+  store_name?: string;
   created_at: string;
   // joined relations (optional, present when fetched with includes)
   images?: ListingImage[];

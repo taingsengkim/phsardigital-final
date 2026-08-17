@@ -5,7 +5,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight, ChevronsUpDown } from "lucide-react";
 import { mockCategories } from "../categories-mock";
-import { ArrowRight } from "lucide-react";
+
 
 export function HeroBanner() {
   const categories = mockCategories;
