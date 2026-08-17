@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { ChevronsUpDown } from "lucide-react";
 import { mockCategories } from "../categories-mock";
+import { ArrowRight } from "lucide-react";
 
 /**
  * TODO when your API is ready: replace `mockCategories` with

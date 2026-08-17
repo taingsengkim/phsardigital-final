@@ -88,62 +88,66 @@ export default function ProductsClient() {
             return (
               <article
                 key={p.id}
-                className="group overflow-hidden rounded-2xl bg-white shadow-[0_2px_12px_rgba(36,31,53,0.08)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_32px_rgba(108,76,216,0.18)]"
+                className="group relative overflow-hidden rounded-2xl bg-white shadow-[0_2px_12px_rgba(36,31,53,0.08)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_32px_rgba(108,76,216,0.18)]"
               >
-                {/* image */}
-                <div className="relative aspect-square w-full overflow-hidden bg-[#F5F3FA]">
-                  <Image
-                    src={p.image}
-                    alt={p.title}
-                    fill
-                    sizes="(max-width:640px) 50vw, 25vw"
-                    className="object-cover object-center transition-transform duration-500 group-hover:scale-[1.06]"
-                    unoptimized={p.image.startsWith("http")}
-                  />
-                  {/* discount badge */}
-                  {p.discountPercent && (
-                    <span className="absolute left-3 top-3 rounded-lg bg-[#6C4CD8] px-2.5 py-1 text-[13px] font-bold text-white shadow-sm">
-                      -{p.discountPercent}%
-                    </span>
-                  )}
-                  {/* save button */}
-                  <button
-                    onClick={() => toggleSave(p.id)}
-                    aria-label={isSaved ? "Remove from saved" : "Save"}
-                    className={cn(
-                      "absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full shadow-md transition-all",
-                      isSaved ? "bg-[#6C4CD8]" : "bg-white/95 hover:bg-[#F1EFFA]"
+                <Link href={`/products/${p.slug}`} className="block">
+                  {/* image */}
+                  <div className="relative aspect-square w-full overflow-hidden bg-[#F5F3FA]">
+                    <Image
+                      src={p.image}
+                      alt={p.title}
+                      fill
+                      sizes="(max-width:640px) 50vw, 25vw"
+                      className="object-cover object-center transition-transform duration-500 group-hover:scale-[1.06]"
+                      unoptimized={p.image.startsWith("http")}
+                    />
+                    {/* discount badge */}
+                    {p.discountPercent && (
+                      <span className="absolute left-3 top-3 rounded-lg bg-[#6C4CD8] px-2.5 py-1 text-[13px] font-bold text-white shadow-sm">
+                        -{p.discountPercent}%
+                      </span>
                     )}
-                  >
-                    <Heart size={16} color={isSaved ? "#fff" : "#6C4CD8"} fill={isSaved ? "#fff" : "none"} />
-                  </button>
-                </div>
-
-                {/* info */}
-                <div className="p-4">
-                  <Link
-                    href={`/products/${p.slug}`}
-                    className="line-clamp-2 text-[15px] font-semibold leading-snug text-[#241F35] hover:text-[#6C4CD8] transition-colors"
-                  >
-                    {p.title}
-                  </Link>
-
-                  {/* stars */}
-                  <div className="mt-2 flex items-center gap-1">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star key={i} size={12} fill="#F5B301" color="#F5B301" />
-                    ))}
-                    <span className="ml-1 text-[13px] text-[#8B85A0]">({p.reviewCount})</span>
                   </div>
 
-                  {/* prices */}
-                  <div className="mt-2 flex items-baseline gap-2">
-                    <span className="text-[18px] font-extrabold text-[#6C4CD8]">{usd(p.price)}</span>
-                    <span className="text-[13px] text-[#B3ADC4] line-through">{usd(p.originalPrice)}</span>
-                  </div>
+                  {/* info */}
+                  <div className="p-4">
+                    <h3 className="line-clamp-2 text-[15px] font-semibold leading-snug text-[#241F35] transition-colors group-hover:text-[#6C4CD8]">
+                      {p.title}
+                    </h3>
 
-                  <p className="mt-1 text-[13px] text-[#8B85A0]">{p.storeName}</p>
-                </div>
+                    {/* stars */}
+                    <div className="mt-2 flex items-center gap-1">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star key={i} size={12} fill="#F5B301" color="#F5B301" />
+                      ))}
+                      <span className="ml-1 text-[13px] text-[#8B85A0]">({p.reviewCount})</span>
+                    </div>
+
+                    {/* prices */}
+                    <div className="mt-2 flex items-baseline gap-2">
+                      <span className="text-[18px] font-extrabold text-[#6C4CD8]">{usd(p.price)}</span>
+                      <span className="text-[13px] text-[#B3ADC4] line-through">{usd(p.originalPrice)}</span>
+                    </div>
+
+                    <p className="mt-1 text-[13px] text-[#8B85A0]">{p.storeName}</p>
+                  </div>
+                </Link>
+
+                {/* save button */}
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    toggleSave(p.id);
+                  }}
+                  aria-label={isSaved ? "Remove from saved" : "Save"}
+                  className={cn(
+                    "absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full shadow-md transition-all",
+                    isSaved ? "bg-[#6C4CD8]" : "bg-white/95 hover:bg-[#F1EFFA]"
+                  )}
+                >
+                  <Heart size={16} color={isSaved ? "#fff" : "#6C4CD8"} fill={isSaved ? "#fff" : "none"} />
+                </button>
               </article>
             );
           })}
@@ -156,51 +160,55 @@ export default function ProductsClient() {
             return (
               <div
                 key={p.id}
-                className="flex gap-3 overflow-hidden rounded-xl bg-white shadow-[0_1px_4px_rgba(36,31,53,0.08)]"
+                className="group relative flex gap-3 overflow-hidden rounded-xl bg-white shadow-[0_1px_4px_rgba(36,31,53,0.08)] transition hover:shadow-md"
               >
-                <div className="relative h-28 w-28 flex-shrink-0 overflow-hidden bg-[#F5F3FA]">
-                  <Image
-                    src={p.image}
-                    alt={p.title}
-                    fill
-                    className="object-cover object-center"
-                    unoptimized={p.image.startsWith("http")}
-                  />
-                  {p.discountPercent && (
-                    <span className="absolute left-1.5 top-1.5 rounded bg-[#6C4CD8] px-1.5 py-0.5 text-[9px] font-bold text-white">
-                      -{p.discountPercent}%
-                    </span>
-                  )}
-                </div>
-                <div className="flex flex-1 flex-col justify-center py-3 pr-3">
-                  <Link
-                    href={`/products/${p.slug}`}
-                    className="text-sm font-semibold text-[#241F35] hover:text-[#6C4CD8]"
-                  >
-                    {p.title}
-                  </Link>
-                  <div className="mt-1 flex items-baseline gap-1.5">
-                    <span className="text-xs text-[#B3ADC4] line-through">
-                      {usd(p.originalPrice)}
-                    </span>
-                    <span className="text-base font-bold text-[#6C4CD8]">
-                      {usd(p.price)}
-                    </span>
+                <Link href={`/products/${p.slug}`} className="flex flex-1 gap-3">
+                  <div className="relative h-28 w-28 flex-shrink-0 overflow-hidden bg-[#F5F3FA]">
+                    <Image
+                      src={p.image}
+                      alt={p.title}
+                      fill
+                      className="object-cover object-center transition-transform duration-300 group-hover:scale-105"
+                      unoptimized={p.image.startsWith("http")}
+                    />
+                    {p.discountPercent && (
+                      <span className="absolute left-1.5 top-1.5 rounded bg-[#6C4CD8] px-1.5 py-0.5 text-[9px] font-bold text-white">
+                        -{p.discountPercent}%
+                      </span>
+                    )}
                   </div>
-                  <div className="mt-1 flex items-center gap-0.5">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star key={i} size={10} fill="#F5B301" color="#F5B301" />
-                    ))}
-                    <span className="ml-1 text-xs text-[#8B85A0]">
-                      ({p.reviewCount})
-                    </span>
+                  <div className="flex flex-1 flex-col justify-center py-3 pr-3">
+                    <h3 className="text-sm font-semibold text-[#241F35] transition-colors group-hover:text-[#6C4CD8]">
+                      {p.title}
+                    </h3>
+                    <div className="mt-1 flex items-baseline gap-1.5">
+                      <span className="text-xs text-[#B3ADC4] line-through">
+                        {usd(p.originalPrice)}
+                      </span>
+                      <span className="text-base font-bold text-[#6C4CD8]">
+                        {usd(p.price)}
+                      </span>
+                    </div>
+                    <div className="mt-1 flex items-center gap-0.5">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star key={i} size={10} fill="#F5B301" color="#F5B301" />
+                      ))}
+                      <span className="ml-1 text-xs text-[#8B85A0]">
+                        ({p.reviewCount})
+                      </span>
+                    </div>
+                    <p className="mt-0.5 text-xs text-[#8B85A0]">{p.storeName}</p>
                   </div>
-                  <p className="mt-0.5 text-xs text-[#8B85A0]">{p.storeName}</p>
-                </div>
+                </Link>
+
                 <button
-                  onClick={() => toggleSave(p.id)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    toggleSave(p.id);
+                  }}
                   aria-label={isSaved ? "Remove from saved" : "Save"}
-                  className="mr-3 self-center flex h-8 w-8 items-center justify-center rounded-full border border-[#E2DFEC] bg-white transition hover:border-[#6C4CD8]"
+                  className="mr-3 self-center z-10 flex h-8 w-8 items-center justify-center rounded-full border border-[#E2DFEC] bg-white transition hover:border-[#6C4CD8]"
                 >
                   <Heart
                     size={14}
