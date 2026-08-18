@@ -3,53 +3,54 @@
 import { useState } from "react";
 import { Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getAccessToken, redirectToLogin } from "@/lib/api";
 
 type Props = {
-  listingId: number | string;
+  listingId: string | number;
   initialSaved?: boolean;
   className?: string;
 };
 
-function getToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return sessionStorage.getItem("kc_access_token");
-}
-
-export default function SavedButton({ listingId, initialSaved = false, className }: Props) {
+export default function SavedButton({
+  listingId,
+  initialSaved = false,
+  className,
+}: Props) {
   const [saved,   setSaved]   = useState(initialSaved);
   const [loading, setLoading] = useState(false);
 
   async function toggle() {
-    const token = getToken();
-    if (!token) {
-      sessionStorage.setItem("kc_return_to", window.location.pathname);
-      window.location.href = "/auth/login";
-      return;
-    }
+    const token = getAccessToken();
+    if (!token) { redirectToLogin(); return; }
 
     setLoading(true);
     try {
       const base = process.env.NEXT_PUBLIC_API_URL ?? "https://phsardigital.quizzy.it.com";
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
+      const headers = {
+        "Content-Type":  "application/json",
         "Authorization": `Bearer ${token}`,
       };
 
       if (saved) {
-        await fetch(`${base}/api/v1/favorites`, {
+        /* DELETE /api/v1/favorites  — body: [uuid] */
+        const res = await fetch(`${base}/api/v1/favorites`, {
           method: "DELETE",
           headers,
           body: JSON.stringify([listingId]),
         });
+        if (!res.ok && res.status !== 204) throw new Error(`${res.status}`);
       } else {
-        await fetch(`${base}/api/v1/favorites/${listingId}`, {
+        /* POST /api/v1/favorites/{listingUuid} */
+        const res = await fetch(`${base}/api/v1/favorites/${listingId}`, {
           method: "POST",
           headers,
         });
+        if (!res.ok) throw new Error(`${res.status}`);
       }
+
       setSaved((s) => !s);
     } catch {
-      // silently ignore network errors
+      /* silent — button stays in previous state */
     } finally {
       setLoading(false);
     }
@@ -60,16 +61,21 @@ export default function SavedButton({ listingId, initialSaved = false, className
       type="button"
       onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggle(); }}
       disabled={loading}
-      aria-label={saved ? "Remove from saved" : "Save listing"}
+      aria-label={saved ? "Remove from wishlist" : "Add to wishlist"}
       className={cn(
         "flex h-9 w-9 items-center justify-center rounded-full shadow-md transition-all disabled:opacity-50",
-        saved ? "bg-[#6C4CD8] hover:bg-[#5B3DC0]" : "bg-white/95 hover:bg-[#F1EFFA]",
+        saved
+          ? "bg-[#6C4CD8] hover:bg-[#5B3DC0]"
+          : "bg-white/95 hover:bg-[#F1EFFA]",
         className
       )}
     >
       <Heart
         size={16}
-        className={cn("transition-colors", saved ? "fill-white text-white" : "text-[#6C4CD8]")}
+        className={cn(
+          "transition-colors",
+          saved ? "fill-white text-white" : "text-[#6C4CD8]"
+        )}
       />
     </button>
   );

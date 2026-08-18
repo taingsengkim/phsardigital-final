@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 
 const KC_ISSUER = "https://auth.quizzy.it.com/realms/phsardigital";
@@ -9,89 +8,97 @@ const KC_CLIENT = "phsardigital-client";
 const KC_SECRET = "idh56ELtGEuuUVGVSeIWoRw2F8Ul5H5M";
 
 function CallbackContent() {
-  const router       = useRouter();
-  const searchParams = useSearchParams();
   const [status,  setStatus]  = useState<"loading" | "success" | "error">("loading");
   const [message, setMessage] = useState("Completing sign in…");
 
   useEffect(() => {
-    const code  = searchParams.get("code");
-    const state = searchParams.get("state");
-    const error = searchParams.get("error");
+    /* Read params directly from the URL — always reliable on the client */
+    const params = new URLSearchParams(window.location.search);
+    const code   = params.get("code");
+    const state  = params.get("state");
+    const error  = params.get("error");
 
     /* Keycloak returned an error (user cancelled etc.) */
     if (error) {
       setStatus("error");
-      setMessage(searchParams.get("error_description") ?? "Login was cancelled.");
-      setTimeout(() => router.replace("/auth/login"), 2500);
+      setMessage(params.get("error_description") ?? "Login was cancelled.");
+      setTimeout(() => { window.location.href = "/auth/login"; }, 2500);
       return;
     }
 
+    /* No code — nothing to do, go back to login */
     if (!code) {
-      router.replace("/auth/login");
+      window.location.href = "/auth/login";
       return;
     }
 
-    /* CSRF check */
+    /* CSRF state check */
     const savedState = sessionStorage.getItem("kc_state");
     if (savedState && state && state !== savedState) {
       setStatus("error");
       setMessage("Security check failed. Please try again.");
-      setTimeout(() => router.replace("/auth/login"), 2500);
+      setTimeout(() => { window.location.href = "/auth/login"; }, 2500);
       return;
     }
 
-    async function exchange() {
+    /* Exchange the code for tokens */
+    (async () => {
       try {
         const callbackUri = `${window.location.origin}/auth/callback`;
-        const body = new URLSearchParams({
-          grant_type:    "authorization_code",
-          client_id:     KC_CLIENT,
-          client_secret: KC_SECRET,
-          redirect_uri:  callbackUri,
-          code:          code!,
-        });
+        const verifier    = sessionStorage.getItem("kc_verifier") ?? "";
 
         const res = await fetch(
           `${KC_ISSUER}/protocol/openid-connect/token`,
           {
             method:  "POST",
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body:    body.toString(),
+            body: new URLSearchParams({
+              grant_type:    "authorization_code",
+              client_id:     KC_CLIENT,
+              client_secret: KC_SECRET,
+              redirect_uri:  callbackUri,
+              code_verifier: verifier,
+              code,
+            }).toString(),
           }
         );
 
         if (!res.ok) {
           const d = await res.json().catch(() => ({}));
-          throw new Error(d?.error_description ?? `Token exchange failed (${res.status})`);
+          throw new Error(
+            d?.error_description ?? `Token exchange failed (${res.status})`
+          );
         }
 
         const tokens = await res.json();
 
-        /* store tokens — clientFetch + SavedButton + AddToCartButton all read these */
+        /* Store tokens — every button reads these */
         sessionStorage.setItem("kc_access_token",  tokens.access_token);
         sessionStorage.setItem("kc_refresh_token", tokens.refresh_token ?? "");
         sessionStorage.setItem("kc_expires_at",
           String(Date.now() + tokens.expires_in * 1000));
         sessionStorage.removeItem("kc_state");
+        sessionStorage.removeItem("kc_verifier");
 
         setStatus("success");
-        setMessage("Signed in! Taking you back…");
+        setMessage("Signed in! Taking you home…");
 
-        /* return to the page user was on, or home */
+        /* Hard-navigate so the public layout fully loads */
         const returnTo = sessionStorage.getItem("kc_return_to") ?? "/home";
         sessionStorage.removeItem("kc_return_to");
-        router.replace(returnTo);
+
+        /* Small delay so the success UI is briefly visible */
+        setTimeout(() => { window.location.href = returnTo; }, 800);
 
       } catch (err: unknown) {
         setStatus("error");
-        setMessage(err instanceof Error ? err.message : "Login failed. Redirecting…");
-        setTimeout(() => router.replace("/auth/login"), 3000);
+        setMessage(
+          err instanceof Error ? err.message : "Login failed. Please try again."
+        );
+        setTimeout(() => { window.location.href = "/auth/login"; }, 3000);
       }
-    }
-
-    exchange();
-  }, [searchParams, router]);
+    })();
+  }, []); // runs once on mount
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#F4F3F8]">
@@ -126,6 +133,7 @@ function CallbackContent() {
   );
 }
 
+/* Suspense is still needed because this page uses client-only APIs */
 export default function CallbackPage() {
   return (
     <Suspense fallback={
