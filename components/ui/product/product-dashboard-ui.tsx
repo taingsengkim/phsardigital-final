@@ -8,13 +8,17 @@ import { ProductActivity } from "./product-activity";
 import { ProductViews } from "./product-views";
 import { ProductTable, ProductRow } from "./product-table";
 import { useGetListingsQuery } from "@/lib/api/homeApi";
-import { useGetSellerOrdersQuery } from "@/lib/api/sellerApi";
+import { useGetSellerOrdersQuery, useGetMyListingsQuery } from "@/lib/api/sellerApi";
 
 export const ProductDashboardUI: React.FC = () => {
-  const { data: listingsData, isLoading: isLoadingListings } = useGetListingsQuery();
+  const { data: myListingsData, isLoading: isLoadingMyListings } = useGetMyListingsQuery();
+  const { data: publicListingsData, isLoading: isLoadingPublicListings } = useGetListingsQuery();
   const { data: ordersData, isLoading: isLoadingOrders } = useGetSellerOrdersQuery();
 
-  const rawListings = listingsData?.data || (listingsData as any)?.content || [];
+  const myListings = myListingsData?.content || myListingsData?.data || [];
+  const publicListings = publicListingsData?.data || (publicListingsData as any)?.content || [];
+  const rawListings = myListings.length > 0 ? myListings : publicListings;
+  const isLoadingListings = isLoadingMyListings && isLoadingPublicListings;
   const ordersList = ordersData?.content || [];
 
   // Calculate live dynamic metrics

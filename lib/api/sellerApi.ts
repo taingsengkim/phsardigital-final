@@ -175,6 +175,7 @@ export const sellerApi = createApi({
     "SellerProfile",
     "SellerOrders",
     "SellerReviews",
+    "SellerListings",
   ],
   baseQuery: fetchBaseQuery({
     baseUrl: "/api",
@@ -294,6 +295,17 @@ export const sellerApi = createApi({
       }),
       providesTags: ["SellerReviews"],
     }),
+
+    getMyListings: builder.query<any, { status?: string; pageNumber?: number; pageSize?: number } | void>({
+      query: (params) => {
+        const pageNumber = params?.pageNumber ?? 0;
+        const pageSize = params?.pageSize ?? 20;
+        let url = `/listings/me?pageNumber=${pageNumber}&pageSize=${pageSize}`;
+        if (params?.status) url += `&status=${params.status}`;
+        return { url };
+      },
+      providesTags: ["SellerListings"],
+    }),
   }),
 });
 
@@ -309,5 +321,6 @@ export const {
   useGetSellerProfileQuery,
   useGetSellerOrdersQuery,
   useGetSellerReviewsQuery,
+  useGetMyListingsQuery,
 } = sellerApi;
 
