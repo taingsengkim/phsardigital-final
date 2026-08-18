@@ -23,7 +23,7 @@ export function ProductCard({ listing, sellerName }: ProductCardProps) {
   const discountPercent = getActiveDiscountPercent(listing);
   const finalPrice = getDiscountedPrice(listing);
 
-  const productSlug = listing.slug || listing.uuid || listing.id || "#";
+  const productSlug = listing.uuid || listing.slug || listing.id || "#";
   const displaySeller =
     sellerName ||
     listing.sellerProfile?.businessName ||

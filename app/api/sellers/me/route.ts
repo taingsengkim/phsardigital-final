@@ -66,3 +66,50 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+/** Update the signed-in seller's own shop profile. */
+export async function PATCH(request: NextRequest) {
+  const authHeader = await getAuthHeader(request);
+
+  if (!authHeader) {
+    return NextResponse.json(
+      { message: "Unauthorized - Please sign in" },
+      { status: 401 }
+    );
+  }
+
+  try {
+    const body = await request.json();
+
+    const res = await fetch(`${BASE_URL}/api/v1/sellers/me`, {
+      method: "PATCH",
+      headers: {
+        Authorization: authHeader,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    const text = await res.text();
+    let data: unknown = null;
+    if (text) {
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = text;
+      }
+    }
+
+    return NextResponse.json(data, { status: res.status });
+  } catch (err: unknown) {
+    console.error("Error updating seller profile:", err);
+    return NextResponse.json(
+      {
+        message:
+          err instanceof Error ? err.message : "Failed to update seller profile",
+      },
+      { status: 502 }
+    );
+  }
+}

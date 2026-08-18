@@ -31,7 +31,7 @@ export function ProductCard({
 
   return (
     <Link
-      href={`/products/${listing.slug}`}
+      href={`/products/${listing.uuid || listing.slug || listing.id}`}
       className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card text-card-foreground transition-shadow hover:shadow-md"
     >
       <div className="relative aspect-square w-full overflow-hidden bg-muted">

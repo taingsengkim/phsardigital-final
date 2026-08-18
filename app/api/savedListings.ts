@@ -8,7 +8,7 @@ export async function getSavedListings(): Promise<SavedListing[]> {
   return res.json();
 }
 
-export async function saveListings(listingId: number): Promise<SavedListing> {
+export async function saveListings(listingId: number | string): Promise<SavedListing> {
   const res = await fetch(`${BASE_URL}/api/saved`, {
     method: "POST",
     credentials: "include",
@@ -19,7 +19,7 @@ export async function saveListings(listingId: number): Promise<SavedListing> {
   return res.json();
 }
 
-export async function unsaveListing(listingId: number): Promise<void> {
+export async function unsaveListing(listingId: number | string): Promise<void> {
   const res = await fetch(`${BASE_URL}/api/saved/${listingId}`, {
     method: "DELETE",
     credentials: "include",

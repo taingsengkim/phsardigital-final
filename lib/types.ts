@@ -59,6 +59,7 @@ export type Review = {
 
 export type Listing = {
   id: number;
+  uuid?: string;
   slug: string;
   title: string;
   description: string;
@@ -119,12 +120,18 @@ export type Order = {
 };
 
 // Query params for listing fetches
+/** Mirrors the query parameters GET /api/v1/listings actually honours. */
 export type ListingsQuery = {
-  categoryId?: number;
-  sort?: "newest" | "price_asc" | "price_desc" | "top_rated";
-  page?: number;
-  pageSize?: number;
+  categoryUuid?: string;
+  categorySlug?: string;
+  sellerId?: string;
   search?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  /** Spring sort expression, e.g. "price,asc" or "createdAt,desc" */
+  sort?: string;
+  pageNumber?: number;
+  pageSize?: number;
 };
 
 export type PaginatedListings = {
@@ -133,4 +140,156 @@ export type PaginatedListings = {
   page: number;
   pageSize: number;
   totalPages: number;
+};
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Live API shapes (phsardigital /api/v1) — mirrors the OpenAPI schemas.
+ * These are the payloads the product detail page actually renders.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+export type ApiImage = {
+  uuid?: string;
+  uri?: string | null;
+  objectName?: string | null;
+  /** gallery position; the API reorders via PATCH /listings/{uuid}/images/order */
+  sortOrder?: number | null;
+};
+
+export type ApiListingAttribute = {
+  uuid?: string;
+  key: string;
+  value: string;
+  sortOrder?: number | null;
+  listingUuid?: string;
+};
+
+export type ApiCategorySummary = {
+  uuid?: string;
+  name?: string | null;
+  slug?: string | null;
+};
+
+export type ApiSellerSummary = {
+  sellerId?: string | null;
+  businessName?: string | null;
+  logoUri?: string | null;
+  phoneNumber?: string | null;
+  biography?: string | null;
+  socialLink?: string[] | null;
+};
+
+export type ApiListing = {
+  uuid: string;
+  sellerProfile?: ApiSellerSummary | null;
+  category?: ApiCategorySummary | null;
+  title?: string | null;
+  slug?: string | null;
+  description?: string | null;
+  price?: number | null;
+  stockQty?: number | null;
+  status?: string | null;
+  isFeatured?: boolean | null;
+  thumbnailUri?: ApiImage | null;
+  sold?: number | null;
+  images?: ApiImage[] | null;
+  listingAttributes?: ApiListingAttribute[] | null;
+  createdAt?: string | null;
+  lastModifiedAt?: string | null;
+  /** server-computed aggregate — no need to derive it from fetched reviews */
+  averageRating?: number | null;
+  reviewCount?: number | null;
+};
+
+export type ApiSellerProfile = {
+  id?: string | null;
+  businessName?: string | null;
+  businessType?: string | null;
+  description?: string | null;
+  logoObjectName?: string | null;
+  logoUri?: string | null;
+  address?: string | null;
+  city?: string | null;
+  province?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  googleMapUrl?: string | null;
+  isActive?: boolean | null;
+  phoneNumber?: string | null;
+  biography?: string | null;
+  socialLink?: string[] | null;
+  averageRating?: number | null;
+  reviewCount?: number | null;
+  suspendedAt?: string | null;
+  suspensionReason?: string | null;
+};
+
+export type ApiReviewAuthor = {
+  id?: string | null;
+  displayName?: string | null;
+  avatarUrl?: string | null;
+};
+
+export type ApiReviewReply = {
+  uuid?: string;
+  comment?: string | null;
+  seller?: ApiSellerProfile | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  parentReplyUuid?: string | null;
+  childReplies?: ApiReviewReply[] | null;
+};
+
+export type ApiReview = {
+  uuid?: string;
+  listing?: ApiListing | null;
+  buyer?: ApiReviewAuthor | null;
+  seller?: ApiSellerProfile | null;
+  rating?: number | null;
+  comment?: string | null;
+  photo?: { uri?: string | null; objectName?: string | null } | null;
+  isEdited?: boolean | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  replies?: ApiReviewReply[] | null;
+};
+
+/** Why the API surfaced a related product — drives the rail's grouping label. */
+export type RelatedReason = "BOUGHT_TOGETHER" | "SAME_CATEGORY" | "SAME_SHOP";
+
+/**
+ * GET /listings/{uuid}/related. Deliberately lighter than ApiListing —
+ * note `thumbnailUri` is a plain URL string here, not an object.
+ */
+export type RelatedListing = {
+  uuid: string;
+  title?: string | null;
+  slug?: string | null;
+  price?: number | null;
+  stockQty?: number | null;
+  sold?: number | null;
+  thumbnailUri?: string | null;
+  category?: ApiCategorySummary | null;
+  sellerId?: string | null;
+  businessName?: string | null;
+  reason?: RelatedReason | null;
+};
+
+export type ReviewSummary = {
+  average: number | null;
+  total: number;
+  /** counts keyed 1–5 */
+  breakdown: Record<number, number>;
+};
+
+export type ProductDetail = {
+  listing: ApiListing;
+  seller: ApiSellerProfile | null;
+  /** other live products from the same store (current one excluded) */
+  storeListings: ApiListing[];
+  /** total products the store has published, when the API reports it */
+  storeProductCount: number | null;
+  reviews: ApiReview[];
+  reviewSummary: ReviewSummary;
+  /** server-ranked recommendations, each tagged with why it was picked */
+  relatedListings: RelatedListing[];
 };

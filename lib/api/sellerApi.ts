@@ -109,6 +109,34 @@ export interface SellerProfile {
   longitude?: number;
   googleMapUrl?: string;
   isActive?: boolean;
+  phoneNumber?: string;
+  biography?: string;
+  socialLink?: string[];
+  averageRating?: number | null;
+  reviewCount?: number;
+  suspendedAt?: string | null;
+  suspensionReason?: string | null;
+}
+
+/**
+ * PATCH /api/v1/sellers/me — the seller edits their own shop, identified by
+ * the bearer token, so there is no id in the path. Every field is optional;
+ * only what you send is changed.
+ */
+export interface UpdateSellerProfilePayload {
+  businessName?: string;
+  businessType?: string;
+  description?: string;
+  logoObjectName?: string;
+  address?: string;
+  city?: string;
+  province?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  googleMapUrl?: string;
+  phoneNumber?: string;
+  biography?: string;
+  socialLink?: string[];
 }
 
 export interface SellerOrderItem {
@@ -282,6 +310,18 @@ export const sellerApi = createApi({
       providesTags: ["SellerProfile"],
     }),
 
+    updateSellerProfile: builder.mutation<
+      SellerProfile,
+      UpdateSellerProfilePayload
+    >({
+      query: (body) => ({
+        url: "/sellers/me",
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: ["SellerProfile"],
+    }),
+
     getSellerOrders: builder.query<PagedSellerOrders, void>({
       query: () => ({
         url: "/purchases/seller/orders?pageNumber=0&pageSize=20",
@@ -319,6 +359,7 @@ export const {
   useGetSellerSubscriptionQuery,
   useSubscribeToPlanMutation,
   useGetSellerProfileQuery,
+  useUpdateSellerProfileMutation,
   useGetSellerOrdersQuery,
   useGetSellerReviewsQuery,
   useGetMyListingsQuery,

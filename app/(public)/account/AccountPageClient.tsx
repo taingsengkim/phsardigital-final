@@ -28,6 +28,8 @@ import {
   ArrowRight,
   BadgeCheck,
   Building2,
+  AlertCircle,
+  MapPinned,
   FileCheck,
   LogOut,
 } from "lucide-react";
@@ -40,6 +42,7 @@ import {
   type UserProfile,
 } from "@/lib/api/authApi";
 import { useGetSellerApplicationQuery } from "@/lib/api/sellerApi";
+import AddressBook from "@/components/account/AddressBook";
 import { AuthToast, type ToastState } from "@/components/auth/AuthToast";
 import { cn } from "@/lib/utils";
 
@@ -78,7 +81,12 @@ export default function AccountPageClient() {
   const [toast, setToast] = useState<ToastState | null>(null);
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<
-    "details" | "orders" | "saved" | "security" | "notifications"
+    | "details"
+    | "orders"
+    | "saved"
+    | "addresses"
+    | "security"
+    | "notifications"
   >("details");
 
   // Populate form from API profile or session fallback
@@ -117,7 +125,17 @@ export default function AccountPageClient() {
   const userAvatarUrl = profile?.avatarUrl || session?.user?.image || "";
   const username = profile?.username || userEmail.split("@")[0] || "user";
 
-  const isSeller = Boolean((profile as any)?.isSeller || sellerApp?.status === "APPROVED");
+  // Keycloak owns email verification — only claim it when the API says so.
+  const emailVerified = profile?.emailVerified === true;
+
+  const memberSince = profile?.createdAt
+    ? new Date(profile.createdAt).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+      })
+    : null;
+
+  const isSeller = sellerApp?.status === "APPROVED";
   const isPendingSeller = sellerApp?.status === "PENDING";
   const isRejectedSeller = sellerApp?.status === "REJECTED";
 
@@ -298,6 +316,12 @@ export default function AccountPageClient() {
                   </span>
                   {username && (
                     <span className="text-sm text-white/60">@{username}</span>
+                  )}
+                  {memberSince && (
+                    <span className="flex items-center gap-1.5 text-white/70">
+                      <Clock size={14} className="text-white/60" /> Member since{" "}
+                      {memberSince}
+                    </span>
                   )}
                 </div>
 
@@ -489,6 +513,12 @@ export default function AccountPageClient() {
                     : isRejectedSeller
                     ? "Rejected"
                     : "New",
+                },
+                {
+                  id: "addresses",
+                  label: "Delivery Addresses",
+                  icon: MapPinned,
+                  badge: null,
                 },
                 {
                   id: "security",
@@ -841,12 +871,20 @@ export default function AccountPageClient() {
                           readOnly
                           className="w-full rounded-xl border border-[#E2DFEC] bg-[#F1EFFA]/60 py-3 pl-11 pr-24 text-sm text-[#5A5470] focus:outline-none cursor-default"
                         />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 inline-flex items-center gap-1.5 rounded-md bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">
-                          <CheckCircle2 size={14} /> Verified
-                        </span>
+                        {emailVerified ? (
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 inline-flex items-center gap-1.5 rounded-md bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">
+                            <CheckCircle2 size={14} /> Verified
+                          </span>
+                        ) : (
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 inline-flex items-center gap-1.5 rounded-md bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700">
+                            <AlertCircle size={14} /> Unverified
+                          </span>
+                        )}
                       </div>
                       <p className="mt-2 text-xs text-[#8D86A8]">
                         Email address is managed by Keycloak SSO authentication.
+                        {!emailVerified &&
+                          " Verify it from the Keycloak security portal under Security & Passwords."}
                       </p>
                     </div>
 
@@ -914,6 +952,14 @@ export default function AccountPageClient() {
               </div>
             )}
 
+            {activeTab === "addresses" && (
+              <AddressBook
+                defaultRecipient={userFullName}
+                defaultPhone={phone}
+                onToast={setToast}
+              />
+            )}
+
             {activeTab === "security" && (
               <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-black/5 sm:p-8">
                 <h2 className="text-xl font-bold text-[#1A1330]">
@@ -955,30 +1001,49 @@ export default function AccountPageClient() {
                   Notification Preferences
                 </h2>
                 <p className="mt-1 text-sm text-[#6B6580]">
-                  Choose how you want to be notified about orders, promotions, and account alerts.
+                  Choose how you want to be notified about orders, promotions, and
+                  account alerts.
                 </p>
 
-                <div className="mt-8 space-y-4">
+                {/* The platform API exposes no notification-preference endpoint
+                    yet, so these controls are shown as read-only rather than
+                    pretending to save. */}
+                <div className="mt-6 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                  <AlertCircle size={18} className="mt-0.5 shrink-0 text-amber-600" />
+                  <div>
+                    <p className="text-sm font-bold text-amber-900">
+                      Preferences are not editable yet
+                    </p>
+                    <p className="mt-1 text-sm leading-relaxed text-amber-800">
+                      Notification settings are not yet supported by the Phsar
+                      Digital API. Until they are, every alert below is sent to
+                      <span className="font-semibold">
+                        {" " + (userEmail || "your email")}
+                      </span>
+                      {" "}by default. We will switch these on as soon as the
+                      endpoint ships.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-6 space-y-4">
                   {[
                     {
                       title: "Order Status Updates",
-                      desc: "Receive SMS and Email notifications when your order status changes.",
-                      checked: true,
+                      desc: "Sent when your order is confirmed, shipped, or delivered.",
                     },
                     {
                       title: "Promotional Offers & Discounts",
-                      desc: "Be the first to know about seasonal sales and exclusive coupon codes.",
-                      checked: true,
+                      desc: "Seasonal sales and exclusive coupon codes.",
                     },
                     {
                       title: "Account Security Alerts",
-                      desc: "Important security notifications about login attempts.",
-                      checked: true,
+                      desc: "Important notifications about login attempts.",
                     },
-                  ].map((item, idx) => (
+                  ].map((item) => (
                     <div
-                      key={idx}
-                      className="flex items-center justify-between rounded-xl border border-[#EDEBF3] p-5 transition hover:bg-[#FAFAFE]"
+                      key={item.title}
+                      className="flex items-center justify-between gap-4 rounded-xl border border-[#EDEBF3] bg-[#FAFAFE] p-5"
                     >
                       <div>
                         <p className="text-base font-semibold text-[#1A1330]">
@@ -986,11 +1051,9 @@ export default function AccountPageClient() {
                         </p>
                         <p className="mt-1 text-sm text-[#8D86A8]">{item.desc}</p>
                       </div>
-                      <input
-                        type="checkbox"
-                        defaultChecked={item.checked}
-                        className="h-5 w-5 rounded border-[#E2DFEC] text-[#6C4CD8] focus:ring-[#6C4CD8]"
-                      />
+                      <span className="shrink-0 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">
+                        Always on
+                      </span>
                     </div>
                   ))}
                 </div>

@@ -24,14 +24,32 @@ async function getAuthHeader(request: NextRequest): Promise<string | null> {
   return null;
 }
 
+/** Filter parameters GET /api/v1/listings honours, forwarded when present. */
+const FORWARDED_PARAMS = [
+  "status",
+  "categoryUuid",
+  "categorySlug",
+  "sellerId",
+  "search",
+  "minPrice",
+  "maxPrice",
+  "sort",
+] as const;
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const status = searchParams.get("status");
-  const pageNumber = searchParams.get("pageNumber") ?? "0";
-  const pageSize = searchParams.get("pageSize") ?? "20";
 
-  let url = `${BASE_URL}/api/v1/listings?pageNumber=${pageNumber}&pageSize=${pageSize}`;
-  if (status) url += `&status=${status}`;
+  const upstream = new URLSearchParams({
+    pageNumber: searchParams.get("pageNumber") ?? "0",
+    pageSize: searchParams.get("pageSize") ?? "20",
+  });
+
+  for (const key of FORWARDED_PARAMS) {
+    const value = searchParams.get(key);
+    if (value) upstream.set(key, value);
+  }
+
+  const url = `${BASE_URL}/api/v1/listings?${upstream.toString()}`;
 
   try {
     const res = await fetch(url, {
