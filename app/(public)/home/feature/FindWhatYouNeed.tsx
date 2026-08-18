@@ -3,13 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ChevronsUpDown } from "lucide-react";
-import { ChevronRight, ArrowRight } from "lucide-react";
+import { ChevronsUpDown, ArrowRight } from "lucide-react";
 import { mockCategoryPanelListings } from "../listing-mock";
 import { getPrimaryImage } from "../listing-helpers";
 import { SectionHeader } from "../SectionHeader";
+import { useGetCategoriesQuery } from "@/lib/api/homeApi";
 
-const panels: { slug: string; label: string; count: number }[] = [
+const defaultPanels = [
   { slug: "personal-care", label: "Personal Care", count: 26 },
   { slug: "sports-outdoor", label: "Sports & Outdoor", count: 26 },
   { slug: "shoes", label: "Shoes", count: 100 },
@@ -17,46 +17,60 @@ const panels: { slug: string; label: string; count: number }[] = [
 ];
 
 function CategoryPanel({ slug, label, count }: { slug: string; label: string; count: number }) {
-  const listings = mockCategoryPanelListings[slug] ?? [];
+  const listings = mockCategoryPanelListings[slug] ?? mockCategoryPanelListings["personal-care"] ?? [];
 
   return (
-    <div className="rounded-xl border border-[#EDEBF3] bg-white p-4 shadow-sm">
+    <div className="rounded-xl border border-[#EDEBF3] bg-white p-4 shadow-sm font-sans">
       <div className="mb-3 flex items-start justify-between">
         <div>
           <p className="font-bold text-[#241F35]">{label}</p>
           <p className="text-xs text-[#8B85A0]">{count} Products</p>
         </div>
         <Link
-          href={`/categories/${slug}`}
+          href={`/products?category=${slug}`}
           className="flex items-center gap-0.5 text-xs font-semibold text-[#6C4CD8] hover:underline"
         >
           View All <ChevronsUpDown size={12} />
         </Link>
       </div>
       <div className="grid grid-cols-4 gap-2">
-        {listings.map((listing) => (
-          <motion.div
-            key={listing.id}
-            whileHover={{ scale: 1.06 }}
-            className="aspect-square overflow-hidden rounded-lg bg-[#F5F3FA]"
-          >
-            <Image
-              src={getPrimaryImage(listing)}
-              alt={listing.title}
-              width={100}
-              height={100}
-              className="h-full w-full object-cover"
-            />
-          </motion.div>
-        ))}
+        {listings.map((listing: any, index: number) => {
+          const img = getPrimaryImage(listing);
+          return (
+            <motion.div
+              key={listing.id || index}
+              whileHover={{ scale: 1.06 }}
+              className="aspect-square overflow-hidden rounded-lg bg-[#F5F3FA] relative"
+            >
+              <Image
+                src={img}
+                alt={listing.title || label}
+                fill
+                unoptimized={Boolean(img?.startsWith("http"))}
+                className="h-full w-full object-cover"
+              />
+            </motion.div>
+          );
+        })}
       </div>
     </div>
   );
 }
 
 export function FindWhatYouNeed() {
+  const { data: categories = [] } = useGetCategoriesQuery();
+
+  const panels =
+    categories.length > 0
+      ? categories.slice(0, 4).map((c: any) => ({
+          slug: c.slug || String(c.id),
+          label: c.name,
+          count: c.productCount || 24,
+        }))
+      : defaultPanels;
+
   return (
-    <section className="mx-auto max-w-7xl px-4 py-8">
+    <section className="mx-auto max-w-7xl px-4 py-8 font-sans">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_1fr]">
         {/* Promo panel */}
         <motion.div

@@ -23,6 +23,12 @@ export const homeApi = createApi({
   endpoints: (builder) => ({
     getCategories: builder.query<Category[], void>({
       query: () => "/categories",
+      transformResponse: (response: any) => {
+        if (Array.isArray(response)) return response;
+        if (Array.isArray(response?.content)) return response.content;
+        if (Array.isArray(response?.data)) return response.data;
+        return [];
+      },
       providesTags: ["Category"],
     }),
 

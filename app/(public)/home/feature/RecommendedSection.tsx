@@ -2,24 +2,22 @@
 
 import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Loader2 } from "lucide-react";
 import { mockFeaturedListings } from "../listing-mock";
 import { ProductCard } from "../ProductCard";
 import { SectionHeader } from "../SectionHeader";
 import { cn } from "@/lib/utils";
+import { useGetListingsQuery } from "@/lib/api/homeApi";
 
 const TABS = ["Featured Products", "Best Selling", "Latest Products"] as const;
 type Tab = (typeof TABS)[number];
 
-/**
- * TODO when your API is ready:
- *   const { data } = useGetListingsQuery({ sort: sortForTab(activeTab), pageSize: 15 });
- * Right now all three tabs point at the same mock array since there's no
- * real "best selling" signal yet — swap the `listings` line below once
- * useGetFeaturedListingsQuery / etc. are live.
- */
 export function RecommendedSection() {
   const [activeTab, setActiveTab] = React.useState<Tab>("Featured Products");
-  const listings = mockFeaturedListings;
+  const { data: listingsResponse, isLoading } = useGetListingsQuery();
+
+  const apiListings = listingsResponse?.data || (listingsResponse as any)?.content || [];
+  const listings = apiListings.length > 0 ? apiListings : mockFeaturedListings;
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-10">
@@ -47,22 +45,32 @@ export function RecommendedSection() {
         </div>
       </div>
 
-      <SectionHeader title="Featured Products" className="mb-4" />
+      <SectionHeader title={activeTab} className="mb-4" />
 
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={activeTab}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5"
-        >
-          {listings.map((listing) => (
-            <ProductCard key={listing.id} listing={listing} sellerName="6Valley" />
-          ))}
-        </motion.div>
-      </AnimatePresence>
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12 text-sm text-gray-500 gap-2">
+          <Loader2 className="size-5 animate-spin text-[#6C4CD8]" />
+          Loading products...
+        </div>
+      ) : (
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5"
+          >
+            {listings.map((listing: any, index: number) => (
+              <ProductCard
+                key={listing.uuid || listing.id || index}
+                listing={listing}
+              />
+            ))}
+          </motion.div>
+        </AnimatePresence>
+      )}
     </section>
   );
 }

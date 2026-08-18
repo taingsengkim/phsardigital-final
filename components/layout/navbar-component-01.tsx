@@ -15,17 +15,22 @@ import {
   X,
   Store,
   Clock,
+  LogOut,
 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useSession } from "@/lib/auth-client";
+import { useSession, logoutFromKeycloak } from "@/lib/auth-client";
 import { useGetMeQuery } from "@/lib/api/authApi";
-import { useGetSellerApplicationQuery } from "@/lib/api/sellerApi";
+import { useGetSellerApplicationQuery, useGetSellerProfileQuery } from "@/lib/api/sellerApi";
+import { useGetCategoriesQuery } from "@/lib/api/homeApi";
+import LoginButton from "@/components/auth/LoginButton";
 
 const BRAND = "#6C4CD8";
 const NAV_LINKS = ["Home", "Offers", "Brands", "Stores", "All Products"];
@@ -51,16 +56,35 @@ export default function Navbar() {
   const { data: profile } = useGetMeQuery(undefined, {
     skip: !session?.user,
   });
+  const { data: sellerProfile } = useGetSellerProfileQuery(undefined, {
+    skip: !session?.user,
+  });
   const { data: sellerApp } = useGetSellerApplicationQuery(undefined, {
     skip: !session?.user,
   });
+  const { data: apiCategories } = useGetCategoriesQuery();
 
   const isLoggedIn = Boolean(session?.user);
-  const isSeller = Boolean((profile as any)?.isSeller || sellerApp?.status === "APPROVED");
+  const isSeller = Boolean(
+    (profile as any)?.isSeller || sellerProfile?.id || sellerApp?.status === "APPROVED"
+  );
   const isPendingSeller = sellerApp?.status === "PENDING";
 
-  const userAvatar = profile?.avatarUrl || sellerApp?.logoUri || session?.user?.image || "";
-  const storeName = sellerApp?.storeDisplayName || sellerApp?.businessName;
+  const userAvatar =
+    profile?.avatarUrl || sellerProfile?.logoUri || sellerApp?.logoUri || session?.user?.image || "";
+  const storeName =
+    sellerProfile?.businessName || sellerApp?.storeDisplayName || sellerApp?.businessName;
+
+  const categoriesList =
+    apiCategories && apiCategories.length > 0
+      ? apiCategories.map((c: any) => ({
+          name: c.name,
+          slug: c.slug || String(c.id),
+        }))
+      : CATEGORIES.map((cat) => ({
+          name: cat,
+          slug: cat.toLowerCase().replace(/\s+/g, "-"),
+        }));
 
   const categoryHref = (cat: string) =>
     `/category/${cat.toLowerCase().replace(/\s+/g, "-").replace(/[&]/g, "and")}`;
@@ -102,11 +126,11 @@ export default function Navbar() {
               aria-label="Phsar Digital home"
             >
               <Image
-                src="/logo.jpg"
+                src="/picture/logo.png"
                 alt="Phsar Digital logo"
-                width={32}
-                height={32}
-                className="h-7 w-7 object-contain sm:h-8 sm:w-8"
+                width={36}
+                height={36}
+                className="h-8 w-8 object-contain sm:h-9 sm:w-9 rounded-xl"
               />
               <span
                 className="hidden text-[15px] font-bold sm:inline sm:text-[17px]"
@@ -163,22 +187,25 @@ export default function Navbar() {
                 </Link>
               )}
 
-              <Link
-                href="/saved"
-                aria-label="Saved"
-                className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9 transition hover:scale-105"
-                style={{ background: "#F1EFFA" }}
-              >
-                <Heart size={15} color={BRAND} />
-                {savedCount > 0 && (
-                  <span
-                    className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white"
-                    style={{ background: BRAND }}
-                  >
-                    {savedCount}
-                  </span>
-                )}
-              </Link>
+              {/* Favorite / Saved link — only when logged in */}
+              {isLoggedIn && (
+                <Link
+                  href="/saved"
+                  aria-label="Saved"
+                  className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9 transition hover:scale-105"
+                  style={{ background: "#F1EFFA" }}
+                >
+                  <Heart size={15} color={BRAND} />
+                  {savedCount > 0 && (
+                    <span
+                      className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white"
+                      style={{ background: BRAND }}
+                    >
+                      {savedCount}
+                    </span>
+                  )}
+                </Link>
+              )}
 
               <Link
                 href="/orders"
@@ -189,24 +216,72 @@ export default function Navbar() {
                 <ShoppingBag size={15} color={BRAND} />
               </Link>
 
-              {/* Account / Profile Button */}
-              <Link
-                href={isLoggedIn ? "/account" : "/auth/login"}
-                aria-label="Account"
-                title={isLoggedIn ? `Account (${session?.user?.name || "User"})` : "Sign In"}
-                className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9 transition hover:scale-105 overflow-hidden ring-2 ring-[#6C4CD8]/20"
-                style={{ background: "#F1EFFA" }}
-              >
-                {isLoggedIn && userAvatar ? (
-                  <img
-                    src={userAvatar}
-                    alt="User Avatar"
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <User size={15} color={BRAND} />
-                )}
-              </Link>
+              {/* Account / Login Dropdown */}
+              {isLoggedIn ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label="Account Menu"
+                      title={`Account (${session?.user?.name || "User"})`}
+                      className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9 transition hover:scale-105 overflow-hidden ring-2 ring-[#6C4CD8]/20 focus:outline-none cursor-pointer"
+                      style={{ background: "#F1EFFA" }}
+                    >
+                      {userAvatar ? (
+                        <img
+                          src={userAvatar}
+                          alt="User Avatar"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <User size={15} color={BRAND} />
+                      )}
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56 p-2 rounded-2xl shadow-xl bg-white border border-[#E2DFEC] mt-2">
+                    <DropdownMenuLabel className="font-normal p-2">
+                      <div className="flex flex-col space-y-1">
+                        <p className="text-sm font-bold text-gray-900 truncate">
+                          {session?.user?.name || "My Account"}
+                        </p>
+                        {session?.user?.email && (
+                          <p className="text-xs text-gray-500 truncate">
+                            {session.user.email}
+                          </p>
+                        )}
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuGroup>
+                      <DropdownMenuItem asChild className="rounded-xl cursor-pointer">
+                        <Link href="/account" className="flex items-center gap-2 py-2">
+                          <User size={16} className="text-[#6C4CD8]" />
+                          <span>Account Details</span>
+                        </Link>
+                      </DropdownMenuItem>
+
+                      {isSeller && (
+                        <DropdownMenuItem asChild className="rounded-xl cursor-pointer">
+                          <Link href="/seller-dashboard/home" className="flex items-center gap-2 py-2 text-[#6C4CD8] font-bold">
+                            <Store size={16} />
+                            <span>Seller Dashboard</span>
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuGroup>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => logoutFromKeycloak("/")}
+                      className="rounded-xl cursor-pointer py-2 text-rose-600 font-semibold focus:bg-rose-50 focus:text-rose-700"
+                    >
+                      <LogOut size={16} className="mr-2" />
+                      <span>Log Out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <LoginButton />
+              )}
 
               <Link
                 href="/cart"
@@ -263,9 +338,9 @@ export default function Navbar() {
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="start">
               <DropdownMenuGroup>
-                {CATEGORIES.map((cat) => (
-                  <DropdownMenuItem key={cat} asChild>
-                    <Link href={categoryHref(cat)}>{cat}</Link>
+                {categoriesList.map((cat) => (
+                  <DropdownMenuItem key={cat.slug} asChild>
+                    <Link href={`/products?category=${cat.slug}`}>{cat.name}</Link>
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuGroup>

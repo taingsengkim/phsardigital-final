@@ -3,30 +3,46 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowRight, ChevronsUpDown } from "lucide-react";
+import { ArrowRight, ChevronsUpDown, Loader2 } from "lucide-react";
 import { mockCategories } from "../categories-mock";
-
+import { useGetCategoriesQuery } from "@/lib/api/homeApi";
 
 export function HeroBanner() {
-  const categories = mockCategories;
+  const { data: apiCategories = [], isLoading } = useGetCategoriesQuery();
+
+  const categories =
+    apiCategories.length > 0
+      ? apiCategories.map((c: any) => ({
+          id: c.uuid || String(c.id),
+          name: c.name,
+          slug: c.slug || String(c.id),
+        }))
+      : mockCategories;
 
   return (
-    <section className="mx-auto grid max-w-7xl grid-cols-1 gap-4 px-4 py-6 lg:grid-cols-[260px_1fr]">
+    <section className="mx-auto grid max-w-7xl grid-cols-1 gap-4 px-4 py-6 lg:grid-cols-[260px_1fr] font-sans">
       {/* Sidebar category list — hidden on mobile, desktop-first */}
       <aside className="hidden rounded-xl border border-[#EDEBF3] bg-white p-2 shadow-sm lg:block">
-        <ul>
-          {categories.map((category) => (
-            <li key={category.id}>
-              <Link
-                href={`/categories/${category.slug}`}
-                className="flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium text-[#241F35] transition-colors hover:bg-[#F1EFFA] hover:text-[#6C4CD8]"
-              >
-                {category.name}
-                <ChevronsUpDown size={14} className="text-muted-foreground" />
-              </Link>
-            </li>
-          ))}
-        </ul>
+        {isLoading ? (
+          <div className="flex items-center justify-center p-8 text-xs text-gray-500 gap-2">
+            <Loader2 className="size-4 animate-spin text-[#6C4CD8]" />
+            Loading categories...
+          </div>
+        ) : (
+          <ul>
+            {categories.map((category: any) => (
+              <li key={category.id || category.slug}>
+                <Link
+                  href={`/products?category=${category.slug}`}
+                  className="flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium text-[#241F35] transition-colors hover:bg-[#F1EFFA] hover:text-[#6C4CD8]"
+                >
+                  <span className="truncate">{category.name}</span>
+                  <ChevronsUpDown size={14} className="text-muted-foreground shrink-0" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
       </aside>
 
       {/* Banner */}

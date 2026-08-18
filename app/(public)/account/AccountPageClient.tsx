@@ -29,8 +29,9 @@ import {
   BadgeCheck,
   Building2,
   FileCheck,
+  LogOut,
 } from "lucide-react";
-import { useSession } from "@/lib/auth-client";
+import { useSession, logoutFromKeycloak } from "@/lib/auth-client";
 import {
   useGetMeQuery,
   useUpdateMeMutation,
@@ -324,10 +325,10 @@ export default function AccountPageClient() {
                     <Store size={18} /> Seller Dashboard
                   </Link>
                   <Link
-                    href="/account/seller-application"
+                    href="/seller-dashboard/products/dashboard"
                     className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-3 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20 active:scale-95"
                   >
-                    Store Settings
+                    <ShoppingBag size={18} /> Manage Products
                   </Link>
                 </>
               ) : isPendingSeller ? (
@@ -574,6 +575,19 @@ export default function AccountPageClient() {
                   </button>
                 );
               })}
+
+              <div className="pt-2 border-t border-[#EAE7F3]">
+                <button
+                  type="button"
+                  onClick={() => logoutFromKeycloak("/")}
+                  className="flex w-full items-center justify-between gap-2 rounded-xl px-4 py-3 text-sm font-bold text-rose-600 hover:bg-rose-50 transition"
+                >
+                  <div className="flex items-center gap-3">
+                    <LogOut size={18} className="text-rose-600" />
+                    <span>Log Out</span>
+                  </div>
+                </button>
+              </div>
             </div>
 
             {/* Support Callout Card */}
@@ -614,10 +628,10 @@ export default function AccountPageClient() {
 
                     {isSeller && (
                       <Link
-                        href="/account/seller-application"
+                        href="/seller-dashboard/home"
                         className="inline-flex items-center gap-1.5 text-xs font-bold text-[#6C4CD8] bg-[#EDE9FB] px-3.5 py-2 rounded-xl hover:bg-[#6C4CD8] hover:text-white transition"
                       >
-                        <Building2 size={14} /> Edit Business Info
+                        <Building2 size={14} /> Go to Seller Dashboard
                       </Link>
                     )}
                   </div>

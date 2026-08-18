@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState } from "react";
 import {
   Search,
@@ -32,6 +33,7 @@ import LoginButton from "@/components/auth/LoginButton";
 import { useSession, logoutFromKeycloak } from "@/lib/auth-client";
 import { useGetMeQuery } from "@/lib/api/authApi";
 import { useGetSellerApplicationQuery } from "@/lib/api/sellerApi";
+import { useGetCategoriesQuery } from "@/lib/api/homeApi";
 
 const BRAND = "#6C4CD8";
 
@@ -76,11 +78,24 @@ export default function Navbar() {
     skip: !isLoggedIn,
   });
 
+  const { data: apiCategories } = useGetCategoriesQuery();
+
   const isSeller = Boolean((profile as any)?.isSeller || sellerApp?.status === "APPROVED");
   const isPendingSeller = sellerApp?.status === "PENDING";
 
   const userAvatar = profile?.avatarUrl || sellerApp?.logoUri || user?.image || "";
   const storeName = sellerApp?.storeDisplayName || sellerApp?.businessName;
+
+  const categoriesList =
+    apiCategories && apiCategories.length > 0
+      ? apiCategories.map((c: any) => ({
+          name: c.name,
+          slug: c.slug || String(c.id),
+        }))
+      : CATEGORIES.map((cat) => ({
+          name: cat,
+          slug: cat.toLowerCase().replace(/\s+/g, "-"),
+        }));
 
   async function handleLogout() {
     await logoutFromKeycloak("/");
@@ -97,7 +112,13 @@ export default function Navbar() {
             className="flex shrink-0 items-center gap-2 text-decoration-none group transition-transform hover:scale-105 active:scale-95"
             aria-label="Phsar Digital home"
           >
-            <SvgComponentSvg className="h-8 w-8 text-[#6C4CD8]" />
+            <Image
+              src="/picture/logo.png"
+              alt="Phsar Digital logo"
+              width={36}
+              height={36}
+              className="h-9 w-9 object-contain rounded-xl"
+            />
             <span className="text-xl font-bold text-[#241F35]">
               Phsar Digital
             </span>
@@ -302,13 +323,13 @@ export default function Navbar() {
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56 mt-2" align="start">
               <DropdownMenuGroup>
-                {CATEGORIES.map((cat) => (
-                  <DropdownMenuItem key={cat} asChild>
+                {categoriesList.map((cat) => (
+                  <DropdownMenuItem key={cat.slug} asChild>
                     <Link
-                      href={`/category/${cat.toLowerCase().replace(/\s+/g, "-").replace(/[&]/g, "and")}`}
+                      href={`/products?category=${cat.slug}`}
                       className="cursor-pointer text-sm transition-colors hover:text-[#6C4CD8]"
                     >
-                      {cat}
+                      {cat.name}
                     </Link>
                   </DropdownMenuItem>
                 ))}
