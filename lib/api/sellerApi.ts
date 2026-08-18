@@ -68,9 +68,114 @@ export interface AttachDocumentPayload {
   objectName: string;
 }
 
+export type SubscriptionPlanType = "BASIC" | "STANDARD" | "PREMIUM";
+
+export interface SubscriptionPlan {
+  plan: SubscriptionPlanType;
+  displayName: string;
+  priceUsd: number;
+  durationDays: number;
+  listingLimit: number;
+}
+
+export interface SellerSubscription {
+  sellerId: string;
+  plan: SubscriptionPlanType;
+  planDisplayName: string;
+  status: "ACTIVE" | "EXPIRED";
+  startedAt: string;
+  expiresAt: string;
+  listingsUsed: number;
+  listingLimit: number;
+  canPostListing: boolean;
+  canChat: boolean;
+}
+
+export interface SubscribePayload {
+  plan: SubscriptionPlanType;
+}
+
+export interface SellerProfile {
+  id: string;
+  businessName: string;
+  businessType?: string;
+  description?: string;
+  logoObjectName?: string;
+  logoUri?: string;
+  address?: string;
+  city?: string;
+  province?: string;
+  latitude?: number;
+  longitude?: number;
+  googleMapUrl?: string;
+  isActive?: boolean;
+}
+
+export interface SellerOrderItem {
+  listingUuid: string;
+  title: string;
+  quantity: number;
+  unitPrice: number;
+  lineTotal: number;
+}
+
+export interface SellerOrder {
+  uuid: string;
+  buyerId: string;
+  sellerId: string;
+  businessName: string;
+  totalPrice: number;
+  status: "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELLED";
+  shippingAddress?: string;
+  note?: string;
+  items?: SellerOrderItem[];
+  createdAt: string;
+}
+
+export interface PagedSellerOrders {
+  content: SellerOrder[];
+  page?: {
+    size: number;
+    number: number;
+    totalElements: number;
+    totalPages: number;
+  };
+}
+
+export interface SellerReview {
+  uuid: string;
+  comment: string;
+  rating: number;
+  createdAt: string;
+  buyer?: {
+    fullName?: string;
+    username?: string;
+    avatarUrl?: string;
+  };
+  listing?: {
+    title?: string;
+  };
+}
+
+export interface PagedSellerReviews {
+  content: SellerReview[];
+  page?: {
+    size: number;
+    number: number;
+    totalElements: number;
+    totalPages: number;
+  };
+}
+
 export const sellerApi = createApi({
   reducerPath: "sellerApi",
-  tagTypes: ["SellerApplication"],
+  tagTypes: [
+    "SellerApplication",
+    "SellerSubscription",
+    "SellerProfile",
+    "SellerOrders",
+    "SellerReviews",
+  ],
   baseQuery: fetchBaseQuery({
     baseUrl: "/api",
   }),
@@ -138,6 +243,57 @@ export const sellerApi = createApi({
       }),
       invalidatesTags: ["SellerApplication"],
     }),
+
+    // Subscriptions
+    getSubscriptionPlans: builder.query<SubscriptionPlan[], void>({
+      query: () => ({
+        url: "/subscriptions/plans",
+      }),
+    }),
+
+    getSellerSubscription: builder.query<SellerSubscription | null, void>({
+      query: () => ({
+        url: "/subscriptions/me",
+      }),
+      providesTags: ["SellerSubscription"],
+      transformResponse: (response: any) => {
+        if (!response || response.notFound) {
+          return null;
+        }
+        return response as SellerSubscription;
+      },
+    }),
+
+    subscribeToPlan: builder.mutation<SellerSubscription, SubscribePayload>({
+      query: (payload) => ({
+        url: "/subscriptions/me",
+        method: "POST",
+        body: payload,
+      }),
+      invalidatesTags: ["SellerSubscription"],
+    }),
+
+    // Seller Dashboard data
+    getSellerProfile: builder.query<SellerProfile | null, void>({
+      query: () => ({
+        url: "/sellers/me",
+      }),
+      providesTags: ["SellerProfile"],
+    }),
+
+    getSellerOrders: builder.query<PagedSellerOrders, void>({
+      query: () => ({
+        url: "/purchases/seller/orders?pageNumber=0&pageSize=20",
+      }),
+      providesTags: ["SellerOrders"],
+    }),
+
+    getSellerReviews: builder.query<PagedSellerReviews, void>({
+      query: () => ({
+        url: "/reviews/sellers/me?page=0&size=10",
+      }),
+      providesTags: ["SellerReviews"],
+    }),
   }),
 });
 
@@ -147,4 +303,11 @@ export const {
   useUploadLogoFileMutation,
   useUploadDocumentFileMutation,
   useAttachDocumentMutation,
+  useGetSubscriptionPlansQuery,
+  useGetSellerSubscriptionQuery,
+  useSubscribeToPlanMutation,
+  useGetSellerProfileQuery,
+  useGetSellerOrdersQuery,
+  useGetSellerReviewsQuery,
 } = sellerApi;
+
