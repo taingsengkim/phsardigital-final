@@ -56,11 +56,14 @@ export const homeApi = createApi({
       providesTags: ["Listing"],
     }),
 
-    // No backend endpoint yet — kept here (unused for now) so the shape is
-    // ready the day "browse sellers" ships. Until then, sections import the
-    // Seller[] mock directly instead of calling this hook.
-    getTopSellers: builder.query<Seller[], void>({
-      query: () => "/sellers?sort=top",
+    getTopSellers: builder.query<any[], void>({
+      query: () => "/sellers/top",
+      transformResponse: (response: any) => {
+        if (Array.isArray(response)) return response;
+        if (Array.isArray(response?.content)) return response.content;
+        if (Array.isArray(response?.data)) return response.data;
+        return [];
+      },
     }),
   }),
 });

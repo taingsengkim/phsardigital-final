@@ -3,28 +3,17 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ChevronsUpDown, ArrowRight } from "lucide-react";
-import { mockCategoryPanelListings } from "../listing-mock";
-import { getPrimaryImage } from "../listing-helpers";
+import { ChevronsUpDown, ArrowRight, Loader2 } from "lucide-react";
 import { SectionHeader } from "../SectionHeader";
 import { useGetCategoriesQuery } from "@/lib/api/homeApi";
 
-const defaultPanels = [
-  { slug: "personal-care", label: "Personal Care", count: 26 },
-  { slug: "sports-outdoor", label: "Sports & Outdoor", count: 26 },
-  { slug: "shoes", label: "Shoes", count: 100 },
-  { slug: "kitchen", label: "Kitchen", count: 26 },
-];
-
-function CategoryPanel({ slug, label, count }: { slug: string; label: string; count: number }) {
-  const listings = mockCategoryPanelListings[slug] ?? mockCategoryPanelListings["personal-care"] ?? [];
-
+function CategoryPanel({ slug, label, count }: { slug: string; label: string; count?: number }) {
   return (
     <div className="rounded-xl border border-[#EDEBF3] bg-white p-4 shadow-sm font-sans">
       <div className="mb-3 flex items-start justify-between">
         <div>
           <p className="font-bold text-[#241F35]">{label}</p>
-          <p className="text-xs text-[#8B85A0]">{count} Products</p>
+          <p className="text-xs text-[#8B85A0]">{count ?? 0} Products</p>
         </div>
         <Link
           href={`/products?category=${slug}`}
@@ -33,41 +22,18 @@ function CategoryPanel({ slug, label, count }: { slug: string; label: string; co
           View All <ChevronsUpDown size={12} />
         </Link>
       </div>
-      <div className="grid grid-cols-4 gap-2">
-        {listings.map((listing: any, index: number) => {
-          const img = getPrimaryImage(listing);
-          return (
-            <motion.div
-              key={listing.id || index}
-              whileHover={{ scale: 1.06 }}
-              className="aspect-square overflow-hidden rounded-lg bg-[#F5F3FA] relative"
-            >
-              <Image
-                src={img}
-                alt={listing.title || label}
-                fill
-                unoptimized={Boolean(img?.startsWith("http"))}
-                className="h-full w-full object-cover"
-              />
-            </motion.div>
-          );
-        })}
-      </div>
     </div>
   );
 }
 
 export function FindWhatYouNeed() {
-  const { data: categories = [] } = useGetCategoriesQuery();
+  const { data: categories = [], isLoading } = useGetCategoriesQuery();
 
-  const panels =
-    categories.length > 0
-      ? categories.slice(0, 4).map((c: any) => ({
-          slug: c.slug || String(c.id),
-          label: c.name,
-          count: c.productCount || 24,
-        }))
-      : defaultPanels;
+  const panels = categories.map((c: any) => ({
+    slug: c.slug || String(c.id),
+    label: c.name,
+    count: c.productCount ?? 0,
+  }));
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-8 font-sans">
@@ -104,11 +70,22 @@ export function FindWhatYouNeed() {
         {/* Category panels */}
         <div className="space-y-4">
           <SectionHeader title="Find What You Need" />
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {panels.map((panel) => (
-              <CategoryPanel key={panel.slug} {...panel} />
-            ))}
-          </div>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8 text-sm text-gray-500 gap-2">
+              <Loader2 className="size-5 animate-spin text-[#6C4CD8]" />
+              Loading categories...
+            </div>
+          ) : panels.length === 0 ? (
+            <div className="rounded-xl border border-[#EDEBF3] bg-white p-8 text-center text-xs text-gray-400">
+              No categories available yet.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {panels.slice(0, 4).map((panel) => (
+                <CategoryPanel key={panel.slug} {...panel} />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </section>

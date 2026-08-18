@@ -55,19 +55,7 @@ export type Review = {
   created_at: string;
 };
 
-export type Seller = {
-  id: number | string;
-  slug: string;
-  name: string;
-  bannerImage: string;
-  logoImage?: string;
-  avatar_url?: string;
-  rating: number;
-  reviewCount: number;
-  productCount: number;
-  review_count?: number;
-  product_count?: number;
-};
+
 
 export type Listing = {
   id: number;

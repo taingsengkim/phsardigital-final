@@ -3,21 +3,17 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowRight, ChevronsUpDown, Loader2 } from "lucide-react";
-import { mockCategories } from "../categories-mock";
+import { ArrowRight, ChevronsUpDown, Loader2, Layers } from "lucide-react";
 import { useGetCategoriesQuery } from "@/lib/api/homeApi";
 
 export function HeroBanner() {
   const { data: apiCategories = [], isLoading } = useGetCategoriesQuery();
 
-  const categories =
-    apiCategories.length > 0
-      ? apiCategories.map((c: any) => ({
-          id: c.uuid || String(c.id),
-          name: c.name,
-          slug: c.slug || String(c.id),
-        }))
-      : mockCategories;
+  const categories = apiCategories.map((c: any) => ({
+    id: c.uuid || String(c.id),
+    name: c.name,
+    slug: c.slug || String(c.id),
+  }));
 
   return (
     <section className="mx-auto grid max-w-7xl grid-cols-1 gap-4 px-4 py-6 lg:grid-cols-[260px_1fr] font-sans">
@@ -27,6 +23,11 @@ export function HeroBanner() {
           <div className="flex items-center justify-center p-8 text-xs text-gray-500 gap-2">
             <Loader2 className="size-4 animate-spin text-[#6C4CD8]" />
             Loading categories...
+          </div>
+        ) : categories.length === 0 ? (
+          <div className="flex flex-col items-center justify-center p-8 text-center text-xs text-gray-400">
+            <Layers className="size-6 text-gray-300 mb-1" />
+            No categories
           </div>
         ) : (
           <ul>

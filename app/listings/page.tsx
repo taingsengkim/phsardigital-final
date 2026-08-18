@@ -12,13 +12,8 @@ export default async function ListingsPage() {
   return (
     <div>
       <h1>Listings</h1>
-<<<<<<< HEAD
       {data.content?.map((listing: ListingItem, index: number) => (
         <div key={listing.uuid ?? listing.id ?? index}>{listing.title}</div>
-=======
-      {data.content?.map((listing: { uuid?: string; title?: string }) => (
-        <div key={listing.uuid}>{listing.title}</div>
->>>>>>> 81c90aadd6ba38ee446010bca12f785977af41a3
       ))}
     </div>
   );
