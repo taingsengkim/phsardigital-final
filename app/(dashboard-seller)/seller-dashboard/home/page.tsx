@@ -79,6 +79,7 @@ export default function DashboardSeller() {
                 src={profile.logoUri}
                 alt={profile.businessName || "Store"}
                 fill
+                unoptimized={Boolean(profile?.logoUri?.startsWith("http"))}
                 className="object-cover"
               />
             ) : (
@@ -205,6 +206,7 @@ export default function DashboardSeller() {
                             alt={rev.buyer.fullName || "User"}
                             width={40}
                             height={40}
+                            unoptimized={Boolean(rev?.buyer?.avatarUrl?.startsWith("http"))}
                             className="size-10 rounded-full object-cover"
                           />
                         ) : (

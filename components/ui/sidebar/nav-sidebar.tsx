@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { ChevronDown, ChevronUp, CircleHelp, Home, Moon, Sparkles, Store, Sun, Tags, UserRound } from "lucide-react"
+import { ChevronDown, ChevronUp, CircleHelp, Home, Moon, Plus, Sparkles, Store, Sun, Tags, UserRound } from "lucide-react"
 import { useTheme } from "next-themes"
 
 import {
@@ -85,7 +85,9 @@ export function SellerSidebar() {
                 <Link
                   href="/seller-dashboard/products/new"
                   aria-label="Add product"
+                  className="grid size-8 place-items-center rounded-lg hover:bg-sidebar-accent hover:text-sidebar-accent-foreground text-muted-foreground"
                 >
+                  <Plus className="size-4" />
                 </Link>
                 <button
                   type="button"
