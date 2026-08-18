@@ -14,9 +14,10 @@ import {
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { readSellerDrafts, writeSellerDrafts } from "@/lib/seller-drafts"
 
 type DraftProduct = {
-  id: number
+  id: string
   title: string
   url: string
   price: string
@@ -24,12 +25,10 @@ type DraftProduct = {
   art: string
 }
 
-const initialProducts: DraftProduct[] = [
-  { id: 1, title: "Product title", url: "ui8.net/product/product-link", price: "$98", editedAt: "Apr 9, 2044 at 3:55 PM", art: "from-[#86d8ff] via-[#ffd0d8] to-[#ad87db]" },
-  { id: 2, title: "Product title", url: "ui8.net/product/product-link", price: "$0.0", editedAt: "Apr 9, 2044 at 3:55 PM", art: "from-[#ffb55c] via-[#ef835d] to-[#f1ded3]" },
-  { id: 3, title: "Product title", url: "ui8.net/product/product-link", price: "$98", editedAt: "Apr 9, 2044 at 3:55 PM", art: "from-[#8ed9dc] via-[#dfd2c9] to-[#edae9c]" },
-  { id: 4, title: "Product title", url: "ui8.net/product/product-link", price: "$98", editedAt: "Apr 9, 2044 at 3:55 PM", art: "from-[#57536f] via-[#8581bf] to-[#f2c2c7]" },
-  { id: 5, title: "Product title", url: "ui8.net/product/product-link", price: "$98", editedAt: "Apr 9, 2044 at 3:55 PM", art: "from-[#f7cbe7] via-[#faf0f3] to-[#a9a2a9]" },
+const draftArt = [
+  "from-[#86d8ff] via-[#ffd0d8] to-[#ad87db]",
+  "from-[#ffb55c] via-[#ef835d] to-[#f1ded3]",
+  "from-[#8ed9dc] via-[#dfd2c9] to-[#edae9c]",
 ]
 
 function Checkbox({ checked, onChange, label }: { checked: boolean; onChange: () => void; label: string }) {
@@ -62,17 +61,29 @@ function ProductArtwork({ art, index }: { art: string; index: number }) {
 
 export function Drafts({ variant = "drafts" }: { variant?: "drafts" | "schedualed" }) {
   const isScheduled = variant === "schedualed"
-  const [products, setProducts] = React.useState(initialProducts)
-  const [selected, setSelected] = React.useState<Set<number>>(new Set([2, 3]))
+  const [products, setProducts] = React.useState<DraftProduct[]>([])
+  const [selected, setSelected] = React.useState<Set<string>>(new Set())
   const [query, setQuery] = React.useState("")
   const [view, setView] = React.useState<"list" | "grid">("list")
+
+  React.useEffect(() => {
+    if (isScheduled) return
+    setProducts(readSellerDrafts().map((draft, index) => ({
+      id: draft.id,
+      title: draft.title,
+      url: draft.imageNames.length ? draft.imageNames.join(", ") : "No images added",
+      price: draft.price ? `$${draft.price}` : "$0.00",
+      editedAt: new Date(draft.updatedAt).toLocaleString(),
+      art: draftArt[index % draftArt.length],
+    })))
+  }, [isScheduled])
 
   const visibleProducts = products.filter((product) =>
     `${product.title} ${product.url}`.toLowerCase().includes(query.toLowerCase()),
   )
   const allVisibleSelected = visibleProducts.length > 0 && visibleProducts.every((product) => selected.has(product.id))
 
-  function toggle(id: number) {
+  function toggle(id: string) {
     setSelected((current) => {
       const next = new Set(current)
       if (next.has(id)) next.delete(id)
@@ -92,6 +103,7 @@ export function Drafts({ variant = "drafts" }: { variant?: "drafts" | "scheduale
 
   function deleteSelected() {
     setProducts((current) => current.filter((product) => !selected.has(product.id)))
+    writeSellerDrafts(readSellerDrafts().filter((draft) => !selected.has(draft.id)))
     setSelected(new Set())
   }
 
@@ -150,7 +162,7 @@ export function Drafts({ variant = "drafts" }: { variant?: "drafts" | "scheduale
                   <div className="flex w-[112px] justify-end gap-[7px] opacity-100 md:opacity-0 md:group-hover:opacity-100">
                     <button type="button" aria-label="Schedule product" className="grid size-[34px] place-items-center rounded-full bg-white text-[#75808a] shadow-sm"><CalendarDays className="size-[17px]" /></button>
                     <button type="button" aria-label="Edit product" className="grid size-[34px] place-items-center rounded-full bg-white text-[#75808a] shadow-sm"><Pencil className="size-[16px]" /></button>
-                    <button type="button" onClick={() => { setProducts((items) => items.filter((item) => item.id !== product.id)); setSelected((items) => { const next = new Set(items); next.delete(product.id); return next }) }} aria-label="Delete product" className="grid size-[34px] place-items-center rounded-full bg-white text-[#75808a] shadow-sm"><Trash2 className="size-[16px]" /></button>
+                    <button type="button" onClick={() => { setProducts((items) => items.filter((item) => item.id !== product.id)); writeSellerDrafts(readSellerDrafts().filter((draft) => draft.id !== product.id)); setSelected((items) => { const next = new Set(items); next.delete(product.id); return next }) }} aria-label="Delete product" className="grid size-[34px] place-items-center rounded-full bg-white text-[#75808a] shadow-sm"><Trash2 className="size-[16px]" /></button>
                   </div>
                 </div>
               )

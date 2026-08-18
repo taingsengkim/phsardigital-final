@@ -10,9 +10,9 @@ export default function DashboardLayout({
 }) {
   return (
     <TooltipProvider>
-      <SidebarProvider>
+      <SidebarProvider data-seller-dashboard className="bg-background text-foreground">
         <SellerSidebar />
-        <SidebarInset>
+        <SidebarInset className="bg-background text-foreground transition-colors">
           <NavTopbar />
           <main className="flex flex-1 flex-col gap-4 p-4">
             {children}

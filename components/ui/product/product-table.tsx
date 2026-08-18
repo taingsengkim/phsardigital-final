@@ -7,8 +7,6 @@ import {
   Pencil,
   MessageSquare,
   MoreHorizontal,
-  ArrowUp,
-  ArrowDown,
   Link2,
   Trash2,
 } from "lucide-react";
@@ -27,9 +25,6 @@ export interface ProductRow {
   image: string;
   status: "active" | "deactive";
   price: string;
-  sales: string;
-  salesChange: string;
-  salesChangeType: "up" | "down";
   views: string;
   /** Width of the views indicator bar, in percent of the track. */
   viewsBar: number;
@@ -47,9 +42,6 @@ const defaultProducts: ProductRow[] = [
     image: "/picture/pic1.jpg",
     status: "active",
     price: "$98",
-    sales: "$3,200",
-    salesChange: "55.8%",
-    salesChangeType: "up",
     views: "48k",
     viewsBar: 25,
     likes: 8,
@@ -63,9 +55,6 @@ const defaultProducts: ProductRow[] = [
     image: "/picture/pic2.jpg",
     status: "active",
     price: "$48",
-    sales: "$3,200",
-    salesChange: "37.8%",
-    salesChangeType: "up",
     views: "80k",
     viewsBar: 45,
     likes: 8,
@@ -79,9 +68,6 @@ const defaultProducts: ProductRow[] = [
     image: "/picture/pic3.jpg",
     status: "active",
     price: "$78",
-    sales: "$3,200",
-    salesChange: "27.5%",
-    salesChangeType: "up",
     views: "80k",
     viewsBar: 80,
     likes: 8,
@@ -95,9 +81,6 @@ const defaultProducts: ProductRow[] = [
     image: "/picture/pic4.jpg",
     status: "active",
     price: "$68",
-    sales: "$3,200",
-    salesChange: "37.8%",
-    salesChangeType: "up",
     views: "24k",
     viewsBar: 25,
     likes: 8,
@@ -111,9 +94,6 @@ const defaultProducts: ProductRow[] = [
     image: "/picture/pic5.jpg",
     status: "deactive",
     price: "$98",
-    sales: "$3,200",
-    salesChange: "27.5%",
-    salesChangeType: "up",
     views: "20k",
     viewsBar: 60,
     likes: 8,
@@ -250,7 +230,7 @@ export const ProductTable: React.FC<{ products?: ProductRow[] }> = ({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[880px] border-separate border-spacing-0">
+        <table className="w-full min-w-[760px] border-separate border-spacing-0">
           <thead>
             <tr className="text-left text-sm font-medium text-gray-400">
               <th className="w-12 pb-4 pl-4">
@@ -264,7 +244,6 @@ export const ProductTable: React.FC<{ products?: ProductRow[] }> = ({
               <th className="pb-4 font-medium">Product</th>
               <th className="pb-4 font-medium">Status</th>
               <th className="pb-4 font-medium">Price</th>
-              <th className="pb-4 font-medium">Sales</th>
               <th className="pb-4 font-medium">Views</th>
               <th className="pb-4 pr-4 font-medium">Likes</th>
             </tr>
@@ -327,29 +306,6 @@ export const ProductTable: React.FC<{ products?: ProductRow[] }> = ({
                 <td className="border-t border-gray-100 py-6 pr-6">
                   <div className="flex items-center gap-2">
                     <span className="rounded-lg bg-gray-100 px-3 py-1 text-sm font-bold text-gray-900">
-                      {product.sales}
-                    </span>
-                    <span
-                      className={cn(
-                        "flex items-center text-sm font-medium",
-                        product.salesChangeType === "up"
-                          ? "text-green-600"
-                          : "text-red-500"
-                      )}
-                    >
-                      {product.salesChangeType === "up" ? (
-                        <ArrowUp className="mr-0.5 size-3.5" />
-                      ) : (
-                        <ArrowDown className="mr-0.5 size-3.5" />
-                      )}
-                      {product.salesChange}
-                    </span>
-                  </div>
-                </td>
-
-                <td className="border-t border-gray-100 py-6 pr-6">
-                  <div className="flex items-center gap-2">
-                    <span className="rounded-lg bg-gray-100 px-3 py-1 text-sm font-bold text-gray-900">
                       {product.views}
                     </span>
                     <span className="h-3 w-10 overflow-hidden rounded-sm bg-transparent">
@@ -380,7 +336,7 @@ export const ProductTable: React.FC<{ products?: ProductRow[] }> = ({
             {visibleProducts.length === 0 && (
               <tr className="border-t border-gray-100">
                 <td
-                  colSpan={7}
+                  colSpan={6}
                   className="border-t border-gray-100 py-12 text-center text-sm text-gray-400"
                 >
                   No products match &ldquo;{query}&rdquo;.

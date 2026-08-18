@@ -47,13 +47,13 @@ const data: ActivityRow[] = [
 
 export const ProductActivity: React.FC = () => {
   return (
-    <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
+    <div className="rounded-3xl border border-border bg-card p-6 text-card-foreground shadow-sm">
       <div className="flex justify-between items-center mb-6 ">
         <div className="flex items-center gap-3">
           <div className="w-4 h-8 bg-green-200 rounded-full" />
-          <h2 className="text-2xl font-bold text-gray-900">Product activity</h2>
+          <h2 className="text-2xl font-bold text-foreground">Product activity</h2>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50">
+        <button className="flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted">
           Last 2 weeks
           <ChevronsUpDown className="w-4 h-4" />
         </button>
@@ -62,7 +62,7 @@ export const ProductActivity: React.FC = () => {
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="text-left text-gray-400 text-sm font-medium">
+            <tr className="text-left text-sm font-medium text-muted-foreground">
               <th className="pb-4">Week</th>
               <th className="pb-4 text-center">Products</th>
               <th className="pb-4 text-center">Views</th>
@@ -70,10 +70,10 @@ export const ProductActivity: React.FC = () => {
               <th className="pb-4 text-center">Comments</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-50">
+          <tbody className="divide-y divide-border">
             {data.map((row, index) => (
               <tr key={index} className="text-sm">
-                <td className="py-6 text-gray-600 font-medium">{row.week}</td>
+                <td className="py-6 font-medium text-muted-foreground">{row.week}</td>
                 <td className="py-6">
                   <div className="flex items-center justify-center gap-2">
                     <span className="w-8 h-8 flex items-center justify-center bg-green-100 text-green-700 rounded-lg font-bold">

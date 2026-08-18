@@ -45,7 +45,7 @@ export function NavTopbar() {
           asChild
           className="h-11 rounded-xl bg-[#7c63e8] px-3 text-white shadow-none hover:bg-[#6c52df] sm:px-5"
         >
-          <Link href="/dashboard/products/new">
+          <Link href="/seller-dashboard/products/new">
             <Plus className="size-5" />
             <span className="hidden sm:inline">Create</span>
           </Link>

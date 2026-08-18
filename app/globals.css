@@ -161,3 +161,87 @@
     scrollbar-width: none;
   }
 }
+
+/* Seller pages predate the shared color tokens in a few places. Keep every
+   seller route readable while those screens use the global light/dark switch. */
+@layer utilities {
+  .dark [data-seller-dashboard] .bg-white {
+    background-color: var(--card) !important;
+  }
+  .dark [data-seller-dashboard] .bg-gray-50,
+  .dark [data-seller-dashboard] .bg-gray-100,
+  .dark [data-seller-dashboard] .bg-slate-50 {
+    background-color: var(--muted) !important;
+  }
+  .dark [data-seller-dashboard] .text-gray-900,
+  .dark [data-seller-dashboard] .text-slate-900,
+  .dark [data-seller-dashboard] .text-slate-950,
+  .dark [data-seller-dashboard] .text-black {
+    color: var(--foreground) !important;
+  }
+  .dark [data-seller-dashboard] .text-gray-700,
+  .dark [data-seller-dashboard] .text-gray-600,
+  .dark [data-seller-dashboard] .text-slate-700,
+  .dark [data-seller-dashboard] .text-slate-600,
+  .dark [data-seller-dashboard] .text-slate-500,
+  .dark [data-seller-dashboard] .text-gray-500,
+  .dark [data-seller-dashboard] .text-gray-400,
+  .dark [data-seller-dashboard] .text-slate-400 {
+    color: var(--muted-foreground) !important;
+  }
+  .dark [data-seller-dashboard] .border-gray-50,
+  .dark [data-seller-dashboard] .border-gray-100,
+  .dark [data-seller-dashboard] .border-gray-200,
+  .dark [data-seller-dashboard] .border-slate-200 {
+    border-color: var(--border) !important;
+  }
+  .dark [data-seller-dashboard] .divide-gray-50 > :not(:last-child) {
+    border-color: var(--border) !important;
+  }
+  .dark [data-seller-dashboard] [class*="bg-[#F9FAFB]"] {
+    background-color: var(--background) !important;
+  }
+  .dark [data-seller-dashboard] [class*="bg-[#E6F4EA]"] {
+    background-color: color-mix(in oklab, #34a853 18%, var(--card)) !important;
+  }
+  .dark [data-seller-dashboard] [class*="bg-[#E8F0FE]"] {
+    background-color: color-mix(in oklab, #4285f4 18%, var(--card)) !important;
+  }
+  .dark [data-seller-dashboard] [class*="bg-[#f7f7f8]"],
+  .dark [data-seller-dashboard] [class*="bg-[#fafafa]"] {
+    background-color: var(--background) !important;
+  }
+  .dark [data-seller-dashboard] [class*="bg-[#f4f4f5]"],
+  .dark [data-seller-dashboard] [class*="bg-[#f5f5f6]"],
+  .dark [data-seller-dashboard] [class*="bg-[#f0f0f0]"] {
+    background-color: var(--muted) !important;
+  }
+  .dark [data-seller-dashboard] [class*="text-[#27282b]"],
+  .dark [data-seller-dashboard] [class*="text-[#25272a]"],
+  .dark [data-seller-dashboard] [class*="text-[#34383d]"] {
+    color: var(--foreground) !important;
+  }
+  .dark [data-seller-dashboard] [class*="text-[#777f89]"],
+  .dark [data-seller-dashboard] [class*="text-[#75808c]"],
+  .dark [data-seller-dashboard] [class*="text-[#737b84]"],
+  .dark [data-seller-dashboard] [class*="text-[#858c95]"],
+  .dark [data-seller-dashboard] [class*="text-[#66707a]"],
+  .dark [data-seller-dashboard] [class*="text-[#69727c]"],
+  .dark [data-seller-dashboard] [class*="text-[#75808a]"],
+  .dark [data-seller-dashboard] [class*="text-[#757d87]"],
+  .dark [data-seller-dashboard] [class*="text-[#7b858e]"] {
+    color: var(--muted-foreground) !important;
+  }
+  .dark [data-seller-dashboard] [class*="border-[#eceef0]"],
+  .dark [data-seller-dashboard] [class*="border-[#e1e3e6]"],
+  .dark [data-seller-dashboard] [class*="border-[#e4e5e7]"],
+  .dark [data-seller-dashboard] [class*="border-[#dfe2e5]"],
+  .dark [data-seller-dashboard] [class*="border-[#c7ccd1]"] {
+    border-color: var(--border) !important;
+  }
+  .dark [data-seller-dashboard] input,
+  .dark [data-seller-dashboard] textarea,
+  .dark [data-seller-dashboard] select {
+    color: var(--foreground);
+  }
+}

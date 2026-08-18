@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Check, CheckCircle2, Grid2X2, List, Search, Star, Trash2, TrendingUp } from "lucide-react"
+import { Check, CheckCircle2, Grid2X2, List, Search, Star, Trash2 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
@@ -89,18 +89,17 @@ export function Released() {
         </div>
 
         {view === "list" ? (
-          <div className="min-w-[760px] overflow-hidden">
-            <div className="grid grid-cols-[38px_minmax(250px,1fr)_80px_90px_145px_125px_120px] items-center border-b border-[#eceef0] pb-[14px] text-[11px] font-medium text-[#777f89]">
-              <Checkbox checked={allSelected} onChange={toggleAll} label="Select all products" /><span>Product</span><span>Price</span><span>Status</span><span>Rating</span><span>Sales</span><span>Views</span>
+          <div className="min-w-[640px] overflow-hidden">
+            <div className="grid grid-cols-[38px_minmax(250px,1fr)_80px_90px_145px_120px] items-center border-b border-[#eceef0] pb-[14px] text-[11px] font-medium text-[#777f89]">
+              <Checkbox checked={allSelected} onChange={toggleAll} label="Select all products" /><span>Product</span><span>Price</span><span>Status</span><span>Rating</span><span>Views</span>
             </div>
             {visible.map((product, index) => (
-              <div key={product.id} className="grid min-h-[116px] grid-cols-[38px_minmax(250px,1fr)_80px_90px_145px_125px_120px] items-center border-b border-[#eceef0] py-[12px] last:border-0">
+              <div key={product.id} className="grid min-h-[116px] grid-cols-[38px_minmax(250px,1fr)_80px_90px_145px_120px] items-center border-b border-[#eceef0] py-[12px] last:border-0">
                 <Checkbox checked={selected.has(product.id)} onChange={() => toggle(product.id)} label="Select Bento Matte 3D Illustration" />
                 <div className="flex min-w-0 items-center gap-[18px]"><Artwork art={product.art} index={index} /><div><p className="max-w-[135px] text-[13px] font-semibold leading-[18px]">Bento Matte 3D Illustration</p><p className="mt-[3px] text-[11px] text-[#858c95]">UI design kit</p></div></div>
                 <span className="text-[12px] font-semibold">$98</span>
                 <span><span className="rounded-[4px] bg-[#ddf6d8] px-[7px] py-[4px] text-[12px] text-[#65b75c]">Active</span></span>
                 <span className="flex items-center gap-[7px] text-[11px] text-[#68717b]"><Star className={cn("size-[19px]", product.rating ? "fill-[#737c88] text-[#737c88]" : "text-[#737c88]")} />{product.rating ?? "No ratings"}</span>
-                <span className="flex items-center gap-[6px] text-[11px]"><b className="rounded-[5px] bg-[#f0f0f0] px-[7px] py-[4px] text-[12px]">$3,200</b><TrendingUp className="size-[15px] text-[#72c96a]" /><span className="font-semibold text-[#72c96a]">55.8%</span></span>
                 <span className="flex items-center gap-[10px] text-[12px] font-semibold"><b className="rounded-[5px] bg-[#f0f0f0] px-[7px] py-[4px]">{product.views}</b><span className={cn("h-[9px] rounded-[2px]", product.bar, index === 0 ? "w-[42px]" : index === 1 ? "w-[12px]" : index === 2 ? "w-[23px]" : index === 3 ? "w-[42px]" : "w-[23px]")} /></span>
               </div>
             ))}
