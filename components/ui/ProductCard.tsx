@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { getFileUrl } from "@/lib/api/utils";
-import type { Listing } from "@/lib/api/types";
+import { getFileUrl } from "@/lib/utils";
+import type { Listing } from "@/lib/types";
 
 interface ProductCardProps {
   listing: Listing;
@@ -25,11 +25,13 @@ export function ProductCard({
   categoryName,
   showFeaturedBadge = false,
 }: ProductCardProps) {
-  const imageUrl = getFileUrl(listing.thumbnailObjectName);
+  const imageUrl = getFileUrl(
+    listing.thumbnailObjectName ?? listing.images?.[0]?.url
+  );
 
   return (
     <Link
-      href={`/product/${listing.slug}`}
+      href={`/products/${listing.slug}`}
       className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card text-card-foreground transition-shadow hover:shadow-md"
     >
       <div className="relative aspect-square w-full overflow-hidden bg-muted">
@@ -53,7 +55,7 @@ export function ProductCard({
           </span>
         ) : null}
 
-        {listing.stockQty === 0 ? (
+        {(listing.stockQty ?? listing.stock) === 0 ? (
           <span className="absolute right-2 top-2 rounded-md bg-foreground/80 px-2 py-0.5 text-[11px] font-bold text-background">
             Out of stock
           </span>

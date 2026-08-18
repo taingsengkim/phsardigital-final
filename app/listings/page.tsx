@@ -6,7 +6,7 @@ export default async function ListingsPage() {
   return (
     <div>
       <h1>Listings</h1>
-      {data.content?.map((listing) => (
+      {data.content?.map((listing: { uuid?: string; title?: string }) => (
         <div key={listing.uuid}>{listing.title}</div>
       ))}
     </div>

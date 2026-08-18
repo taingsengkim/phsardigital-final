@@ -1,13 +1,15 @@
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { ShoppingCartIcon } from "lucide-react";
-import CartPageClient from "./CartPageClient";
+import { Suspense } from "react";
+import CheckoutClient from "../checkout/CheckoutClient";
 
 export default function CartPage() {
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
-      <h1 className="mb-6 text-2xl font-bold">Your Cart</h1>
-      <CartPageClient />
+    <div className="min-h-screen bg-[#F6F5FA]">
+      <div className="mx-auto max-w-[1240px] px-6 py-10">
+        <Suspense fallback={<div className="py-20 text-center text-[#8B85A0]">Loading checkout...</div>}>
+          <CheckoutClient />
+        </Suspense>
+      </div>
     </div>
   );
 }
+

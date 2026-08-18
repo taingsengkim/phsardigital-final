@@ -1,10 +1,3 @@
-import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
-
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
-}
-
 export function getFileUrl(objectName?: string | null): string {
   if (!objectName) return "";
   if (
@@ -20,4 +13,3 @@ export function getFileUrl(objectName?: string | null): string {
     "";
   return baseUrl ? `${baseUrl.replace(/\/$/, "")}/${objectName}` : objectName;
 }
-

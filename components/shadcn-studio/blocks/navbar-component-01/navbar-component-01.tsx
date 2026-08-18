@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Search, Heart, ShoppingBag, ShoppingCart, MapPin, Menu, ChevronsUpDown, LogOut, User, Settings, Package } from "lucide-react";
+import { Search, Heart, ShoppingBag, ShoppingCart, MapPin, Menu, ChevronsUpDown, LogOut, User, Settings, Package, MessageSquare } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,6 +46,7 @@ export default function Navbar() {
   const [search, setSearch] = useState("");
   const savedCount = 2;
   const cartCount = 2;
+  const messageCount = 1;
 
   const { data: session, isPending } = useSession();
   const isLoggedIn = !!session?.user;
@@ -57,7 +58,7 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 shadow-sm transition-all duration-300">
-      {/* â”€â”€ top bar: white â”€â”€ */}
+      {/* ── top bar: white ── */}
       <div className="border-b border-[#EDEBF3] bg-white">
         <div className="mx-auto flex max-w-[1240px] items-center gap-4 px-6 py-3">
           {/* logo */}
@@ -79,7 +80,7 @@ export default function Navbar() {
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search Products..."
               aria-label="Search products"
-              className="w-full rounded-full border border-[#E2DFEC] bg-[#F8F7FB] py-2.5 pl-4 pr-10 text-sm outline-none transition-all focus:border-[#6C4CD8] focus:bg-white focus:ring-4 focus:ring-[#6C4CD8]/10"
+              className="w-full rounded-full border border-[#E2DFEC] bg-[#F8F7FC] py-2.5 pl-4 pr-10 text-sm outline-none transition-all focus:border-[#6C4CD8] focus:bg-white focus:ring-4 focus:ring-[#6C4CD8]/10"
             />
             <Search
               size={18}
@@ -89,7 +90,24 @@ export default function Navbar() {
 
           <div className="flex-1" />
 
-          {/* Saved â€” only when logged in */}
+          {/* Messages / Chat Hub — only when logged in */}
+          {isLoggedIn && (
+            <Link
+              href="/messages"
+              aria-label="Messages"
+              title="Shop Messages & Chats"
+              className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F1EFFA] transition-all hover:bg-[#E5E0F5] hover:scale-105 active:scale-95 group"
+            >
+              <MessageSquare size={18} className="text-[#6C4CD8] transition-transform group-hover:scale-110" />
+              {messageCount > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#6C4CD8] text-[10px] font-bold text-white shadow-sm animate-in zoom-in">
+                  {messageCount}
+                </span>
+              )}
+            </Link>
+          )}
+
+          {/* Saved — only when logged in */}
           {isLoggedIn && (
             <Link
               href="/saved"
@@ -105,7 +123,7 @@ export default function Navbar() {
             </Link>
           )}
 
-          {/* Orders â€” only when logged in */}
+          {/* Orders — only when logged in */}
           {isLoggedIn && (
             <Link
               href="/orders"
@@ -159,6 +177,12 @@ export default function Navbar() {
                     <Link href="/account" className="flex items-center gap-2 cursor-pointer transition-colors hover:text-[#6C4CD8]">
                       <User size={15} />
                       <span className="text-sm">My Profile</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/messages" className="flex items-center gap-2 cursor-pointer transition-colors hover:text-[#6C4CD8]">
+                      <MessageSquare size={15} />
+                      <span className="text-sm font-medium">My Messages</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>

@@ -3,19 +3,24 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Star, Store } from "lucide-react";
-import type { Seller } from "../types";
+import type { Seller } from "@/lib/types";
 
 interface SellerCardProps {
   seller: Seller;
 }
 
 /**
- * Renders from the UI-only `Seller` type — see `../types/index.ts`.
- * Swap `seller` for a real domain type + fetched data once a
- * "browse sellers/stores" endpoint exists on the backend.
+ * Renders from the `Seller` type in `@/lib/types`.
  */
 export function SellerCard({ seller }: SellerCardProps) {
-  const { name, bannerImage, logoImage, rating, reviewCount, productCount } = seller;
+  const {
+    name,
+    bannerImage = seller.avatar_url ?? "/picture/pic1.jpg",
+    logoImage,
+    rating = 0,
+    reviewCount = seller.review_count ?? 0,
+    productCount = seller.product_count ?? 0,
+  } = seller;
 
   return (
     <Link
