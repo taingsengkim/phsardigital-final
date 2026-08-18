@@ -28,9 +28,9 @@ function getActiveDiscount(listing: Listing) {
 
 export default function ProductDetailClient({ listing }: Props) {
   const router = useRouter();
-  const [qty, setQty]       = useState(1);
+  const [qty, setQty] = useState(1);
   const [adding, setAdding] = useState(false);
-  const [added, setAdded]   = useState(false);
+  const [added, setAdded] = useState(false);
 
   async function handleBuyNow() {
     try {
@@ -46,7 +46,7 @@ export default function ProductDetailClient({ listing }: Props) {
       ? listing.reviews.reduce((s, r) => s + r.rating, 0) / listing.reviews.length
       : 0;
 
-  const activeDiscount  = getActiveDiscount(listing);
+  const activeDiscount = getActiveDiscount(listing);
   const discountedPrice = activeDiscount
     ? listing.price * (1 - activeDiscount.discount_percent / 100)
     : null;
@@ -119,24 +119,30 @@ export default function ProductDetailClient({ listing }: Props) {
         </div>
 
         {/* stock status */}
-        <div className="mt-3 flex items-center gap-2">
-          <span
-            className={cn(
-              "h-2.5 w-2.5 rounded-full",
-              listing.stock > 0 ? "bg-emerald-500" : "bg-red-500"
-            )}
-          />
-          <span
-            className={cn(
-              "text-[15px] font-semibold",
-              listing.stock > 0 ? "text-emerald-600" : "text-red-500"
-            )}
-          >
-            {listing.stock > 0
-              ? `In stock · ${listing.stock} units available`
-              : "Out of stock"}
-          </span>
-        </div>
+        {(() => {
+          const stockCount = listing.stock ?? listing.stockQty ?? 0;
+          const inStock = stockCount > 0;
+          return (
+            <div className="mt-3 flex items-center gap-2">
+              <span
+                className={cn(
+                  "h-2.5 w-2.5 rounded-full",
+                  inStock ? "bg-emerald-500" : "bg-red-500"
+                )}
+              />
+              <span
+                className={cn(
+                  "text-[15px] font-semibold",
+                  inStock ? "text-emerald-600" : "text-red-500"
+                )}
+              >
+                {inStock
+                  ? `In stock · ${stockCount} units available`
+                  : "Out of stock"}
+              </span>
+            </div>
+          );
+        })()}
       </div>
 
       {/* ── attributes grid ── */}
@@ -209,9 +215,9 @@ export default function ProductDetailClient({ listing }: Props) {
       {/* ── trust badges ── */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { Icon: Truck,        label: "Free Delivery",   sub: "Orders over $50" },
-          { Icon: RotateCcw,    label: "30-Day Returns",  sub: "Hassle-free" },
-          { Icon: ShieldCheck,  label: "Secure Payment",  sub: "100% Protected" },
+          { Icon: Truck, label: "Free Delivery", sub: "Orders over $50" },
+          { Icon: RotateCcw, label: "30-Day Returns", sub: "Hassle-free" },
+          { Icon: ShieldCheck, label: "Secure Payment", sub: "100% Protected" },
         ].map(({ Icon, label, sub }) => (
           <div
             key={label}

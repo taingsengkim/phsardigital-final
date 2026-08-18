@@ -65,6 +65,7 @@ export default function Navbar() {
   const [search, setSearch] = useState("");
   const savedCount = 2;
   const cartCount = 2;
+  const messageCount = 1;
 
   const { data: session, isPending } = useSession();
   const isLoggedIn = !!session?.user;
@@ -89,13 +90,13 @@ export default function Navbar() {
   const categoriesList =
     apiCategories && apiCategories.length > 0
       ? apiCategories.map((c: any) => ({
-          name: c.name,
-          slug: c.slug || String(c.id),
-        }))
+        name: c.name,
+        slug: c.slug || String(c.id),
+      }))
       : CATEGORIES.map((cat) => ({
-          name: cat,
-          slug: cat.toLowerCase().replace(/\s+/g, "-"),
-        }));
+        name: cat,
+        slug: cat.toLowerCase().replace(/\s+/g, "-"),
+      }));
 
   async function handleLogout() {
     await logoutFromKeycloak("/");
@@ -131,7 +132,7 @@ export default function Navbar() {
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search Products..."
               aria-label="Search products"
-              className="w-full rounded-full border border-[#E2DFEC] bg-[#F8F7FB] py-2.5 pl-4 pr-10 text-sm outline-none transition-all focus:border-[#6C4CD8] focus:bg-white focus:ring-4 focus:ring-[#6C4CD8]/10"
+              className="w-full rounded-full border border-[#E2DFEC] bg-[#F8F7FC] py-2.5 pl-4 pr-10 text-sm outline-none transition-all focus:border-[#6C4CD8] focus:bg-white focus:ring-4 focus:ring-[#6C4CD8]/10"
             />
             <Search
               size={18}
@@ -141,33 +142,7 @@ export default function Navbar() {
 
           <div className="flex-1" />
 
-          {/* Seller Dashboard Shortcut in Header if User is Seller */}
-          {isSeller && (
-            <Link
-              href="/seller-dashboard/home"
-              aria-label="Seller Dashboard"
-              title={storeName ? `Seller Dashboard (${storeName})` : "Seller Dashboard"}
-              className="hidden sm:flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold text-white shadow-md transition-all hover:brightness-105 active:scale-95"
-              style={{ background: "linear-gradient(90deg, #6C4CD8, #4F35A5)" }}
-            >
-              <Store size={15} />
-              <span>{storeName || "Seller Dashboard"}</span>
-            </Link>
-          )}
-
-          {isPendingSeller && !isSeller && (
-            <Link
-              href="/account/seller-application"
-              aria-label="Store Pending"
-              title="Seller application under review"
-              className="hidden sm:flex items-center gap-1.5 rounded-full bg-amber-100 border border-amber-300 px-3 py-1.5 text-xs font-bold text-amber-800 transition hover:bg-amber-200"
-            >
-              <Clock size={14} className="text-amber-600" />
-              <span>Store Pending</span>
-            </Link>
-          )}
-
-          {/* Saved — only when logged in */}
+          {/* Saved â€” only when logged in */}
           {isLoggedIn && (
             <Link
               href="/saved"
@@ -252,16 +227,6 @@ export default function Navbar() {
                       <span className="text-sm font-medium">My Account</span>
                     </Link>
                   </DropdownMenuItem>
-
-                  {isSeller && (
-                    <DropdownMenuItem asChild>
-                      <Link href="/seller-dashboard/home" className="flex items-center gap-2.5 cursor-pointer py-2 transition-colors text-[#6C4CD8] font-bold">
-                        <Store size={16} />
-                        <span className="text-sm">Seller Dashboard</span>
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
-
                   <DropdownMenuItem asChild>
                     <Link href="/orders" className="flex items-center gap-2.5 cursor-pointer py-2 transition-colors hover:text-[#6C4CD8]">
                       <Package size={16} className="text-[#8D86A8]" />

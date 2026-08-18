@@ -55,17 +55,35 @@ export type Review = {
   created_at: string;
 };
 
+export type Seller = {
+  id: number | string;
+  slug: string;
+  name: string;
+  bannerImage: string;
+  logoImage?: string;
+  avatar_url?: string;
+  rating: number;
+  reviewCount: number;
+  productCount: number;
+  review_count?: number;
+  product_count?: number;
+};
+
 export type Listing = {
   id: number;
   slug: string;
   title: string;
   description: string;
   price: number;
-  category_id: number;
-  stock: number;
+  category_id?: number;
+  categoryUuid?: string;
+  stock?: number;
+  stockQty?: number;
+  isFeatured?: boolean;
+  thumbnailObjectName?: string;
   store_id?: number;
   store_name?: string;
-  created_at: string;
+  created_at?: string;
   // joined relations (optional, present when fetched with includes)
   images?: ListingImage[];
   discounts?: ListingDiscount[];
