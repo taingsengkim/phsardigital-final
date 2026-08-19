@@ -1,150 +1,285 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Minus, Plus, ShoppingCart, Heart, Share2, ShieldCheck, RotateCcw, Truck } from "lucide-react";
+import {
+  BadgeCheck,
+  Check,
+  Flame,
+  Link2,
+  Minus,
+  Package,
+  Plus,
+  RotateCcw,
+  Share2,
+  ShieldCheck,
+  ShoppingCart,
+  Star,
+  Truck,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import RatingStars from "@/components/product/RatingStars";
-import ProductBadge from "@/components/product/ProductBadge";
 import SavedButton from "@/components/saved/SavedButton";
 import { addToCart } from "@/app/api/cart";
-import type { Listing } from "@/lib/types";
+import type { ApiListing, ReviewSummary } from "@/lib/types";
 
-type Props = { listing: Listing };
+type Props = {
+  listing: ApiListing;
+  reviewSummary: ReviewSummary;
+  sellerName?: string | null;
+  sellerId?: string | null;
+};
 
-function getActiveDiscount(listing: Listing) {
-  if (!listing.discounts || listing.discounts.length === 0) return null;
-  const now = Date.now();
-  return (
-    listing.discounts
-      .filter(
-        (d) =>
-          new Date(d.starts_at).getTime() <= now &&
-          new Date(d.ends_at).getTime() >= now
-      )
-      .sort((a, b) => b.discount_percent - a.discount_percent)[0] ?? null
-  );
+/** Indicative USD→KHR reference rate; shoppers in Cambodia price-check in riel. */
+const KHR_PER_USD = 4100;
+
+/** Below this, show scarcity messaging rather than a plain stock count. */
+const LOW_STOCK_THRESHOLD = 5;
+
+function formatUsd(value: number): string {
+  return value.toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+  });
 }
 
-export default function ProductDetailClient({ listing }: Props) {
+function formatKhr(usd: number): string {
+  const riel = Math.round((usd * KHR_PER_USD) / 100) * 100;
+  return `៛${riel.toLocaleString("en-US")}`;
+}
+
+function formatListedDate(value?: string | null): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+export default function ProductDetailClient({
+  listing,
+  reviewSummary,
+  sellerName,
+  sellerId,
+}: Props) {
   const router = useRouter();
-  const [qty, setQty]       = useState(1);
+  const [qty, setQty] = useState(1);
   const [adding, setAdding] = useState(false);
-  const [added, setAdded]   = useState(false);
+  const [added, setAdded] = useState(false);
+  const [shared, setShared] = useState(false);
 
-  async function handleBuyNow() {
-    try {
-      await addToCart(listing.id, qty, listing.slug);
-    } catch {
-      // continue to checkout
-    }
-    router.push(`/checkout?slug=${encodeURIComponent(listing.slug)}&qty=${qty}`);
-  }
+  const listingId = listing.uuid;
+  const productSlug = listing.slug || listing.uuid;
 
-  const avgRating =
-    listing.reviews && listing.reviews.length > 0
-      ? listing.reviews.reduce((s, r) => s + r.rating, 0) / listing.reviews.length
-      : 0;
+  const price = typeof listing.price === "number" ? listing.price : 0;
+  const stock = typeof listing.stockQty === "number" ? listing.stockQty : 0;
+  const sold = typeof listing.sold === "number" ? listing.sold : 0;
 
-  const activeDiscount  = getActiveDiscount(listing);
-  const discountedPrice = activeDiscount
-    ? listing.price * (1 - activeDiscount.discount_percent / 100)
-    : null;
+  const isActive = (listing.status ?? "ACTIVE").toUpperCase() === "ACTIVE";
+  const inStock = isActive && stock > 0;
+  const lowStock = inStock && stock <= LOW_STOCK_THRESHOLD;
+
+  const attributes = useMemo(
+    () =>
+      [...(listing.listingAttributes ?? [])].sort(
+        (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
+      ),
+    [listing.listingAttributes]
+  );
+
+  const listedOn = formatListedDate(listing.createdAt);
+  const { average, total } = reviewSummary;
 
   async function handleAddToCart() {
     setAdding(true);
     try {
-      await addToCart(listing.id, qty, listing.slug);
+      await addToCart(listingId, qty, productSlug ?? undefined);
       setAdded(true);
       setTimeout(() => setAdded(false), 2500);
     } catch {
-      // silently handle
+      // the cart layer already falls back locally
     } finally {
       setAdding(false);
     }
   }
 
+  async function handleBuyNow() {
+    try {
+      await addToCart(listingId, qty, productSlug ?? undefined);
+    } catch {
+      // continue to checkout regardless
+    }
+    router.push(
+      `/checkout?slug=${encodeURIComponent(productSlug ?? "")}&qty=${qty}`
+    );
+  }
+
+  async function handleShare() {
+    const url = typeof window !== "undefined" ? window.location.href : "";
+    const shareData = {
+      title: listing.title ?? "Phsar Digital",
+      text: `${listing.title ?? "Check this out"} — ${formatUsd(price)} on Phsar Digital`,
+      url,
+    };
+
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch {
+        // user dismissed the sheet — fall through to copying
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(url);
+      setShared(true);
+      setTimeout(() => setShared(false), 2000);
+    } catch {
+      // clipboard unavailable
+    }
+  }
+
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 font-sans">
+      {/* ── category + status chips ── */}
+      <div className="flex flex-wrap items-center gap-2">
+        {listing.category?.name && (
+          <Link
+            href={`/products?categorySlug=${listing.category.slug ?? ""}`}
+            className="rounded-full bg-[#F1EFFA] px-3 py-1 text-[13px] font-bold text-[#6C4CD8] transition hover:bg-[#E4DEFA]"
+          >
+            {listing.category.name}
+          </Link>
+        )}
+        {listing.isFeatured && (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FFF7E6] px-3 py-1 text-[13px] font-bold text-[#B7791F]">
+            <Star size={12} fill="#B7791F" />
+            Featured
+          </span>
+        )}
+        {sold > 0 && (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F0FDF4] px-3 py-1 text-[13px] font-bold text-emerald-600">
+            <Flame size={12} />
+            {sold} sold
+          </span>
+        )}
+        {!isActive && (
+          <span className="rounded-full bg-[#FEF2F2] px-3 py-1 text-[13px] font-bold text-red-500">
+            Unavailable
+          </span>
+        )}
+      </div>
 
       {/* ── title row ── */}
       <div className="flex items-start justify-between gap-4">
         <h1 className="text-[28px] font-extrabold leading-tight text-[#1A1330] lg:text-[32px]">
-          {listing.title}
+          {listing.title || "Product details"}
         </h1>
         <div className="flex shrink-0 items-center gap-2 pt-1">
-          <SavedButton listingId={listing.id} />
+          <SavedButton listingId={listingId} />
           <button
-            aria-label="Share"
+            type="button"
+            onClick={handleShare}
+            aria-label={shared ? "Link copied" : "Share this product"}
             className="flex h-10 w-10 items-center justify-center rounded-full border border-[#E2DFEC] bg-white text-[#6C4CD8] transition hover:bg-[#F1EFFA]"
           >
-            <Share2 size={16} />
+            {shared ? (
+              <Check size={16} className="text-emerald-500" />
+            ) : (
+              <Share2 size={16} />
+            )}
           </button>
         </div>
       </div>
 
-      {/* ── rating row ── */}
-      {avgRating > 0 && (
-        <div className="flex flex-wrap items-center gap-3">
-          <RatingStars rating={avgRating} size={18} />
-          <span className="text-[16px] font-bold text-[#F5B301]">
-            {avgRating.toFixed(1)}
+      {/* ── seller + rating line ── */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[15px]">
+        {sellerName && (
+          <Link
+            href={sellerId ? `/stores/${sellerId}` : "/stores"}
+            className="inline-flex items-center gap-1.5 font-semibold text-[#6C4CD8] hover:underline"
+          >
+            <BadgeCheck size={15} />
+            {sellerName}
+          </Link>
+        )}
+
+        {average !== null ? (
+          <span className="flex items-center gap-2 border-l border-[#E2DFEC] pl-4">
+            <RatingStars rating={average} size={16} />
+            <span className="font-bold text-[#F5B301]">{average.toFixed(1)}</span>
+            <a href="#reviews" className="text-[#8B85A0] hover:text-[#6C4CD8]">
+              ({total} {total === 1 ? "review" : "reviews"})
+            </a>
           </span>
-          {listing.reviews && listing.reviews.length > 0 && (
-            <span className="border-l border-[#E2DFEC] pl-3 text-[15px] text-[#8B85A0]">
-              {listing.reviews.length} reviews
-              {/* {listing.sku ? ` · SKU ${listing.sku}` : ""} */}
-            </span>
-          )}
-        </div>
-      )}
+        ) : (
+          <span className="border-l border-[#E2DFEC] pl-4 text-[#8B85A0]">
+            No reviews yet
+          </span>
+        )}
+      </div>
 
       {/* ── price block ── */}
       <div className="rounded-2xl bg-[#F6F5FA] px-6 py-5">
         <div className="flex flex-wrap items-baseline gap-3">
-          <span className="text-[36px] font-black text-[#6C4CD8] leading-none">
-            ${(discountedPrice ?? listing.price).toFixed(2)}
+          <span className="text-[36px] font-black leading-none text-[#6C4CD8]">
+            {formatUsd(price)}
           </span>
-          {discountedPrice && (
-            <>
-              <span className="text-[20px] text-[#B3ADC4] line-through font-medium">
-                ${listing.price.toFixed(2)}
-              </span>
-              <span className="rounded-lg bg-[#6C4CD8] px-3 py-1 text-[14px] font-bold text-white">
-                SAVE {activeDiscount!.discount_percent}%
-              </span>
-            </>
-          )}
-          <ProductBadge discounts={listing.discounts} />
+          <span className="text-[15px] font-medium text-[#8B85A0]">
+            ≈ {formatKhr(price)}
+          </span>
         </div>
 
         {/* stock status */}
-        <div className="mt-3 flex items-center gap-2">
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           <span
             className={cn(
               "h-2.5 w-2.5 rounded-full",
-              listing.stock > 0 ? "bg-emerald-500" : "bg-red-500"
+              inStock ? (lowStock ? "bg-amber-500" : "bg-emerald-500") : "bg-red-500"
             )}
           />
           <span
             className={cn(
               "text-[15px] font-semibold",
-              listing.stock > 0 ? "text-emerald-600" : "text-red-500"
+              inStock
+                ? lowStock
+                  ? "text-amber-600"
+                  : "text-emerald-600"
+                : "text-red-500"
             )}
           >
-            {listing.stock > 0
-              ? `In stock · ${listing.stock} units available`
-              : "Out of stock"}
+            {!isActive
+              ? "This listing is not available right now"
+              : stock > 0
+                ? lowStock
+                  ? `Only ${stock} left in stock — order soon`
+                  : `In stock · ${stock} available`
+                : "Out of stock"}
           </span>
         </div>
+
+        {qty > 1 && inStock && (
+          <p className="mt-2 text-[14px] text-[#5A5470]">
+            Subtotal for {qty} items:{" "}
+            <span className="font-bold text-[#1A1330]">
+              {formatUsd(price * qty)}
+            </span>
+          </p>
+        )}
       </div>
 
-      {/* ── attributes grid ── */}
-      {listing.attributes && listing.attributes.length > 0 && (
-        <div className="rounded-2xl border border-[#E2DFEC] bg-white overflow-hidden">
-          <div className="grid grid-cols-2 divide-x divide-y divide-[#F0EDFB]">
-            {listing.attributes.map((attr, i) => (
-              <div key={attr.id} className={cn("px-5 py-3.5", i % 2 === 0 ? "" : "")}>
+      {/* ── key specs ── */}
+      {attributes.length > 0 && (
+        <div className="overflow-hidden rounded-2xl border border-[#E2DFEC] bg-white">
+          <div className="grid grid-cols-1 divide-y divide-[#F0EDFB] sm:grid-cols-2 sm:divide-x">
+            {attributes.slice(0, 6).map((attr, i) => (
+              <div key={attr.uuid ?? `${attr.key}-${i}`} className="px-5 py-3.5">
                 <p className="text-[13px] font-semibold uppercase tracking-wide text-[#8B85A0]">
                   {attr.key}
                 </p>
@@ -154,64 +289,75 @@ export default function ProductDetailClient({ listing }: Props) {
               </div>
             ))}
           </div>
+          {attributes.length > 6 && (
+            <a
+              href="#details"
+              className="block border-t border-[#F0EDFB] px-5 py-3 text-center text-[14px] font-bold text-[#6C4CD8] hover:bg-[#FAF9FD]"
+            >
+              See all {attributes.length} specifications
+            </a>
+          )}
         </div>
       )}
 
       {/* ── quantity + add to cart ── */}
       <div className="flex flex-wrap items-center gap-4">
-        {/* qty stepper */}
         <div className="flex items-center overflow-hidden rounded-xl border-2 border-[#E2DFEC] bg-white">
           <button
+            type="button"
             onClick={() => setQty((q) => Math.max(1, q - 1))}
-            disabled={qty <= 1}
+            disabled={qty <= 1 || !inStock}
             aria-label="Decrease quantity"
             className="flex h-12 w-12 items-center justify-center text-[#6C4CD8] transition hover:bg-[#F1EFFA] disabled:opacity-30"
           >
             <Minus size={16} />
           </button>
-          <span className="w-12 text-center text-[18px] font-bold text-[#1A1330]">
+          <span
+            className="w-12 text-center text-[18px] font-bold text-[#1A1330]"
+            aria-live="polite"
+          >
             {qty}
           </span>
           <button
-            onClick={() => setQty((q) => q + 1)}
+            type="button"
+            onClick={() => setQty((q) => Math.min(stock || 1, q + 1))}
+            disabled={!inStock || qty >= stock}
             aria-label="Increase quantity"
-            className="flex h-12 w-12 items-center justify-center text-[#6C4CD8] transition hover:bg-[#F1EFFA]"
+            className="flex h-12 w-12 items-center justify-center text-[#6C4CD8] transition hover:bg-[#F1EFFA] disabled:opacity-30"
           >
             <Plus size={16} />
           </button>
         </div>
 
-        {/* add to cart */}
         <button
+          type="button"
           onClick={handleAddToCart}
-          disabled={adding || listing.stock === 0}
+          disabled={adding || !inStock}
           className={cn(
-            "flex flex-1 items-center justify-center gap-2.5 rounded-xl py-3.5 text-[17px] font-bold text-white shadow-md transition-all hover:shadow-lg disabled:opacity-50",
-            added
-              ? "bg-emerald-500 hover:bg-emerald-600"
-              : "bg-[#6C4CD8] hover:bg-[#5B3DC0]"
+            "flex flex-1 items-center justify-center gap-2.5 rounded-xl py-3.5 text-[17px] font-bold text-white shadow-md transition-all hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50",
+            added ? "bg-emerald-500 hover:bg-emerald-600" : "bg-[#6C4CD8] hover:bg-[#5B3DC0]"
           )}
         >
-          <ShoppingCart size={20} />
-          {adding ? "Adding…" : added ? "Added to cart!" : "Add to Cart"}
+          {added ? <Check size={20} /> : <ShoppingCart size={20} />}
+          {adding ? "Adding…" : added ? "Added to cart" : "Add to cart"}
         </button>
       </div>
 
-      {/* ── buy now ── */}
       <button
+        type="button"
         onClick={handleBuyNow}
-        disabled={listing.stock === 0}
-        className="w-full rounded-xl border-2 border-[#6C4CD8] py-3.5 text-[17px] font-bold text-[#6C4CD8] transition hover:bg-[#6C4CD8] hover:text-white disabled:opacity-40"
+        disabled={!inStock}
+        className="w-full rounded-xl border-2 border-[#6C4CD8] py-3.5 text-[17px] font-bold text-[#6C4CD8] transition hover:bg-[#6C4CD8] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
       >
-        Buy Now
+        Buy now
       </button>
 
       {/* ── trust badges ── */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { Icon: Truck,        label: "Free Delivery",   sub: "Orders over $50" },
-          { Icon: RotateCcw,    label: "30-Day Returns",  sub: "Hassle-free" },
-          { Icon: ShieldCheck,  label: "Secure Payment",  sub: "100% Protected" },
+          { Icon: Truck, label: "Fast delivery", sub: "Phnom Penh & provinces" },
+          { Icon: RotateCcw, label: "7-day returns", sub: "On damaged items" },
+          { Icon: ShieldCheck, label: "Buyer protection", sub: "Secure checkout" },
         ].map(({ Icon, label, sub }) => (
           <div
             key={label}
@@ -224,15 +370,42 @@ export default function ProductDetailClient({ listing }: Props) {
         ))}
       </div>
 
-      {/* ── description ── */}
+      {/* ── description preview ── */}
       {listing.description && (
         <div className="border-t border-[#E2DFEC] pt-5">
-          <h2 className="mb-2 text-[18px] font-bold text-[#1A1330]">About this item</h2>
-          <p className="text-[16px] leading-relaxed text-[#5A5470]">
+          <h2 className="mb-2 text-[18px] font-bold text-[#1A1330]">
+            About this item
+          </h2>
+          <p className="whitespace-pre-line text-[16px] leading-relaxed text-[#5A5470]">
             {listing.description}
           </p>
         </div>
       )}
+
+      {/* ── listing meta ── */}
+      <dl className="flex flex-wrap gap-x-6 gap-y-2 border-t border-[#E2DFEC] pt-5 text-[13px] text-[#8B85A0]">
+        <div className="flex items-center gap-1.5">
+          <Package size={13} />
+          <dt className="sr-only">Item code</dt>
+          <dd className="font-mono">
+            {listingId.slice(0, 8).toUpperCase()}
+          </dd>
+        </div>
+        {listedOn && (
+          <div className="flex items-center gap-1.5">
+            <dt>Listed</dt>
+            <dd className="font-semibold text-[#5A5470]">{listedOn}</dd>
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={handleShare}
+          className="inline-flex items-center gap-1.5 font-semibold text-[#6C4CD8] hover:underline"
+        >
+          <Link2 size={13} />
+          {shared ? "Link copied" : "Copy link"}
+        </button>
+      </dl>
     </div>
   );
 }

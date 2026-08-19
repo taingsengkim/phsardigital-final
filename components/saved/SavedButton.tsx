@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { saveListings, unsaveListing } from "@/app/api/savedListings";
 
 type Props = {
-  listingId: number;
+  listingId: number | string;
   /** Whether the item is already saved (pass from parent/server) */
   initialSaved?: boolean;
   className?: string;

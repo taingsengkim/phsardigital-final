@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { ChevronDown, ChevronUp, CircleHelp, Home, MessageCircle, Moon, Plus, Store, Sun, Tags, UserRound } from "lucide-react"
+import { ChevronDown, ChevronUp, CircleHelp, Home, Moon, Plus, Sparkles, Store, Sun, Tags, UserRound } from "lucide-react"
 import { useTheme } from "next-themes"
 
 import {
@@ -77,8 +77,9 @@ export function SellerSidebar() {
                 <Link
                   href="/seller-dashboard/products/new"
                   aria-label="Add product"
-                  className="grid size-8 place-items-center rounded-lg text-muted-foreground hover:bg-sidebar-accent hover:text-[#6C4CD8]"
+                  className="grid size-8 place-items-center rounded-lg hover:bg-sidebar-accent hover:text-sidebar-accent-foreground text-muted-foreground"
                 >
+                  <Plus className="size-4" />
                 </Link>
                 <button
                   type="button"
@@ -140,14 +141,14 @@ export function SellerSidebar() {
           </Link>
 
           <Link
-            href="/seller-dashboard/message"
+            href="/subscriptions"
             className={cn(
               "flex h-12 items-center gap-4 rounded-xl px-3 text-[15px] font-semibold text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0",
-              pathname.startsWith("/seller-dashboard/message") && "bg-sidebar-accent text-sidebar-accent-foreground",
+              pathname === "/subscriptions" && "bg-sidebar-accent text-[#6C4CD8]",
             )}
           >
-            <MessageCircle className="size-5 shrink-0" strokeWidth={2} />
-            <span className="group-data-[collapsible=icon]:hidden">Message</span>
+            <Sparkles className="size-5 shrink-0 text-yellow-500" strokeWidth={2} />
+            <span className="group-data-[collapsible=icon]:hidden">Subscriptions</span>
           </Link>
         </nav>
       </SidebarContent>

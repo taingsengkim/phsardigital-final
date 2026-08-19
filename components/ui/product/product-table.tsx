@@ -270,6 +270,7 @@ export const ProductTable: React.FC<{ products?: ProductRow[] }> = ({
                       alt={product.title}
                       width={80}
                       height={80}
+                      unoptimized={Boolean(product.image?.startsWith("http"))}
                       className="size-20 shrink-0 rounded-2xl object-cover"
                     />
                     <div className="min-w-0">

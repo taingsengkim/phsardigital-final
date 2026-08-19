@@ -57,7 +57,7 @@ export async function getCart(): Promise<Cart> {
 }
 
 export async function addToCart(
-  listingId: number,
+  listingId: number | string,
   quantity = 1,
   slug?: string
 ): Promise<CartItem> {
@@ -83,12 +83,12 @@ export async function addToCart(
 
   const listingSlug = slug ?? "poco-smart-phone";
   const listing = generateDynamicMockListing(listingSlug);
-  listing.id = listingId;
+  listing.id = listingId as number;
 
   const newItem: CartItem = {
     id: mockCartItems.length + 1,
     cart_id: 1,
-    listing_id: listingId,
+    listing_id: listingId as number,
     quantity,
     listing,
   };

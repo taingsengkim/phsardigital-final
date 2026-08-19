@@ -194,11 +194,15 @@ export async function getListings(
   if (BASE_URL) {
     try {
       const params = new URLSearchParams();
-      if (query.categoryId) params.set("category_id", String(query.categoryId));
-      if (query.sort) params.set("sort", query.sort);
-      if (query.page) params.set("page", String(query.page));
-      if (query.pageSize) params.set("page_size", String(query.pageSize));
+      if (query.categoryUuid) params.set("categoryUuid", query.categoryUuid);
+      if (query.categorySlug) params.set("categorySlug", query.categorySlug);
+      if (query.sellerId) params.set("sellerId", query.sellerId);
       if (query.search) params.set("search", query.search);
+      if (query.minPrice !== undefined) params.set("minPrice", String(query.minPrice));
+      if (query.maxPrice !== undefined) params.set("maxPrice", String(query.maxPrice));
+      if (query.sort) params.set("sort", query.sort);
+      if (query.pageNumber !== undefined) params.set("pageNumber", String(query.pageNumber));
+      if (query.pageSize !== undefined) params.set("pageSize", String(query.pageSize));
 
       const res = await fetch(`${BASE_URL}/api/listings?${params.toString()}`, {
         next: { revalidate: 30 },
@@ -230,17 +234,46 @@ export async function getListings(
 /**
  * Fetch a single listing by slug, with all relations included.
  */
-export async function getListingBySlug(slug: string): Promise<Listing> {
-  if (BASE_URL) {
-    try {
-      const res = await fetch(`${BASE_URL}/api/listings/${slug}`, {
-        next: { revalidate: 30 },
-      });
-      if (res.ok) return await res.json();
-    } catch {
-      // Fallback below
+export async function getListingBySlug(slug: string): Promise<any> {
+  const baseUrl =
+    process.env.API_BASE_URL ??
+    process.env.NEXT_PUBLIC_API_URL ??
+    "https://phsardigital.quizzy.it.com";
+
+  // 1. Try fetching directly by uuid/slug endpoint
+  try {
+    const res = await fetch(`${baseUrl}/api/v1/listings/${slug}`, {
+      cache: "no-store",
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && (data.uuid || data.id || data.title)) {
+        return data;
+      }
     }
+  } catch (err) {
+    console.error("Error fetching listing by uuid/slug endpoint:", err);
   }
 
-  return generateDynamicMockListing(slug);
+  // 2. Search all listings from API to match slug/uuid/id
+  try {
+    const res = await fetch(`${baseUrl}/api/v1/listings?pageNumber=0&pageSize=100`, {
+      cache: "no-store",
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const listings = data?.content || data?.data || (Array.isArray(data) ? data : []);
+      const matched = listings.find(
+        (item: any) =>
+          item.uuid === slug ||
+          item.slug === slug ||
+          String(item.id) === slug
+      );
+      if (matched) return matched;
+    }
+  } catch (err) {
+    console.error("Error searching listing in listings list:", err);
+  }
+
+  return null;
 }

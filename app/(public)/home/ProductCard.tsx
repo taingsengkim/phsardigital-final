@@ -4,7 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Heart, Eye, Star } from "lucide-react";
-import type { Listing } from "@/lib/types";
 import {
   getPrimaryImage,
   getAverageRating,
@@ -14,8 +13,8 @@ import {
 } from "./listing-helpers";
 
 type ProductCardProps = {
-  listing: Listing;
-  sellerName?: string; // e.g. "6Valley" in the mock — pass through once you have real seller data
+  listing: any;
+  sellerName?: string;
 };
 
 export function ProductCard({ listing, sellerName }: ProductCardProps) {
@@ -24,18 +23,26 @@ export function ProductCard({ listing, sellerName }: ProductCardProps) {
   const discountPercent = getActiveDiscountPercent(listing);
   const finalPrice = getDiscountedPrice(listing);
 
+  const productSlug = listing.uuid || listing.slug || listing.id || "#";
+  const displaySeller =
+    sellerName ||
+    listing.sellerProfile?.businessName ||
+    listing.seller_name ||
+    "Phsar Store";
+
   return (
     <motion.div
       whileHover={{ y: -4 }}
       transition={{ type: "spring", stiffness: 300, damping: 22 }}
       className="group relative overflow-hidden rounded-xl border border-[#EDEBF3] bg-white shadow-sm"
     >
-      <Link href={`/products/${listing.slug}`} className="block">
+      <Link href={`/products/${productSlug}`} className="block">
         <div className="relative aspect-square w-full overflow-hidden bg-[#F5F3FA]">
           <Image
             src={image}
-            alt={listing.images?.[0]?.alt_text ?? listing.title}
+            alt={listing.title || "Product"}
             fill
+            unoptimized={Boolean(image?.startsWith("http"))}
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw"
             className="object-cover transition-transform duration-500 group-hover:scale-110"
           />
@@ -70,10 +77,14 @@ export function ProductCard({ listing, sellerName }: ProductCardProps) {
         </div>
 
         <div className="space-y-1 p-3">
-          <p className="truncate text-sm font-semibold text-[#241F35]">{listing.title}</p>
+          <p className="truncate text-sm font-semibold text-[#241F35]">
+            {listing.title || "Untitled Product"}
+          </p>
 
           <div className="flex items-center gap-2">
-            <span className="text-sm font-extrabold text-[#6C4CD8]">{formatPrice(finalPrice)}</span>
+            <span className="text-sm font-extrabold text-[#6C4CD8]">
+              {formatPrice(finalPrice)}
+            </span>
             {discountPercent && (
               <span className="text-xs text-[#8B85A0] line-through">
                 {formatPrice(listing.price)}
@@ -82,9 +93,9 @@ export function ProductCard({ listing, sellerName }: ProductCardProps) {
           </div>
 
           <div className="flex items-center justify-between text-xs text-[#8B85A0]">
-            {sellerName && <span>{sellerName}</span>}
+            <span className="truncate max-w-[110px]">{displaySeller}</span>
             {rating > 0 && (
-              <span className="flex items-center gap-0.5">
+              <span className="flex items-center gap-0.5 shrink-0">
                 <Star size={12} className="fill-[#F5B301] text-[#F5B301]" />
                 {rating}
               </span>

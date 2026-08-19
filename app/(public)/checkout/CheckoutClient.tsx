@@ -656,22 +656,6 @@ export default function CheckoutClient() {
 
     return (
       <div className="fixed inset-x-0 bottom-0 top-[108px] z-40 bg-[#F6F5FA] p-4 md:p-6 flex flex-col overflow-hidden">
-        {/* Top Header Action Bar */}
-        <div className="flex items-center justify-between px-2 mb-3 shrink-0">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-[13.5px] font-bold text-[#6C4CD8] border border-[#EDEBF3] shadow-xs hover:bg-[#F8F7FC] transition"
-          >
-            <ArrowLeft size={16} />
-            Back to Home Page
-          </Link>
-
-          <span className="rounded-full bg-emerald-100 px-3.5 py-1 text-[12px] font-extrabold text-emerald-700 flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            Social Marketplace Chat Portal
-          </span>
-        </div>
-
         {/* FULL PAGE FLOATING CHAT APP CONTAINER */}
         <div className="flex flex-col md:flex-row flex-1 h-full overflow-hidden rounded-3xl border border-[#EDEBF3] bg-white shadow-[0_12px_40px_rgba(26,19,48,0.08)] w-full">
           {/* ── LEFT SIDEBAR: SHOP CHATS LIST WITH SMOOTH SCROLL ── */}

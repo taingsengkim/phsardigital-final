@@ -20,6 +20,7 @@ import {
   FileCheck,
   RotateCcw,
   Sparkles,
+  ShoppingBag,
   Info,
   ExternalLink,
   Clock,
@@ -193,54 +194,68 @@ export default function SellerApplicationClient() {
     if (!url) return null;
 
     // Pattern 1: !3d11.5563768!4d104.9282123 (Google Maps Place data URLs)
-    const dataMatch = url.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
+    const dataMatch = url.match(/!3d(-?\d+(?:\.\d+)?)[^\d!]*!4d(-?\d+(?:\.\d+)?)/i);
     if (dataMatch) {
       const lat = parseFloat(dataMatch[1]);
       const lng = parseFloat(dataMatch[2]);
-      if (!isNaN(lat) && !isNaN(lng)) return { lat, lng };
+      if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+        return { lat, lng };
+      }
     }
 
     // Pattern 2: @11.5563768,104.9282123 (Standard viewport URLs)
-    const atMatch = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+    const atMatch = url.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
     if (atMatch) {
       const lat = parseFloat(atMatch[1]);
       const lng = parseFloat(atMatch[2]);
-      if (!isNaN(lat) && !isNaN(lng)) return { lat, lng };
+      if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+        return { lat, lng };
+      }
     }
 
     // Pattern 3: ?q=11.5563768,104.9282123 or &ll=11.5563768,104.9282123
-    const paramMatch = url.match(/[?&](?:q|ll|center|point)=(-?\d+\.\d+),(-?\d+\.\d+)/);
+    const paramMatch = url.match(/[?&](?:q|ll|center|point|destination|origin)=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/i);
     if (paramMatch) {
       const lat = parseFloat(paramMatch[1]);
       const lng = parseFloat(paramMatch[2]);
-      if (!isNaN(lat) && !isNaN(lng)) return { lat, lng };
+      if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+        return { lat, lng };
+      }
     }
 
     // Pattern 4: /dir//11.5563768,104.9282123 or /search/11.5563768,104.9282123
-    const searchMatch = url.match(/(?:search|dir)\/(-?\d+\.\d+),(?:\+|\s)?(-?\d+\.\d+)/);
+    const searchMatch = url.match(/(?:search|dir|place)\/(-?\d+(?:\.\d+)?),(?:\+|\s)?(-?\d+(?:\.\d+)?)/i);
     if (searchMatch) {
       const lat = parseFloat(searchMatch[1]);
       const lng = parseFloat(searchMatch[2]);
-      if (!isNaN(lat) && !isNaN(lng)) return { lat, lng };
+      if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+        return { lat, lng };
+      }
     }
 
-    // Pattern 5: Plain numbers "11.5563768, 104.9282123"
-    const plainMatch = url.match(/^(-?\d+\.\d+),\s*(-?\d+\.\d+)$/);
+    // Pattern 5: Plain numbers or coordinates "11.5563768, 104.9282123"
+    const plainMatch = url.match(/(-?\d{1,2}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)/);
     if (plainMatch) {
       const lat = parseFloat(plainMatch[1]);
       const lng = parseFloat(plainMatch[2]);
-      if (!isNaN(lat) && !isNaN(lng)) return { lat, lng };
+      if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+        return { lat, lng };
+      }
     }
 
     return null;
   }
 
   // Auto extract lat/long on Google Maps URL input change
-  function handleGoogleMapsUrlChange(urlValue: string) {
+  async function handleGoogleMapsUrlChange(urlValue: string) {
     setGoogleMapsUrl(urlValue);
     if (fieldErrors.googleMapsUrl) {
       setFieldErrors((prev) => ({ ...prev, googleMapsUrl: "" }));
     }
+
+    if (!urlValue.trim()) return;
+
+    // 1. Try parsing standard Google Maps URL
     const coords = parseGoogleMapsUrl(urlValue);
     if (coords) {
       setLatitude(String(coords.lat));
@@ -249,6 +264,32 @@ export default function SellerApplicationClient() {
         type: "success",
         message: `Auto-extracted coordinates: ${coords.lat}, ${coords.lng}`,
       });
+      return;
+    }
+
+    // 2. If URL is a shortened link (maps.app.goo.gl or goo.gl/maps), resolve full URL asynchronously
+    if (urlValue.includes("goo.gl") || urlValue.includes("maps.app")) {
+      try {
+        const res = await fetch("/api/resolve-maps-url", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: urlValue }),
+        });
+        const data = await res.json();
+        if (data?.finalUrl) {
+          const resolvedCoords = parseGoogleMapsUrl(data.finalUrl);
+          if (resolvedCoords) {
+            setLatitude(String(resolvedCoords.lat));
+            setLongitude(String(resolvedCoords.lng));
+            setToast({
+              type: "success",
+              message: `Auto-extracted coordinates: ${resolvedCoords.lat}, ${resolvedCoords.lng}`,
+            });
+          }
+        }
+      } catch (e) {
+        console.warn("Could not resolve short maps link:", e);
+      }
     }
   }
 
@@ -350,6 +391,19 @@ export default function SellerApplicationClient() {
     }
 
     try {
+      let finalLat = latitude.trim() ? parseFloat(latitude) : undefined;
+      let finalLng = longitude.trim() ? parseFloat(longitude) : undefined;
+
+      if ((finalLat === undefined || isNaN(finalLat) || finalLng === undefined || isNaN(finalLng)) && googleMapsUrl.trim()) {
+        const parsed = parseGoogleMapsUrl(googleMapsUrl.trim());
+        if (parsed) {
+          finalLat = parsed.lat;
+          finalLng = parsed.lng;
+          setLatitude(String(parsed.lat));
+          setLongitude(String(parsed.lng));
+        }
+      }
+
       const payload = {
         businessName: businessName.trim(),
         storeDisplayName: storeDisplayName.trim() || businessName.trim(),
@@ -361,8 +415,8 @@ export default function SellerApplicationClient() {
         city: city.trim() || undefined,
         province: province.trim() || undefined,
         googleMapsUrl: googleMapsUrl.trim() || undefined,
-        latitude: latitude.trim() ? parseFloat(latitude) : undefined,
-        longitude: longitude.trim() ? parseFloat(longitude) : undefined,
+        latitude: finalLat !== undefined && !isNaN(finalLat) ? finalLat : undefined,
+        longitude: finalLng !== undefined && !isNaN(finalLng) ? finalLng : undefined,
       };
 
       await createApplication(payload).unwrap();
@@ -539,10 +593,12 @@ export default function SellerApplicationClient() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-white sm:text-3xl">
-                Become a Seller on Phsar Digital
+                {isSeller ? "Active Seller Portal" : "Become a Seller on Phsar Digital"}
               </h1>
               <p className="mt-1 text-sm text-white/80">
-                Register shop details, upload verification documents, and start selling online.
+                {isSeller
+                  ? "Your seller store is registered, verified, and active on Phsar Digital."
+                  : "Register shop details, upload verification documents, and start selling online."}
               </p>
             </div>
           </div>
@@ -552,45 +608,92 @@ export default function SellerApplicationClient() {
       <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
         {/* ── CASE A: Active Seller Account ── */}
         {isSeller && (
-          <div className="overflow-hidden rounded-2xl bg-white p-8 shadow-sm ring-1 ring-black/5">
-            <div className="flex items-center gap-4 border-b border-[#EAE7F3] pb-6">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-                <ShieldCheck size={32} />
+          <div className="overflow-hidden rounded-3xl bg-white p-8 shadow-sm ring-1 ring-black/5">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-[#EAE7F3] pb-6">
+              <div className="flex items-center gap-4">
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600 shadow-inner">
+                  <ShieldCheck size={36} />
+                </div>
+                <div>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">
+                    <CheckCircle2 size={14} /> Active Seller Account
+                  </span>
+                  <h2 className="mt-1.5 text-2xl font-extrabold text-[#1A1330]">
+                    Your Seller Store is Approved & Verified!
+                  </h2>
+                  <p className="text-xs text-[#6B6580] mt-0.5">
+                    You are already registered as an active merchant. Registration is complete.
+                  </p>
+                </div>
               </div>
-              <div>
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-0.5 text-xs font-bold text-emerald-700">
-                  <CheckCircle2 size={14} /> Active Seller Account
-                </span>
-                <h2 className="mt-1 text-2xl font-bold text-[#1A1330]">
-                  Your Seller Store is Approved & Active!
-                </h2>
-                <p className="text-sm text-[#6B6580]">
-                  Access your seller dashboard to manage product listings, sales reports, and customer orders.
-                </p>
-              </div>
-            </div>
 
-            <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Link
                 href="/seller-dashboard/home"
-                className="flex items-center justify-between rounded-xl bg-[#6C4CD8] p-5 text-white shadow-md shadow-[#6C4CD8]/20 transition hover:bg-[#5C3DC8]"
+                className="inline-flex items-center gap-2 rounded-2xl bg-[#6C4CD8] px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-[#6C4CD8]/25 hover:bg-[#5C3DC8] transition shrink-0"
+              >
+                <Store size={18} /> Open Seller Dashboard <ArrowRight size={16} />
+              </Link>
+            </div>
+
+            <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <Link
+                href="/seller-dashboard/home"
+                className="flex flex-col justify-between rounded-2xl bg-[#F8F7FB] border border-[#E2DFEC] p-5 text-[#1A1330] transition hover:border-[#6C4CD8] hover:bg-[#EDE9FB] group"
               >
                 <div>
-                  <p className="text-base font-bold">Go to Seller Dashboard</p>
-                  <p className="text-xs text-white/80">Manage products, orders & shop profile</p>
+                  <div className="w-10 h-10 rounded-xl bg-purple-100 text-[#6C4CD8] flex items-center justify-center mb-3">
+                    <Store size={20} />
+                  </div>
+                  <p className="text-base font-bold text-[#1A1330] group-hover:text-[#6C4CD8]">
+                    Seller Dashboard
+                  </p>
+                  <p className="text-xs text-[#8D86A8] mt-1">
+                    Track revenue, orders, and sales reports
+                  </p>
                 </div>
-                <ArrowRight size={20} />
+                <div className="mt-4 flex items-center gap-1 text-xs font-bold text-[#6C4CD8]">
+                  Go to Dashboard <ArrowRight size={14} />
+                </div>
+              </Link>
+
+              <Link
+                href="/seller-dashboard/products/dashboard"
+                className="flex flex-col justify-between rounded-2xl bg-[#F8F7FB] border border-[#E2DFEC] p-5 text-[#1A1330] transition hover:border-[#6C4CD8] hover:bg-[#EDE9FB] group"
+              >
+                <div>
+                  <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center mb-3">
+                    <ShoppingBag size={20} />
+                  </div>
+                  <p className="text-base font-bold text-[#1A1330] group-hover:text-[#6C4CD8]">
+                    Product Inventory
+                  </p>
+                  <p className="text-xs text-[#8D86A8] mt-1">
+                    Add, update, or remove store listings
+                  </p>
+                </div>
+                <div className="mt-4 flex items-center gap-1 text-xs font-bold text-[#6C4CD8]">
+                  Manage Products <ArrowRight size={14} />
+                </div>
               </Link>
 
               <Link
                 href="/subscriptions"
-                className="flex items-center justify-between rounded-xl border border-[#E2DFEC] bg-[#F8F7FB] p-5 text-[#1A1330] transition hover:bg-[#EDE9FB] hover:text-[#6C4CD8]"
+                className="flex flex-col justify-between rounded-2xl bg-[#F8F7FB] border border-[#E2DFEC] p-5 text-[#1A1330] transition hover:border-[#6C4CD8] hover:bg-[#EDE9FB] group"
               >
                 <div>
-                  <p className="text-base font-bold">View Subscriptions</p>
-                  <p className="text-xs text-[#8D86A8]">Posting listings requires active subscription</p>
+                  <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center mb-3">
+                    <Sparkles size={20} />
+                  </div>
+                  <p className="text-base font-bold text-[#1A1330] group-hover:text-[#6C4CD8]">
+                    Seller Subscription
+                  </p>
+                  <p className="text-xs text-[#8D86A8] mt-1">
+                    View or upgrade your listing plan limits
+                  </p>
                 </div>
-                <ExternalLink size={20} />
+                <div className="mt-4 flex items-center gap-1 text-xs font-bold text-[#6C4CD8]">
+                  View Plans <ExternalLink size={14} />
+                </div>
               </Link>
             </div>
           </div>

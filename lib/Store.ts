@@ -2,8 +2,7 @@ import { configureStore } from "@reduxjs/toolkit";
 import { authApi } from "@/lib/api/authApi";
 import { sellerApi } from "@/lib/api/sellerApi";
 import { homeApi } from "@/lib/api/homeApi";
-import { sellerProductApi } from "@/lib/redux/service/sellerProductApi";
-import { sellerDashboardApi } from "@/lib/redux/service/sellerDashboardApi";
+import { addressApi } from "@/lib/api/addressApi";
 
 export const makeStore = () => {
   return configureStore({
@@ -11,16 +10,14 @@ export const makeStore = () => {
       [authApi.reducerPath]: authApi.reducer,
       [sellerApi.reducerPath]: sellerApi.reducer,
       [homeApi.reducerPath]: homeApi.reducer,
-      [sellerProductApi.reducerPath]: sellerProductApi.reducer,
-      [sellerDashboardApi.reducerPath]: sellerDashboardApi.reducer,
+      [addressApi.reducerPath]: addressApi.reducer,
     },
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware().concat(
         authApi.middleware,
         sellerApi.middleware,
         homeApi.middleware,
-        sellerProductApi.middleware,
-        sellerDashboardApi.middleware
+        addressApi.middleware
       ),
   });
 };

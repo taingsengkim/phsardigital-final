@@ -23,6 +23,12 @@ export const homeApi = createApi({
   endpoints: (builder) => ({
     getCategories: builder.query<Category[], void>({
       query: () => "/categories",
+      transformResponse: (response: any) => {
+        if (Array.isArray(response)) return response;
+        if (Array.isArray(response?.content)) return response.content;
+        if (Array.isArray(response?.data)) return response.data;
+        return [];
+      },
       providesTags: ["Category"],
     }),
 
@@ -34,27 +40,39 @@ export const homeApi = createApi({
       providesTags: ["Listing"],
     }),
 
-    // Thin wrappers around getListings for the specific homepage sections,
-    // so components can call a purpose-named hook instead of remembering
-    // which sort/filter params to pass every time.
+    // Thin wrappers around getListings for the specific homepage sections, so
+    // components call a purpose-named hook instead of remembering the params.
+    // `sort` takes a Spring sort expression — "field,direction".
     getFeaturedListings: builder.query<PaginatedListings, void>({
-      query: () => ({ url: "/listings", params: { sort: "newest", pageSize: 15 } }),
+      query: () => ({
+        url: "/listings",
+        params: { sort: "createdAt,desc", pageSize: 15 },
+      }),
       providesTags: ["Listing"],
     }),
     getTopRatedListings: builder.query<PaginatedListings, void>({
-      query: () => ({ url: "/listings", params: { sort: "top_rated", pageSize: 5 } }),
+      query: () => ({
+        url: "/listings",
+        params: { sort: "averageRating,desc", pageSize: 5 },
+      }),
       providesTags: ["Listing"],
     }),
-    getWearableListings: builder.query<PaginatedListings, void>({
-      query: () => ({ url: "/listings", params: { categoryId: 5, pageSize: 5 } }),
+    getListingsByCategory: builder.query<PaginatedListings, string>({
+      query: (categorySlug) => ({
+        url: "/listings",
+        params: { categorySlug, pageSize: 5 },
+      }),
       providesTags: ["Listing"],
     }),
 
-    // No backend endpoint yet — kept here (unused for now) so the shape is
-    // ready the day "browse sellers" ships. Until then, sections import the
-    // Seller[] mock directly instead of calling this hook.
-    getTopSellers: builder.query<Seller[], void>({
-      query: () => "/sellers?sort=top",
+    getTopSellers: builder.query<any[], void>({
+      query: () => "/sellers/top",
+      transformResponse: (response: any) => {
+        if (Array.isArray(response)) return response;
+        if (Array.isArray(response?.content)) return response.content;
+        if (Array.isArray(response?.data)) return response.data;
+        return [];
+      },
     }),
   }),
 });
@@ -64,6 +82,6 @@ export const {
   useGetListingsQuery,
   useGetFeaturedListingsQuery,
   useGetTopRatedListingsQuery,
-  useGetWearableListingsQuery,
+  useGetListingsByCategoryQuery,
   useGetTopSellersQuery,
 } = homeApi;
