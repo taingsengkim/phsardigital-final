@@ -39,10 +39,21 @@ const DEFAULT_MOCK_ITEMS: CartItem[] = [
 
 let mockCartItems: CartItem[] = [...DEFAULT_MOCK_ITEMS];
 
+export type ApiSellerProfile = {
+  sellerId?: string | null;
+  businessName?: string | null;
+  logoUri?: string | null;
+  phoneNumber?: string | null;
+  biography?: string | null;
+  socialLink?: string[] | null;
+};
+
 export type ApiCartItem = {
   uuid: string;
   listingUuid: string;
   title: string;
+  thumbnailUri?: string | { uri?: string; objectName?: string } | null;
+  fullPrice?: number | null;
   unitPrice: number;
   quantity: number;
   lineTotal: number;
@@ -50,7 +61,8 @@ export type ApiCartItem = {
 
 export type VendorCart = {
   uuid: string;
-  sellerId: string;
+  sellerId?: string | null;
+  sellerProfile?: ApiSellerProfile | null;
   items: ApiCartItem[];
   totalPrice: number;
 };
@@ -66,16 +78,23 @@ export async function getCarts(): Promise<VendorCart[]> {
     console.warn("Failed to fetch carts from route handler:", err);
   }
 
-  // Fallback to sample mock vendor carts matching user schema
+  // Fallback to sample mock vendor carts matching user backend API schema
   return [
     {
       uuid: "adbc335b-fb28-4b53-9289-5104b54f1f03",
-      sellerId: "TechHub KH",
+      sellerId: "6e443fad-e712-49f4-8e63-ad6c5e50f399",
+      sellerProfile: {
+        sellerId: "6e443fad-e712-49f4-8e63-ad6c5e50f399",
+        businessName: "SOMA Coffee & Roastery",
+        logoUri: "/picture/pic1.jpg",
+      },
       items: [
         {
           uuid: "80f60724-4817-45f1-a5dc-f316f16be395",
           listingUuid: "ac364012-6788-4df9-baf9-a7815753d9c1",
           title: "Wireless Mechanical Keyboard",
+          thumbnailUri: "/picture/pic7.jpg",
+          fullPrice: 89.99,
           unitPrice: 89.99,
           quantity: 7,
           lineTotal: 629.93,
@@ -84,27 +103,14 @@ export async function getCarts(): Promise<VendorCart[]> {
           uuid: "796cd4ac-7946-4444-9766-d48a3ade6610",
           listingUuid: "a99cbb20-21a9-4349-ab9f-30e1b6aff5c4",
           title: "ISTAD Friends Hoodie",
-          unitPrice: 25.0,
-          quantity: 5,
-          lineTotal: 125.0,
+          thumbnailUri: "/picture/pic3.jpg",
+          fullPrice: 25,
+          unitPrice: 25,
+          quantity: 9,
+          lineTotal: 225,
         },
       ],
-      totalPrice: 754.93,
-    },
-    {
-      uuid: "ea9163f6-31d0-456d-9607-36dea1881911",
-      sellerId: "Van Shop",
-      items: [
-        {
-          uuid: "3418f72d-800d-428d-a531-1cdd3f74640a",
-          listingUuid: "3cd9eca1-520a-4314-afba-7d238cff1301",
-          title: "Cats Accessories Pack",
-          unitPrice: 12.0,
-          quantity: 2,
-          lineTotal: 24.0,
-        },
-      ],
-      totalPrice: 24.0,
+      totalPrice: 854.93,
     },
   ];
 }

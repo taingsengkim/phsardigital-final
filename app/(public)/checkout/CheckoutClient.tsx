@@ -256,15 +256,24 @@ export default function CheckoutClient() {
 
         if (vendorCarts && Array.isArray(vendorCarts) && vendorCarts.length > 0) {
           vendorCarts.forEach((cart, cartIdx) => {
-            const storeName = cart.sellerId
-              ? cart.sellerId.length > 20
-                ? `Shop #${cart.sellerId.slice(0, 6)}`
-                : cart.sellerId
-              : `Shop ${cartIdx + 1}`;
+            const storeName = cart.sellerProfile?.businessName?.trim()
+              || (cart.sellerId
+                ? cart.sellerId.length > 20
+                  ? `Shop #${cart.sellerId.slice(0, 6)}`
+                  : cart.sellerId
+                : `Shop ${cartIdx + 1}`);
 
             if (cart.items && Array.isArray(cart.items)) {
               cart.items.forEach((item, itemIdx) => {
-                const img = item.title?.toLowerCase().includes("keyboard")
+                const rawThumb = typeof item.thumbnailUri === "string"
+                  ? item.thumbnailUri
+                  : (typeof item.thumbnailUri === "object" && item.thumbnailUri?.uri
+                    ? item.thumbnailUri.uri
+                    : null);
+
+                const img = rawThumb && rawThumb.length > 5
+                  ? rawThumb
+                  : item.title?.toLowerCase().includes("keyboard")
                   ? "/picture/pic7.jpg"
                   : item.title?.toLowerCase().includes("hoodie") || item.title?.toLowerCase().includes("dress")
                   ? "/picture/pic3.jpg"
@@ -272,10 +281,14 @@ export default function CheckoutClient() {
                   ? "/picture/pic1.jpg"
                   : `/picture/pic${(itemIdx % 7) + 1}.jpg`;
 
+                const safeUnitPrice = typeof item.unitPrice === "number" && !isNaN(item.unitPrice)
+                  ? item.unitPrice
+                  : (typeof (item as any).price === "number" && !isNaN((item as any).price) ? (item as any).price : 0);
+
                 mappedItems.push({
                   id: item.uuid || item.listingUuid,
                   title: item.title || "Product Item",
-                  price: item.unitPrice ?? 0,
+                  price: safeUnitPrice,
                   quantity: item.quantity ?? 1,
                   image: img,
                   slug: item.listingUuid,
@@ -293,7 +306,7 @@ export default function CheckoutClient() {
             mappedItems = singleCart.items.map((item) => ({
               id: item.listing_id,
               title: item.listing?.title ?? "Product Item",
-              price: item.listing?.price ?? 0,
+              price: typeof item.listing?.price === "number" && !isNaN(item.listing.price) ? item.listing.price : 0,
               quantity: item.quantity,
               image: item.listing?.images?.[0]?.url ?? "/picture/pic1.jpg",
               slug: item.listing?.slug,
@@ -304,26 +317,56 @@ export default function CheckoutClient() {
 
         if (slugParam) {
           const parsedQty = Math.max(1, parseInt(qtyParam ?? "1", 10));
-          const existing = mappedItems.find((i) => i.slug === slugParam);
+          const existing = mappedItems.find(
+            (i) => i.slug === slugParam || String(i.id) === String(slugParam)
+          );
 
           if (existing) {
-            existing.quantity = Math.max(existing.quantity, parsedQty);
+            existing.quantity = existing.quantity + parsedQty;
           } else {
-            const listing: Listing = await getListingBySlug(slugParam);
-            const primaryImg =
-              listing.images?.find((img) => img.is_primary)?.url ??
-              listing.images?.[0]?.url ??
-              "/picture/pic1.jpg";
+            try {
+              const listing: Listing = await getListingBySlug(slugParam);
+              if (listing) {
+                const matchByTitle = mappedItems.find(
+                  (i) => i.title.toLowerCase() === listing.title?.toLowerCase()
+                );
 
-            mappedItems.unshift({
-              id: listing.id,
-              title: listing.title,
-              price: listing.price,
-              quantity: parsedQty,
-              image: primaryImg,
-              slug: listing.slug,
-              storeName: listing.store_name ?? "TechHub KH",
-            });
+                if (matchByTitle) {
+                  matchByTitle.quantity += parsedQty;
+                } else {
+                  const primaryImg =
+                    (listing as any).thumbnailUri?.uri ||
+                    listing.images?.find((img) => img.is_primary)?.url ||
+                    listing.images?.[0]?.url ||
+                    (listing.title?.toLowerCase().includes("keyboard")
+                      ? "/picture/pic7.jpg"
+                      : listing.title?.toLowerCase().includes("hoodie") || listing.title?.toLowerCase().includes("dress")
+                      ? "/picture/pic3.jpg"
+                      : "/picture/pic1.jpg");
+
+                  const safeListingPrice =
+                    typeof (listing as any).discountPrice === "number" && !isNaN((listing as any).discountPrice)
+                      ? (listing as any).discountPrice
+                      : (typeof listing.price === "number" && !isNaN(listing.price)
+                        ? listing.price
+                        : (typeof (listing as any).fullPrice === "number" && !isNaN((listing as any).fullPrice)
+                          ? (listing as any).fullPrice
+                          : 0));
+
+                  mappedItems.unshift({
+                    id: listing.uuid || listing.id,
+                    title: listing.title || "Product Item",
+                    price: safeListingPrice,
+                    quantity: parsedQty,
+                    image: primaryImg,
+                    slug: listing.slug || listing.uuid || slugParam,
+                    storeName: listing.store_name ?? (listing as any).sellerProfile?.businessName ?? "SOMA Coffee & Roastery",
+                  });
+                }
+              }
+            } catch {
+              // ignore
+            }
           }
         }
 
@@ -411,7 +454,7 @@ export default function CheckoutClient() {
   const activeItems = items.filter((i) => i.storeName === (selectedStore || allStores[0]));
 
   // Price calculations for active store
-  const subtotal = activeItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  const subtotal = activeItems.reduce((sum, i) => sum + (typeof i.price === "number" && !isNaN(i.price) ? i.price : 0) * (i.quantity || 1), 0);
   const discountAmount = subtotal > 150 ? 10 : 0;
   const shippingFee = subtotal >= 50 ? 0 : 1.5;
   const grandTotal = Math.max(0, subtotal - discountAmount + shippingFee);
@@ -1223,8 +1266,20 @@ export default function CheckoutClient() {
               <div className="space-y-4 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin">
                 {activeItems.map((item) => (
                   <div key={item.id} className="flex items-center gap-4">
-                    <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-[#1A1330] border border-[#2D2644] flex items-center justify-center text-white shadow-xs">
-                      <ShoppingBag size={24} className="text-[#6C4CD8]" />
+                    <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-[#F5F3FA] border border-[#EDEBF3]">
+                      {item.image && item.image.length > 5 ? (
+                        <Image
+                          src={item.image}
+                          alt={item.title}
+                          fill
+                          className="object-cover"
+                          unoptimized={item.image.startsWith("http")}
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center bg-[#1A1330] text-[#6C4CD8]">
+                          <ShoppingBag size={24} />
+                        </div>
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-[14px] font-bold text-[#1A1330] truncate">{item.title}</p>
@@ -1233,7 +1288,7 @@ export default function CheckoutClient() {
                       </p>
                     </div>
                     <p className="text-[15px] font-extrabold text-[#6C4CD8]">
-                      ${(item.price * item.quantity).toFixed(2)}
+                      ${((typeof item.price === "number" && !isNaN(item.price) ? item.price : 0) * (item.quantity || 1)).toFixed(2)}
                     </p>
                   </div>
                 ))}
