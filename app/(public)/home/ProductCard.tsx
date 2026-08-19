@@ -1,14 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Heart, Eye, Star } from "lucide-react";
+import { Heart, Star } from "lucide-react";
 import {
   getPrimaryImage,
   getAverageRating,
-  getActiveDiscountPercent,
-  getDiscountedPrice,
+  getPrices,
   formatPrice,
 } from "./listing-helpers";
 
@@ -18,10 +18,11 @@ type ProductCardProps = {
 };
 
 export function ProductCard({ listing, sellerName }: ProductCardProps) {
+  const [isSaved, setIsSaved] = useState(false);
+
   const image = getPrimaryImage(listing);
   const rating = getAverageRating(listing);
-  const discountPercent = getActiveDiscountPercent(listing);
-  const finalPrice = getDiscountedPrice(listing);
+  const { currentPrice, originalPrice, discountPercent } = getPrices(listing);
 
   const productSlug = listing.uuid || listing.slug || listing.id || "#";
   const displaySeller =
@@ -30,77 +31,94 @@ export function ProductCard({ listing, sellerName }: ProductCardProps) {
     listing.seller_name ||
     "Phsar Store";
 
+  const ratingVal = typeof rating === "number" && rating > 0 ? Math.round(rating) : 0;
+  const reviewCount = listing.reviewCount ?? listing.reviews?.length ?? 0;
+
   return (
     <motion.div
-      whileHover={{ y: -4 }}
-      transition={{ type: "spring", stiffness: 300, damping: 22 }}
-      className="group relative overflow-hidden rounded-xl border border-[#EDEBF3] bg-white shadow-sm"
+      whileHover={{ y: -6, scale: 1.01 }}
+      transition={{ type: "spring", stiffness: 350, damping: 25 }}
+      className="group relative flex flex-col overflow-hidden rounded-3xl border border-[#EDEBF3] bg-white shadow-xs transition-all duration-300 hover:border-[#6C4CD8]/40 hover:shadow-xl"
     >
-      <Link href={`/products/${productSlug}`} className="block">
-        <div className="relative aspect-square w-full overflow-hidden bg-[#F5F3FA]">
+      <Link href={`/products/${productSlug}`} className="block flex-1 flex flex-col justify-between">
+        {/* Top Image Box — Flush to card top/left/right borders */}
+        <div className="relative aspect-square w-full overflow-hidden bg-[#F8F7FB]">
           <Image
             src={image}
             alt={listing.title || "Product"}
             fill
             unoptimized={Boolean(image?.startsWith("http"))}
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw"
-            className="object-cover transition-transform duration-500 group-hover:scale-110"
+            className="object-cover transition-transform duration-500 group-hover:scale-108"
           />
 
+          {/* Discount Badge on Top-Left */}
           {discountPercent && (
-            <span className="absolute left-2 top-2 rounded-md bg-[#6C4CD8] px-2 py-0.5 text-xs font-bold text-white shadow-sm">
+            <span className="absolute left-3 top-3 rounded-xl bg-[#6C4CD8] px-3 py-1 text-xs font-extrabold text-white shadow-md">
               -{discountPercent}%
             </span>
           )}
 
-          {/* Hover-only quick actions */}
-          <div className="absolute right-2 top-2 flex flex-col gap-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={(e) => e.preventDefault()}
-              aria-label="Save"
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#241F35] shadow hover:bg-[#F1EFFA] hover:text-[#6C4CD8]"
-            >
-              <Heart size={15} />
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={(e) => e.preventDefault()}
-              aria-label="Quick view"
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#241F35] shadow hover:bg-[#F1EFFA] hover:text-[#6C4CD8]"
-            >
-              <Eye size={15} />
-            </motion.button>
-          </div>
+          {/* Saved Heart Button on Top-Right */}
+          <motion.button
+            whileHover={{ scale: 1.15 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsSaved((prev) => !prev);
+            }}
+            aria-label="Save item"
+            className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#6C4CD8] shadow-md transition-all hover:bg-[#F1EFFA]"
+          >
+            <Heart
+              size={17}
+              className={isSaved ? "fill-[#6C4CD8] text-[#6C4CD8]" : "text-[#6C4CD8]"}
+            />
+          </motion.button>
         </div>
 
-        <div className="space-y-1 p-3">
-          <p className="truncate text-sm font-semibold text-[#241F35]">
+        {/* Content Below Image */}
+        <div className="flex-1 p-5 flex flex-col justify-between space-y-2.5">
+          {/* Product Title */}
+          <h3 className="line-clamp-2 text-base font-extrabold text-[#1A1330] leading-snug transition-colors group-hover:text-[#6C4CD8]">
             {listing.title || "Untitled Product"}
-          </p>
+          </h3>
 
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-extrabold text-[#6C4CD8]">
-              {formatPrice(finalPrice)}
+          {/* 5-Star Rating Row + (reviewCount) */}
+          <div className="flex items-center gap-1.5 text-xs sm:text-sm">
+            <div className="flex items-center gap-0.5">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Star
+                  key={i}
+                  size={15}
+                  className={
+                    ratingVal > 0 && i < ratingVal
+                      ? "fill-amber-400 text-amber-400"
+                      : "text-gray-300 fill-gray-200"
+                  }
+                />
+              ))}
+            </div>
+            <span className="text-xs font-semibold text-[#8B85A0]">({reviewCount})</span>
+          </div>
+
+          {/* Price Row: Current Price + Strikethrough Original Price */}
+          <div className="flex items-baseline gap-2 flex-wrap pt-0.5">
+            <span className="text-xl sm:text-2xl font-black text-[#6C4CD8]">
+              {formatPrice(currentPrice)}
             </span>
-            {discountPercent && (
-              <span className="text-xs text-[#8B85A0] line-through">
-                {formatPrice(listing.price)}
+            {originalPrice && (
+              <span className="text-sm font-semibold text-[#9B94B4] line-through">
+                {formatPrice(originalPrice)}
               </span>
             )}
           </div>
 
-          <div className="flex items-center justify-between text-xs text-[#8B85A0]">
-            <span className="truncate max-w-[110px]">{displaySeller}</span>
-            {rating > 0 && (
-              <span className="flex items-center gap-0.5 shrink-0">
-                <Star size={12} className="fill-[#F5B301] text-[#F5B301]" />
-                {rating}
-              </span>
-            )}
-          </div>
+          {/* Seller Business Name */}
+          <p className="text-xs sm:text-sm font-semibold text-[#7C7596] truncate">
+            {displaySeller}
+          </p>
         </div>
       </Link>
     </motion.div>

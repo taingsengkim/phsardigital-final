@@ -1,48 +1,57 @@
-import type { Listing } from "@/lib/types";
+import { getFileUrl } from "@/lib/api/utils";
 
 export function getPrimaryImage(listing: any): string {
   if (!listing) return "/picture/pic1.jpg";
   if (typeof listing === "string") return listing;
 
-  const primary =
+  const rawUri =
     listing.thumbnailUri?.uri ||
+    (listing.thumbnailUri?.objectName ? getFileUrl(listing.thumbnailUri.objectName) : null) ||
     listing.thumbnail_url ||
     listing.images?.find((img: any) => img.is_primary || img.isPrimary)?.url ||
     listing.images?.find((img: any) => img.is_primary || img.isPrimary)?.uri ||
     listing.images?.[0]?.url ||
     listing.images?.[0]?.uri;
 
-  return primary ?? "/picture/pic1.jpg";
-}
-
-export function getAverageRating(listing: any): number {
-  if (!listing) return 4.8;
-  const reviews = listing.reviews ?? [];
-  if (reviews.length === 0) return listing.rating || 4.8;
-  const sum = reviews.reduce((acc: number, r: any) => acc + (r.rating || 5), 0);
-  return Math.round((sum / reviews.length) * 10) / 10;
-}
-
-export function getActiveDiscountPercent(listing: any): number | null {
-  if (!listing) return null;
-  if (listing.discountPercent || listing.discount_percent) {
-    return listing.discountPercent || listing.discount_percent;
+  if (rawUri && typeof rawUri === "string" && rawUri.length > 5) {
+    return rawUri;
   }
-  const now = Date.now();
-  const active = listing.discounts?.find(
-    (d: any) =>
-      new Date(d.starts_at || d.startsAt).getTime() <= now &&
-      new Date(d.ends_at || d.endsAt).getTime() >= now
-  );
-  return active?.discount_percent ?? active?.discountPercent ?? null;
+
+  return "/picture/pic1.jpg";
 }
 
-export function getDiscountedPrice(listing: any): number {
-  if (!listing) return 0;
-  const price = listing.price ?? 0;
-  const pct = getActiveDiscountPercent(listing);
-  if (!pct) return price;
-  return Math.round(price * (1 - pct / 100) * 100) / 100;
+export function getAverageRating(listing: any): number | null {
+  if (!listing) return null;
+  if (typeof listing.averageRating === "number") return listing.averageRating;
+  if (typeof listing.rating === "number") return listing.rating;
+  return null;
+}
+
+export function getPrices(listing: any) {
+  if (!listing) return { currentPrice: 0, originalPrice: null, discountPercent: null };
+
+  const rawFull = typeof listing.fullPrice === "number" ? listing.fullPrice : (typeof listing.price === "number" ? listing.price : null);
+  const rawDiscount = typeof listing.discountPrice === "number" ? listing.discountPrice : null;
+
+  // Purple main price: discountPrice if present, otherwise 0 if discountPrice is null, or listing.price
+  const currentPrice = rawDiscount !== null ? rawDiscount : (listing.discountPrice === null && typeof listing.fullPrice === "number" ? 0 : (listing.price ?? 0));
+
+  // Gray strikethrough price: fullPrice if present and greater than currentPrice
+  const originalPrice = rawFull !== null && rawFull > currentPrice ? rawFull : null;
+
+  // Calculate discount percentage ONLY if discountPrice was explicitly provided and is less than fullPrice
+  let discountPercent: number | null = null;
+  if (rawDiscount !== null && rawFull !== null && rawFull > rawDiscount && rawFull > 0) {
+    discountPercent = Math.round(((rawFull - rawDiscount) / rawFull) * 100);
+  } else if (listing.discountPercent || listing.discount_percent) {
+    discountPercent = listing.discountPercent || listing.discount_percent;
+  }
+
+  return {
+    currentPrice,
+    originalPrice,
+    discountPercent: discountPercent && discountPercent > 0 ? discountPercent : null,
+  };
 }
 
 export function formatPrice(value: number): string {

@@ -20,7 +20,7 @@ export function TopSellersSection() {
 
   return (
     <section className="bg-[#F1EFFA]/60 py-8 font-sans">
-      <div className="mx-auto max-w-7xl space-y-5 px-4">
+      <div className="mx-auto max-w-[1240px] space-y-5 px-6">
         <SectionHeader title="Top Sellers" />
 
         {isLoading ? (

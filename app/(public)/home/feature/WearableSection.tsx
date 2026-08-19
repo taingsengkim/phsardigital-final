@@ -29,7 +29,7 @@ export function WearableSection({
     response?.data || (response as unknown as { content?: unknown[] })?.content || [];
 
   return (
-    <section className="mx-auto max-w-7xl px-4 py-8 font-sans">
+    <section className="mx-auto max-w-[1240px] px-6 py-8 font-sans">
       <SectionHeader title={title} className="mb-5" />
 
       {isLoading ? (

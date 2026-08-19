@@ -30,12 +30,12 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getListingBySlug } from "@/app/api/listings";
-import { getCart } from "@/app/api/cart";
+import { getCart, getCarts } from "@/app/api/cart";
 import { createOrder } from "@/app/api/orders";
 import type { Listing } from "@/lib/types";
 
 type CheckoutItem = {
-  id: number;
+  id: number | string;
   title: string;
   price: number;
   quantity: number;
@@ -251,25 +251,55 @@ export default function CheckoutClient() {
     async function loadCheckoutData() {
       setLoading(true);
       try {
-        const cart = await getCart();
+        const vendorCarts = await getCarts();
         let mappedItems: CheckoutItem[] = [];
 
-        if (cart && cart.items && cart.items.length > 0) {
-          mappedItems = cart.items.map((item) => {
-            const img =
-              item.listing?.images?.find((i) => i.is_primary)?.url ??
-              item.listing?.images?.[0]?.url ??
-              "/picture/pic1.jpg";
-            return {
+        if (vendorCarts && Array.isArray(vendorCarts) && vendorCarts.length > 0) {
+          vendorCarts.forEach((cart, cartIdx) => {
+            const storeName = cart.sellerId
+              ? cart.sellerId.length > 20
+                ? `Shop #${cart.sellerId.slice(0, 6)}`
+                : cart.sellerId
+              : `Shop ${cartIdx + 1}`;
+
+            if (cart.items && Array.isArray(cart.items)) {
+              cart.items.forEach((item, itemIdx) => {
+                const img = item.title?.toLowerCase().includes("keyboard")
+                  ? "/picture/pic7.jpg"
+                  : item.title?.toLowerCase().includes("hoodie") || item.title?.toLowerCase().includes("dress")
+                  ? "/picture/pic3.jpg"
+                  : item.title?.toLowerCase().includes("phone")
+                  ? "/picture/pic1.jpg"
+                  : `/picture/pic${(itemIdx % 7) + 1}.jpg`;
+
+                mappedItems.push({
+                  id: item.uuid || item.listingUuid,
+                  title: item.title || "Product Item",
+                  price: item.unitPrice ?? 0,
+                  quantity: item.quantity ?? 1,
+                  image: img,
+                  slug: item.listingUuid,
+                  storeName,
+                });
+              });
+            }
+          });
+        }
+
+        // Fallback if vendorCarts was empty
+        if (mappedItems.length === 0) {
+          const singleCart = await getCart();
+          if (singleCart && singleCart.items && singleCart.items.length > 0) {
+            mappedItems = singleCart.items.map((item) => ({
               id: item.listing_id,
               title: item.listing?.title ?? "Product Item",
               price: item.listing?.price ?? 0,
               quantity: item.quantity,
-              image: img,
+              image: item.listing?.images?.[0]?.url ?? "/picture/pic1.jpg",
               slug: item.listing?.slug,
-              storeName: item.listing?.store_name ?? "Phsar Digital Store",
-            };
-          });
+              storeName: item.listing?.store_name ?? "TechHub KH",
+            }));
+          }
         }
 
         if (slugParam) {
@@ -292,7 +322,7 @@ export default function CheckoutClient() {
               quantity: parsedQty,
               image: primaryImg,
               slug: listing.slug,
-              storeName: listing.store_name ?? "Phsar Digital Store",
+              storeName: listing.store_name ?? "TechHub KH",
             });
           }
         }
@@ -301,20 +331,29 @@ export default function CheckoutClient() {
           mappedItems = [
             {
               id: 101,
-              title: "POCO Smart Phone — 8GB RAM / 256GB Storage (5G Dual SIM)",
-              price: 229.50,
-              quantity: 1,
-              image: "/picture/pic1.jpg",
-              slug: "poco-smart-phone",
+              title: "Wireless Mechanical Keyboard",
+              price: 89.99,
+              quantity: 7,
+              image: "/picture/pic7.jpg",
+              slug: "ac364012-6788-4df9-baf9-a7815753d9c1",
               storeName: "TechHub KH",
             },
             {
               id: 102,
-              title: "Fitbit Versa 4 Fitness Smartwatch",
-              price: 108.00,
-              quantity: 1,
+              title: "ISTAD Friends Hoodie",
+              price: 25.0,
+              quantity: 5,
+              image: "/picture/pic3.jpg",
+              slug: "a99cbb20-21a9-4349-ab9f-30e1b6aff5c4",
+              storeName: "TechHub KH",
+            },
+            {
+              id: 103,
+              title: "Cats Accessories Pack",
+              price: 12.0,
+              quantity: 2,
               image: "/picture/pic4.jpg",
-              slug: "fitbit-versa-4",
+              slug: "3cd9eca1-520a-4314-afba-7d238cff1301",
               storeName: "Van Shop",
             },
           ];
@@ -416,7 +455,7 @@ export default function CheckoutClient() {
         shipping_address: `${fullName} (${phone}) - ${address}, ${city}`,
         payment_method: paymentMethod,
         items: activeItems.map((i) => ({
-          listing_id: i.id,
+          listing_id: typeof i.id === "number" ? i.id : parseInt(String(i.id), 10) || 101,
           quantity: i.quantity,
           unit_price: i.price,
         })),
@@ -1184,8 +1223,8 @@ export default function CheckoutClient() {
               <div className="space-y-4 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin">
                 {activeItems.map((item) => (
                   <div key={item.id} className="flex items-center gap-4">
-                    <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-[#F5F3FA] border border-[#EDEBF3]">
-                      <Image src={item.image} alt={item.title} fill className="object-cover" />
+                    <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-[#1A1330] border border-[#2D2644] flex items-center justify-center text-white shadow-xs">
+                      <ShoppingBag size={24} className="text-[#6C4CD8]" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-[14px] font-bold text-[#1A1330] truncate">{item.title}</p>

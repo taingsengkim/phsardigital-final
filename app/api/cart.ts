@@ -39,6 +39,76 @@ const DEFAULT_MOCK_ITEMS: CartItem[] = [
 
 let mockCartItems: CartItem[] = [...DEFAULT_MOCK_ITEMS];
 
+export type ApiCartItem = {
+  uuid: string;
+  listingUuid: string;
+  title: string;
+  unitPrice: number;
+  quantity: number;
+  lineTotal: number;
+};
+
+export type VendorCart = {
+  uuid: string;
+  sellerId: string;
+  items: ApiCartItem[];
+  totalPrice: number;
+};
+
+export async function getCarts(): Promise<VendorCart[]> {
+  try {
+    const res = await fetch("/api/carts", { cache: "no-store" });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data)) return data;
+    }
+  } catch (err) {
+    console.warn("Failed to fetch carts from route handler:", err);
+  }
+
+  // Fallback to sample mock vendor carts matching user schema
+  return [
+    {
+      uuid: "adbc335b-fb28-4b53-9289-5104b54f1f03",
+      sellerId: "TechHub KH",
+      items: [
+        {
+          uuid: "80f60724-4817-45f1-a5dc-f316f16be395",
+          listingUuid: "ac364012-6788-4df9-baf9-a7815753d9c1",
+          title: "Wireless Mechanical Keyboard",
+          unitPrice: 89.99,
+          quantity: 7,
+          lineTotal: 629.93,
+        },
+        {
+          uuid: "796cd4ac-7946-4444-9766-d48a3ade6610",
+          listingUuid: "a99cbb20-21a9-4349-ab9f-30e1b6aff5c4",
+          title: "ISTAD Friends Hoodie",
+          unitPrice: 25.0,
+          quantity: 5,
+          lineTotal: 125.0,
+        },
+      ],
+      totalPrice: 754.93,
+    },
+    {
+      uuid: "ea9163f6-31d0-456d-9607-36dea1881911",
+      sellerId: "Van Shop",
+      items: [
+        {
+          uuid: "3418f72d-800d-428d-a531-1cdd3f74640a",
+          listingUuid: "3cd9eca1-520a-4314-afba-7d238cff1301",
+          title: "Cats Accessories Pack",
+          unitPrice: 12.0,
+          quantity: 2,
+          lineTotal: 24.0,
+        },
+      ],
+      totalPrice: 24.0,
+    },
+  ];
+}
+
 export async function getCart(): Promise<Cart> {
   if (BASE_URL) {
     try {

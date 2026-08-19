@@ -36,7 +36,7 @@ export function FindWhatYouNeed() {
   }));
 
   return (
-    <section className="mx-auto max-w-7xl px-4 py-8 font-sans">
+    <section className="mx-auto max-w-[1240px] px-6 py-8 font-sans">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_1fr]">
         {/* Promo panel */}
         <motion.div

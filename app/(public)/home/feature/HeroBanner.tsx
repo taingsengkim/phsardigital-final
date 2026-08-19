@@ -16,7 +16,7 @@ export function HeroBanner() {
   }));
 
   return (
-    <section className="mx-auto grid max-w-7xl grid-cols-1 gap-4 px-4 py-6 lg:grid-cols-[260px_1fr] font-sans">
+    <section className="mx-auto grid max-w-[1240px] grid-cols-1 gap-4 px-6 py-6 lg:grid-cols-[260px_1fr] font-sans">
       {/* Sidebar category list — hidden on mobile, desktop-first */}
       <aside className="hidden rounded-xl border border-[#EDEBF3] bg-white p-2 shadow-sm lg:block">
         {isLoading ? (

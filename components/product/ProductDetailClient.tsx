@@ -81,7 +81,15 @@ export default function ProductDetailClient({
   const listingId = listing.uuid;
   const productSlug = listing.slug || listing.uuid;
 
-  const price = typeof listing.price === "number" ? listing.price : 0;
+  const rawFull = typeof listing.fullPrice === "number" ? listing.fullPrice : (typeof listing.price === "number" ? listing.price : null);
+  const rawDiscount = typeof listing.discountPrice === "number" ? listing.discountPrice : null;
+
+  // Purple main price: discountPrice if present, otherwise 0 if discountPrice is null, or listing.price
+  const price = rawDiscount !== null ? rawDiscount : (listing.discountPrice === null && typeof listing.fullPrice === "number" ? 0 : (typeof listing.price === "number" ? listing.price : 0));
+
+  // Gray strikethrough full price: fullPrice if present and greater than current price
+  const fullPrice = rawFull !== null && rawFull > price ? rawFull : null;
+
   const stock = typeof listing.stockQty === "number" ? listing.stockQty : 0;
   const sold = typeof listing.sold === "number" ? listing.sold : 0;
 
@@ -276,6 +284,11 @@ export default function ProductDetailClient({
           <span className="text-[36px] font-black leading-none text-[#6C4CD8]">
             {formatUsd(price)}
           </span>
+          {fullPrice !== null && (
+            <span className="text-[20px] font-extrabold text-[#8B85A0] line-through">
+              {formatUsd(fullPrice)}
+            </span>
+          )}
           <span className="text-[15px] font-medium text-[#8B85A0]">
             ≈ {formatKhr(price)}
           </span>

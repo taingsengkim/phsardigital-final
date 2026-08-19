@@ -64,6 +64,8 @@ export type Listing = {
   title: string;
   description: string;
   price: number;
+  fullPrice?: number;
+  discountPrice?: number;
   category_id?: number;
   categoryUuid?: string;
   stock?: number;
@@ -186,6 +188,8 @@ export type ApiListing = {
   slug?: string | null;
   description?: string | null;
   price?: number | null;
+  fullPrice?: number | null;
+  discountPrice?: number | null;
   stockQty?: number | null;
   status?: string | null;
   isFeatured?: boolean | null;

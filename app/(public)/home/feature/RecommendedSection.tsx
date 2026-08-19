@@ -18,7 +18,7 @@ export function RecommendedSection() {
   const listings = listingsResponse?.data || (listingsResponse as any)?.content || [];
 
   return (
-    <section className="mx-auto max-w-7xl px-4 py-10 font-sans">
+    <section className="mx-auto max-w-[1240px] px-6 py-10 font-sans">
       <div className="mb-6 text-center">
         <h2 className="text-2xl font-bold text-[#1A1330] sm:text-3xl">Recommended For You</h2>
         <div className="mt-4 inline-flex gap-6 border-b border-[#EDEBF3]">
@@ -64,7 +64,7 @@ export function RecommendedSection() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5"
+            className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-5"
           >
             {listings.map((listing: any, index: number) => (
               <ProductCard
