@@ -61,21 +61,29 @@ export async function addToCart(
   quantity = 1,
   slug?: string
 ): Promise<CartItem> {
-  if (BASE_URL) {
-    try {
-      const res = await fetch(`${BASE_URL}/api/cart/items`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ listing_id: listingId, quantity }),
-      });
-      if (res.ok) return await res.json();
-    } catch {
-      // Fallback
+  try {
+    const res = await fetch("/api/carts/items", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        listingUuid: String(listingId),
+        quantity,
+      }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      // If backend returns a cart item, return it
+      if (data && (data.id || data.cart_id)) return data;
     }
+  } catch (err) {
+    console.warn("Cart route handler call error, falling back locally:", err);
   }
 
-  const existing = mockCartItems.find((i) => i.listing_id === listingId);
+  // Local fallback for offline/guest demo interactive UX
+  const existing = mockCartItems.find(
+    (i) => i.listing_id === listingId || i.listing?.uuid === listingId
+  );
   if (existing) {
     existing.quantity += quantity;
     return existing;
@@ -83,12 +91,14 @@ export async function addToCart(
 
   const listingSlug = slug ?? "poco-smart-phone";
   const listing = generateDynamicMockListing(listingSlug);
-  listing.id = listingId as number;
+  if (typeof listingId === "number") {
+    listing.id = listingId;
+  }
 
   const newItem: CartItem = {
     id: mockCartItems.length + 1,
     cart_id: 1,
-    listing_id: listingId as number,
+    listing_id: typeof listingId === "number" ? listingId : mockCartItems.length + 1,
     quantity,
     listing,
   };

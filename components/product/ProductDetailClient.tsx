@@ -3,9 +3,11 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   BadgeCheck,
   Check,
+  CheckCircle2,
   Flame,
   Link2,
   Minus,
@@ -15,8 +17,10 @@ import {
   Share2,
   ShieldCheck,
   ShoppingCart,
+  ShoppingBag,
   Star,
   Truck,
+  ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import RatingStars from "@/components/product/RatingStars";
@@ -72,6 +76,7 @@ export default function ProductDetailClient({
   const [adding, setAdding] = useState(false);
   const [added, setAdded] = useState(false);
   const [shared, setShared] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const listingId = listing.uuid;
   const productSlug = listing.slug || listing.uuid;
@@ -95,14 +100,22 @@ export default function ProductDetailClient({
   const listedOn = formatListedDate(listing.createdAt);
   const { average, total } = reviewSummary;
 
+  function triggerToast(msg: string) {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 4000);
+  }
+
   async function handleAddToCart() {
     setAdding(true);
     try {
       await addToCart(listingId, qty, productSlug ?? undefined);
       setAdded(true);
+      triggerToast(`Added ${qty} × "${listing.title ?? "Item"}" to your cart!`);
       setTimeout(() => setAdded(false), 2500);
     } catch {
-      // the cart layer already falls back locally
+      // local fallback handles state
     } finally {
       setAdding(false);
     }
@@ -112,7 +125,7 @@ export default function ProductDetailClient({
     try {
       await addToCart(listingId, qty, productSlug ?? undefined);
     } catch {
-      // continue to checkout regardless
+      // continue to checkout
     }
     router.push(
       `/checkout?slug=${encodeURIComponent(productSlug ?? "")}&qty=${qty}`
@@ -132,7 +145,7 @@ export default function ProductDetailClient({
         await navigator.share(shareData);
         return;
       } catch {
-        // user dismissed the sheet — fall through to copying
+        // user dismissed sheet
       }
     }
 
@@ -146,7 +159,39 @@ export default function ProductDetailClient({
   }
 
   return (
-    <div className="flex flex-col gap-6 font-sans">
+    <div className="relative flex flex-col gap-6 font-sans">
+      {/* ── Success Toast Alert Banner ── */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -24, scale: 0.92 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 450, damping: 26 }}
+            className="fixed top-20 right-6 z-50 flex items-center gap-3.5 rounded-2xl bg-emerald-600 px-5 py-4 text-white shadow-[0_16px_40px_-10px_rgba(5,150,105,0.4)] border border-emerald-400/40 max-w-md backdrop-blur-md"
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/20 text-white shadow-xs">
+              <CheckCircle2 size={22} className="text-white" />
+            </div>
+
+            <div className="flex-1 pr-1">
+              <p className="text-base font-extrabold text-white leading-snug">Item Added to Cart!</p>
+              <p className="text-xs sm:text-sm font-medium text-emerald-100 line-clamp-1 mt-0.5">{toastMessage}</p>
+            </div>
+
+            <Link href="/cart">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="flex items-center gap-1.5 rounded-xl bg-white px-4 py-2.5 text-xs sm:text-sm font-extrabold text-emerald-700 shadow-md transition-all hover:bg-emerald-50 shrink-0"
+              >
+                <span>View Cart</span>
+                <ArrowRight size={14} />
+              </motion.button>
+            </Link>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {/* ── category + status chips ── */}
       <div className="flex flex-wrap items-center gap-2">
         {listing.category?.name && (

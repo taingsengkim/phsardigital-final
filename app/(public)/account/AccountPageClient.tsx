@@ -130,9 +130,9 @@ export default function AccountPageClient() {
 
   const memberSince = profile?.createdAt
     ? new Date(profile.createdAt).toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-      })
+      year: "numeric",
+      month: "long",
+    })
     : null;
 
   const isSeller = sellerApp?.status === "APPROVED";
@@ -509,10 +509,10 @@ export default function AccountPageClient() {
                   badge: isSeller
                     ? "Store Active"
                     : isPendingSeller
-                    ? "Pending"
-                    : isRejectedSeller
-                    ? "Rejected"
-                    : "New",
+                      ? "Pending"
+                      : isRejectedSeller
+                        ? "Rejected"
+                        : "New",
                 },
                 {
                   id: "addresses",
