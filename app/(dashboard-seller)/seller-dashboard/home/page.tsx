@@ -43,11 +43,9 @@ const FALLBACK_COMMENTS = [
 
 function SectionTitle({ color, children }: { color: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-5 text-sm">
-      <p>Could not load the seller dashboard.</p>
-      <button onClick={retry} className="mt-3 inline-flex items-center gap-2 font-semibold text-destructive">
-        <RefreshCw className="size-4" /> Try again
-      </button>
+    <div className="mb-5 flex items-center gap-3">
+      <span className={`size-3 rounded-full ${color}`} aria-hidden="true" />
+      <h2 className="text-lg font-bold text-gray-900">{children}</h2>
     </div>
   );
 }

@@ -1,121 +1,95 @@
 "use client"
 
 import * as React from "react"
-import { Check, CheckCircle2, Grid2X2, List, Search, Star, Trash2 } from "lucide-react"
-
+import Image from "next/image"
+import Link from "next/link"
+import { Check, Eye, Loader2, MoreHorizontal, Pencil, Power } from "lucide-react"
+import { useGetMyListingsQuery, useUpdateListingStatusMutation } from "@/lib/api/sellerApi"
 import { cn } from "@/lib/utils"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { ProductTableToolbar } from "@/components/ui/products/product-table-toolbar"
+import { ProductTablePagination } from "@/components/ui/products/product-table-pagination"
 
-type ReleasedProduct = {
-  id: number
-  views: string
-  bar: string
-  rating: string | null
-  art: string
+type ApiProduct = {
+  uuid?: string; id?: string; slug?: string; title?: string; name?: string
+  description?: string; price?: number; status?: string; views?: number; viewCount?: number; sold?: number; createdAt?: string
+  thumbnailUri?: string | { uri?: string }
+  images?: Array<{ uri?: string; url?: string; isPrimary?: boolean; is_primary?: boolean }>
 }
+type Product = { id: string; slug: string; title: string; description: string; price: number; status: string; views: number; image?: string; createdAt?: string }
 
-const initialProducts: ReleasedProduct[] = [
-  { id: 1, views: "48k", bar: "bg-[#2f80ed]", rating: "4.8 (87)", art: "from-[#f6c9df] via-[#faf0f2] to-[#99959c]" },
-  { id: 2, views: "40k", bar: "bg-[#ff7165]", rating: "4.8 (87)", art: "from-[#83d7ff] via-[#ffd2dd] to-[#a880d8]" },
-  { id: 3, views: "32k", bar: "bg-[#8754f6]", rating: null, art: "from-[#ffc36d] via-[#ed805c] to-[#efe0d8]" },
-  { id: 4, views: "24k", bar: "bg-[#ff7165]", rating: "4.8 (87)", art: "from-[#8ed9db] via-[#d8cfcc] to-[#e5a999]" },
-  { id: 5, views: "16k", bar: "bg-[#2f80ed]", rating: "4.8 (87)", art: "from-[#57536c] via-[#817cbb] to-[#eabdc5]" },
-]
+function responseItems(value: unknown): ApiProduct[] {
+  if (Array.isArray(value)) return value
+  const response = value as { content?: unknown; data?: unknown } | undefined
+  return (Array.isArray(response?.content) ? response.content : Array.isArray(response?.data) ? response.data : []) as ApiProduct[]
+}
 
 function Checkbox({ checked, onChange, label }: { checked: boolean; onChange: () => void; label: string }) {
-  return (
-    <button type="button" role="checkbox" aria-checked={checked} aria-label={label} onClick={onChange} className={cn("grid size-[22px] shrink-0 place-items-center rounded-[5px] border", checked ? "border-[#2f80ed] bg-[#2f80ed] text-white" : "border-[#c7ccd1] bg-white")}>
-      {checked && <Check className="size-[15px]" strokeWidth={3} />}
-    </button>
-  )
+  return <button type="button" role="checkbox" aria-checked={checked} aria-label={label} onClick={onChange} className={cn("grid size-[22px] place-items-center rounded-[5px] border", checked ? "border-[#2f80ed] bg-[#2f80ed] text-white" : "border-[#c7ccd1] bg-white")}>{checked && <Check className="size-4" strokeWidth={3} />}</button>
 }
 
-function Artwork({ art, index }: { art: string; index: number }) {
-  return (
-    <div className={cn("relative size-[76px] shrink-0 overflow-hidden rounded-[8px] bg-gradient-to-br", art)} aria-hidden="true">
-      <span className="absolute -bottom-3 left-2 h-10 w-16 -rotate-12 rounded-full bg-white/60" />
-      <span className="absolute left-1/2 top-1/2 size-9 -translate-x-1/2 -translate-y-1/2 rotate-45 rounded-[30%] bg-white/40 shadow-lg" />
-      <span className={cn("absolute h-12 w-3 rounded-full bg-white/70", index % 2 ? "right-4 top-3 rotate-[18deg]" : "left-5 top-2 -rotate-[22deg]")} />
-    </div>
-  )
+function ProductImage({ product }: { product: Product }) {
+  return product.image
+    ? <div className="relative size-[76px] shrink-0 overflow-hidden rounded-lg bg-muted"><Image src={product.image} alt={product.title} fill sizes="76px" unoptimized={product.image.startsWith("http")} className="object-cover" /></div>
+    : <div className="grid size-[76px] shrink-0 place-items-center rounded-lg bg-gradient-to-br from-[#c9b7ff] to-[#8068e8] text-2xl font-bold text-white">{product.title[0]?.toUpperCase()}</div>
 }
+
+const viewLabel = (views: number) => views >= 1000 ? `${Math.round(views / 100) / 10}k` : String(views)
 
 export function Released() {
-  const [products, setProducts] = React.useState(initialProducts)
-  const [selected, setSelected] = React.useState<Set<number>>(new Set([3, 4]))
+  const { data, isLoading, isError, refetch } = useGetMyListingsQuery({ pageNumber: 0, pageSize: 100 })
+  const [updateListingStatus] = useUpdateListingStatusMutation()
+  const products = React.useMemo<Product[]>(() => responseItems(data).map((item, index) => {
+    const primary = item.images?.find((image) => image.isPrimary || image.is_primary) ?? item.images?.[0]
+    return {
+      id: item.uuid ?? item.id ?? item.slug ?? String(index),
+      slug: item.slug ?? item.uuid ?? item.id ?? String(index),
+      title: item.title ?? item.name ?? "Untitled product",
+      description: item.description ?? "",
+      price: Number(item.price ?? 0), status: item.status ?? "ACTIVE",
+      views: Number(item.viewCount ?? item.views ?? item.sold ?? 0),
+      createdAt: item.createdAt,
+      image: typeof item.thumbnailUri === "string" ? item.thumbnailUri : item.thumbnailUri?.uri ?? primary?.uri ?? primary?.url,
+    }
+  }), [data])
+  const [selected, setSelected] = React.useState<Set<string>>(new Set())
   const [query, setQuery] = React.useState("")
-  const [view, setView] = React.useState<"list" | "grid">("list")
-  const visible = products.filter(() => "bento matte 3d illustration ui design kit".includes(query.toLowerCase()))
-  const allSelected = visible.length > 0 && visible.every((item) => selected.has(item.id))
+  const [createdDate, setCreatedDate] = React.useState("")
+  const [visibleColumns, setVisibleColumns] = React.useState(() => new Set(["product", "price", "status", "views", "actions"]))
+  const [page, setPage] = React.useState(0)
+  const [view] = React.useState<"list" | "grid">("list")
+  const releasedProducts = products.filter((p) => p.status.toUpperCase() !== "DRAFT")
+  const filteredProducts = releasedProducts.filter((p) => (!createdDate || p.createdAt?.slice(0, 10) === createdDate) && `${p.title} ${p.description} ${p.status}`.toLowerCase().includes(query.trim().toLowerCase()))
+  const totalPages = Math.ceil(filteredProducts.length / 10)
+  const visible = filteredProducts.slice(page * 10, page * 10 + 10)
+  const allSelected = visible.length > 0 && visible.every((p) => selected.has(p.id))
+  const toggle = (id: string) => setSelected((old) => { const next = new Set(old); if (next.has(id)) next.delete(id); else next.add(id); return next })
+  const toggleAll = () => setSelected((old) => { const next = new Set(old); visible.forEach((p) => allSelected ? next.delete(p.id) : next.add(p.id)); return next })
+  const toggleColumn = (key: string) => setVisibleColumns((old) => { const next = new Set(old); if (next.has(key)) next.delete(key); else next.add(key); return next })
+  const [actionMessage, setActionMessage] = React.useState("")
 
-  function toggle(id: number) {
-    setSelected((current) => {
-      const next = new Set(current)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
+  async function setProductStatus(uuid: string, status: "ACTIVE" | "INACTIVE") {
+    setActionMessage("")
+    try {
+      await updateListingStatus({ uuid, status }).unwrap()
+      setActionMessage(`Product set to ${status.toLowerCase()}.`)
+    } catch (error) {
+      const apiError = error as { data?: { message?: string } }
+      setActionMessage(apiError.data?.message ?? "Could not update product availability.")
+    }
   }
 
-  function toggleAll() {
-    setSelected((current) => {
-      const next = new Set(current)
-      if (allSelected) visible.forEach((item) => next.delete(item.id))
-      else visible.forEach((item) => next.add(item.id))
-      return next
-    })
-  }
-
-  function deleteSelected() {
-    setProducts((current) => current.filter((item) => !selected.has(item.id)))
-    setSelected(new Set())
-  }
-
-  return (
-    <section className="flex min-h-[calc(100vh-104px)] flex-col bg-[#f7f7f8] px-[28px] py-[28px] text-[#27282b] sm:px-[38px]">
-      <h1 className="mb-[22px] text-[32px] font-bold leading-none tracking-[-0.8px]">Released</h1>
-
-      <div className="flex-1 rounded-[10px] bg-white px-[18px] pb-[18px] pt-[18px] shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-        <div className="flex flex-wrap items-center gap-[17px] pb-[25px]">
-          <span className="h-[31px] w-[14px] rounded-[5px] bg-[#c9b7ff]" />
-          <h2 className="text-[17px] font-semibold">Products</h2>
-          <label className="relative w-full max-w-[345px] sm:ml-[6px]">
-            <Search className="absolute left-[13px] top-1/2 size-[18px] -translate-y-1/2 text-[#75808c]" />
-            <input value={query} onChange={(event) => setQuery(event.target.value)} type="search" placeholder="Search product" className="h-[39px] w-full rounded-[10px] border-0 bg-[#f4f4f5] pl-[40px] pr-[14px] text-[13px] outline-none placeholder:text-[#8a929d] focus:ring-2 focus:ring-[#8068e8]/25" />
-          </label>
-          <div className="ml-auto flex gap-[10px]">
-            <button type="button" onClick={() => setView("list")} aria-label="List view" className={cn("grid size-[40px] place-items-center rounded-[9px] text-[#737b84]", view === "list" && "bg-[#f4f4f5] shadow-sm")}><List className="size-[20px]" /></button>
-            <button type="button" onClick={() => setView("grid")} aria-label="Grid view" className={cn("grid size-[40px] place-items-center rounded-[9px] text-[#737b84]", view === "grid" && "bg-[#f4f4f5] shadow-sm")}><Grid2X2 className="size-[18px]" /></button>
-          </div>
-        </div>
-
-        {view === "list" ? (
-          <div className="min-w-[640px] overflow-hidden">
-            <div className="grid grid-cols-[38px_minmax(250px,1fr)_80px_90px_145px_120px] items-center border-b border-[#eceef0] pb-[14px] text-[11px] font-medium text-[#777f89]">
-              <Checkbox checked={allSelected} onChange={toggleAll} label="Select all products" /><span>Product</span><span>Price</span><span>Status</span><span>Rating</span><span>Views</span>
-            </div>
-            {visible.map((product, index) => (
-              <div key={product.id} className="grid min-h-[116px] grid-cols-[38px_minmax(250px,1fr)_80px_90px_145px_120px] items-center border-b border-[#eceef0] py-[12px] last:border-0">
-                <Checkbox checked={selected.has(product.id)} onChange={() => toggle(product.id)} label="Select Bento Matte 3D Illustration" />
-                <div className="flex min-w-0 items-center gap-[18px]"><Artwork art={product.art} index={index} /><div><p className="max-w-[135px] text-[13px] font-semibold leading-[18px]">Bento Matte 3D Illustration</p><p className="mt-[3px] text-[11px] text-[#858c95]">UI design kit</p></div></div>
-                <span className="text-[12px] font-semibold">$98</span>
-                <span><span className="rounded-[4px] bg-[#ddf6d8] px-[7px] py-[4px] text-[12px] text-[#65b75c]">Active</span></span>
-                <span className="flex items-center gap-[7px] text-[11px] text-[#68717b]"><Star className={cn("size-[19px]", product.rating ? "fill-[#737c88] text-[#737c88]" : "text-[#737c88]")} />{product.rating ?? "No ratings"}</span>
-                <span className="flex items-center gap-[10px] text-[12px] font-semibold"><b className="rounded-[5px] bg-[#f0f0f0] px-[7px] py-[4px]">{product.views}</b><span className={cn("h-[9px] rounded-[2px]", product.bar, index === 0 ? "w-[42px]" : index === 1 ? "w-[12px]" : index === 2 ? "w-[23px]" : index === 3 ? "w-[42px]" : "w-[23px]")} /></span>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-[16px] py-[10px] sm:grid-cols-2 xl:grid-cols-3">
-            {visible.map((product, index) => <article key={product.id} className="relative flex items-center gap-[15px] rounded-[10px] border border-[#eceef0] p-[14px]"><div className="absolute right-[10px] top-[10px]"><Checkbox checked={selected.has(product.id)} onChange={() => toggle(product.id)} label="Select product" /></div><Artwork art={product.art} index={index} /><div><p className="max-w-[130px] text-[13px] font-semibold">Bento Matte 3D Illustration</p><p className="mt-[4px] text-[11px] text-[#65b75c]">Active · {product.views} views</p></div></article>)}
-          </div>
-        )}
-        {visible.length === 0 && <p className="py-[70px] text-center text-[13px] text-[#858c95]">No released products found.</p>}
-      </div>
-
-      <div className="sticky bottom-0 -mx-[28px] -mb-[28px] mt-[32px] flex min-h-[82px] items-center border-t border-[#eceef0] bg-white px-[28px] sm:-mx-[38px] sm:px-[38px]">
-        <div className="flex items-center gap-[12px] text-[12px] text-[#69727c]"><CheckCircle2 className="size-[18px]" /> {selected.size} products selected</div>
-        <div className="ml-auto flex gap-[10px]"><button type="button" onClick={deleteSelected} disabled={!selected.size} className="flex h-[45px] items-center gap-[9px] rounded-[9px] border border-[#e4e5e7] px-[17px] text-[12px] font-semibold text-[#f06455] shadow-sm disabled:opacity-40">Deleted <Trash2 className="size-[17px] text-[#757d87]" /></button><button type="button" disabled={!selected.size} className="h-[45px] rounded-[9px] bg-[#8068e8] px-[20px] text-[12px] font-semibold text-white hover:bg-[#7057df] disabled:opacity-40">Unpublish</button></div>
-      </div>
-    </section>
-  )
+  return <section className="flex min-h-[calc(100vh-104px)] flex-1 flex-col bg-[#f7f7f8] px-7 py-7 text-[#27282b] sm:px-10">
+    <h1 className="mb-6 text-[32px] font-bold tracking-tight">Released</h1>
+    {actionMessage && <div role="status" className="mb-4 rounded-xl border border-[#ddd7fb] bg-white px-4 py-3 text-sm text-[#5944bd] shadow-sm">{actionMessage}</div>}
+    <div className="rounded-xl bg-white p-5">
+      <ProductTableToolbar query={query} onQueryChange={(value) => { setQuery(value); setPage(0) }} createdDate={createdDate} onCreatedDateChange={(value) => { setCreatedDate(value); setPage(0) }} columns={[{ key: "product", label: "Product" }, { key: "price", label: "Price" }, { key: "status", label: "Status" }, { key: "views", label: "Views" }, { key: "actions", label: "Actions" }]} visibleColumns={visibleColumns} onToggleColumn={toggleColumn} />
+      {isLoading ? <div className="flex min-h-72 items-center justify-center gap-2 text-sm text-muted-foreground"><Loader2 className="size-5 animate-spin" />Loading your products...</div>
+      : isError ? <div className="flex min-h-72 flex-col items-center justify-center gap-3 text-sm text-muted-foreground"><p>Unable to load your products.</p><button onClick={() => refetch()} className="rounded-lg bg-[#8068e8] px-4 py-2 text-white">Try again</button></div>
+      : view === "list" ? <Table className="table-fixed"><colgroup><col className="w-[5%]" /><col className="w-[46%]" /><col className="w-[14%]" /><col className="w-[21%]" /><col className="w-[7%]" /><col className="w-[7%]" /></colgroup><TableHeader><TableRow className="h-14 hover:bg-transparent"><TableHead className="px-6"><Checkbox checked={allSelected} onChange={toggleAll} label="Select all products" /></TableHead><TableHead className={cn("text-[12px] font-bold uppercase tracking-[0.08em] text-[#596273]", !visibleColumns.has("product") && "hidden")}>Product</TableHead><TableHead className={cn("text-[12px] font-bold uppercase tracking-[0.08em] text-[#596273]", !visibleColumns.has("price") && "hidden")}>Price</TableHead><TableHead className={cn("text-[12px] font-bold uppercase tracking-[0.08em] text-[#596273]", !visibleColumns.has("status") && "hidden")}>Status</TableHead><TableHead className={cn("text-right text-[12px] font-bold uppercase tracking-[0.08em] text-[#596273]", !visibleColumns.has("views") && "hidden")}>Views</TableHead><TableHead className={cn("text-center text-[12px] font-bold uppercase tracking-[0.08em] text-[#596273]", !visibleColumns.has("actions") && "hidden")}>Actions</TableHead></TableRow></TableHeader><TableBody>{visible.map((p) => <TableRow key={p.id} data-state={selected.has(p.id) ? "selected" : undefined} className="h-24"><TableCell className="px-6"><Checkbox checked={selected.has(p.id)} onChange={() => toggle(p.id)} label={`Select ${p.title}`} /></TableCell><TableCell className={cn(!visibleColumns.has("product") && "hidden")}><div className="flex min-w-0 items-center gap-4"><ProductImage product={p} /><div className="min-w-0"><p className="truncate font-semibold">{p.title}</p><p className="truncate text-xs text-muted-foreground">{p.description || "No description"}</p></div></div></TableCell><TableCell className={cn("font-semibold", !visibleColumns.has("price") && "hidden")}>${p.price.toFixed(2)}</TableCell><TableCell className={cn(!visibleColumns.has("status") && "hidden")}><span className="inline-flex items-center gap-2 text-xs font-medium"><span className={cn("size-2 rounded-full", p.status.toUpperCase() === "ACTIVE" ? "bg-emerald-500" : "bg-slate-400")} />{p.status}</span></TableCell><TableCell className={cn("text-right font-semibold", !visibleColumns.has("views") && "hidden")}>{viewLabel(p.views)}</TableCell><TableCell className={cn(!visibleColumns.has("actions") && "hidden")}><details className="relative mx-auto w-fit"><summary className="grid size-9 cursor-pointer list-none place-items-center rounded-lg hover:bg-muted"><MoreHorizontal className="size-5" /></summary><div className="absolute right-0 z-20 mt-1 w-44 rounded-xl border bg-white p-1.5 text-sm shadow-xl"><Link href={`/products/${p.slug}`} className="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-muted"><Eye className="size-4" />View</Link><Link href={`/seller-dashboard/products/new?edit=${p.id}`} className="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-muted"><Pencil className="size-4" />Edit</Link><button onClick={() => setProductStatus(p.id, p.status.toUpperCase() === "ACTIVE" ? "INACTIVE" : "ACTIVE")} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-muted"><Power className="size-4" />Set {p.status.toUpperCase() === "ACTIVE" ? "inactive" : "active"}</button></div></details></TableCell></TableRow>)}</TableBody></Table>
+      : <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{visible.map((p) => <article key={p.id} className="relative flex items-center gap-4 rounded-xl border p-4"><div className="absolute right-3 top-3"><Checkbox checked={selected.has(p.id)} onChange={() => toggle(p.id)} label={`Select ${p.title}`} /></div><ProductImage product={p} /><div className="min-w-0 pr-6"><p className="truncate font-semibold">{p.title}</p><p className="text-xs text-emerald-600">{p.status} · {viewLabel(p.views)} views</p></div></article>)}</div>}
+      {!isLoading && !isError && visible.length === 0 && <p className="py-20 text-center text-sm text-muted-foreground">{query ? "No products match your search." : "You have not posted any products yet."}</p>}
+      <ProductTablePagination page={page} totalPages={totalPages} selectedCount={visible.filter((product) => selected.has(product.id)).length} rowCount={visible.length} onPageChange={setPage} />
+    </div>
+  </section>
 }

@@ -1,8 +1,7 @@
 "use client";
 
 import React from "react";
-import { ChevronsUpDown, Activity, ShoppingBag, Loader2, Sparkles, Plus } from "lucide-react";
-import Link from "next/link";
+import { ChevronsUpDown, Activity, ShoppingBag, Loader2, Sparkles } from "lucide-react";
 import { OverviewCard } from "./overview-card";
 import { ProductActivity } from "./product-activity";
 import { ProductViews } from "./product-views";
@@ -11,12 +10,16 @@ import { useGetListingsQuery } from "@/lib/api/homeApi";
 import { useGetSellerOrdersQuery, useGetMyListingsQuery } from "@/lib/api/sellerApi";
 
 export const ProductDashboardUI: React.FC = () => {
-  const { data: myListingsData, isLoading: isLoadingMyListings } = useGetMyListingsQuery();
+  const { data: myListingsData, isLoading: isLoadingMyListings } = useGetMyListingsQuery({ pageNumber: 0, pageSize: 100 });
   const { data: publicListingsData, isLoading: isLoadingPublicListings } = useGetListingsQuery();
   const { data: ordersData, isLoading: isLoadingOrders } = useGetSellerOrdersQuery();
 
-  const myListings = myListingsData?.content || myListingsData?.data || [];
-  const publicListings = publicListingsData?.data || (publicListingsData as any)?.content || [];
+  const myListings = Array.isArray(myListingsData)
+    ? myListingsData
+    : myListingsData?.content || myListingsData?.data || [];
+  const publicListings = Array.isArray(publicListingsData)
+    ? publicListingsData
+    : publicListingsData?.data || (publicListingsData as any)?.content || [];
   const rawListings = myListings.length > 0 ? myListings : publicListings;
   const isLoadingListings = isLoadingMyListings && isLoadingPublicListings;
   const ordersList = ordersData?.content || [];
@@ -34,6 +37,9 @@ export const ProductDashboardUI: React.FC = () => {
     const primaryImg =
       item.images?.find((img: any) => img.is_primary || img.isPrimary)?.url ||
       item.images?.[0]?.url ||
+      item.images?.find((img: any) => img.is_primary || img.isPrimary)?.uri ||
+      item.images?.[0]?.uri ||
+      (typeof item.thumbnailUri === "string" ? item.thumbnailUri : undefined) ||
       item.thumbnailUri?.uri ||
       item.thumbnail_url ||
       `/picture/pic${(index % 8) + 1}.jpg`;
@@ -74,13 +80,6 @@ export const ProductDashboardUI: React.FC = () => {
           </p>
         </div>
 
-        <Link
-          href="/seller-dashboard/products/new"
-          className="inline-flex items-center gap-2 rounded-xl bg-[#6C4CD8] px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-[#6C4CD8]/20 hover:bg-[#5C3DC8] transition"
-        >
-          <Plus className="size-4" />
-          Create New Product
-        </Link>
       </div>
 
       {/* Overview Section */}
@@ -137,9 +136,7 @@ export const ProductDashboardUI: React.FC = () => {
           Loading products inventory...
         </div>
       ) : (
-        <ProductTable
-          products={transformedProducts.length > 0 ? transformedProducts : undefined}
-        />
+        <ProductTable products={transformedProducts} />
       )}
     </div>
   );

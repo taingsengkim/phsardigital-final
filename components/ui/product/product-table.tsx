@@ -4,19 +4,8 @@ import React from "react";
 import Image from "next/image";
 import {
   Search,
-  Pencil,
-  MessageSquare,
-  MoreHorizontal,
-  Link2,
-  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 export interface ProductRow {
   id: string;
@@ -102,110 +91,16 @@ const defaultProducts: ProductRow[] = [
   },
 ];
 
-function TableCheckbox({
-  checked,
-  indeterminate = false,
-  onChange,
-  label,
-}: {
-  checked: boolean;
-  indeterminate?: boolean;
-  onChange: (checked: boolean) => void;
-  label: string;
-}) {
-  const ref = React.useRef<HTMLInputElement>(null);
-
-  React.useEffect(() => {
-    if (ref.current) {
-      ref.current.indeterminate = indeterminate && !checked;
-    }
-  }, [indeterminate, checked]);
-
-  return (
-    <input
-      ref={ref}
-      type="checkbox"
-      aria-label={label}
-      checked={checked}
-      onChange={(event) => onChange(event.target.checked)}
-      className="size-5 cursor-pointer rounded-md border-2 border-gray-200 accent-purple-500"
-    />
-  );
-}
-
-function RowActions() {
-  return (
-    <div className="flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
-      <button
-        type="button"
-        aria-label="Edit product"
-        className="flex size-9 items-center justify-center rounded-full bg-white text-gray-500 shadow-md ring-1 ring-gray-100 transition-colors hover:text-gray-900"
-      >
-        <Pencil className="size-4" />
-      </button>
-      <button
-        type="button"
-        aria-label="View comments"
-        className="flex size-9 items-center justify-center rounded-full bg-white text-gray-500 shadow-md ring-1 ring-gray-100 transition-colors hover:text-gray-900"
-      >
-        <MessageSquare className="size-4" />
-      </button>
-
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          aria-label="More actions"
-          className="flex size-9 items-center justify-center rounded-full bg-white text-gray-500 shadow-md ring-1 ring-gray-100 outline-none transition-colors hover:text-gray-900 data-open:text-gray-900"
-        >
-          <MoreHorizontal className="size-4" />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent
-          align="start"
-          sideOffset={8}
-          className="w-64 rounded-2xl p-2 shadow-xl"
-        >
-          <DropdownMenuItem className="gap-3 rounded-xl px-3 py-3 text-base text-gray-700">
-            <Pencil className="size-5 text-gray-500" />
-            Edit title &amp; description
-          </DropdownMenuItem>
-          <DropdownMenuItem className="gap-3 rounded-xl px-3 py-3 text-base text-gray-700">
-            <Link2 className="size-5 text-gray-500" />
-            Get shareable link
-          </DropdownMenuItem>
-          <DropdownMenuItem className="gap-3 rounded-xl px-3 py-3 text-base text-gray-700">
-            <Trash2 className="size-5 text-gray-500" />
-            Delete forever
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
-  );
-}
-
 export const ProductTable: React.FC<{ products?: ProductRow[] }> = ({
   products = defaultProducts,
 }) => {
   const [query, setQuery] = React.useState("");
-  const [selected, setSelected] = React.useState<string[]>([]);
 
   const visibleProducts = products.filter((product) =>
     `${product.title} ${product.category}`
       .toLowerCase()
       .includes(query.trim().toLowerCase())
   );
-
-  const allSelected =
-    visibleProducts.length > 0 &&
-    visibleProducts.every((product) => selected.includes(product.id));
-
-  const toggleAll = (checked: boolean) => {
-    setSelected(checked ? visibleProducts.map((product) => product.id) : []);
-  };
-
-  const toggleRow = (id: string, checked: boolean) => {
-    setSelected((current) =>
-      checked ? [...current, id] : current.filter((rowId) => rowId !== id)
-    );
-  };
 
   return (
     <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
@@ -233,19 +128,11 @@ export const ProductTable: React.FC<{ products?: ProductRow[] }> = ({
         <table className="w-full min-w-[760px] border-separate border-spacing-0">
           <thead>
             <tr className="text-left text-sm font-medium text-gray-400">
-              <th className="w-12 pb-4 pl-4">
-                <TableCheckbox
-                  label="Select all products"
-                  checked={allSelected}
-                  indeterminate={selected.length > 0}
-                  onChange={toggleAll}
-                />
-              </th>
               <th className="pb-4 font-medium">Product</th>
               <th className="pb-4 font-medium">Status</th>
               <th className="pb-4 font-medium">Price</th>
               <th className="pb-4 font-medium">Views</th>
-              <th className="pb-4 pr-4 font-medium">Likes</th>
+              <th className="pb-4 pr-4 font-medium">Wishlist</th>
             </tr>
           </thead>
           <tbody>
@@ -254,14 +141,6 @@ export const ProductTable: React.FC<{ products?: ProductRow[] }> = ({
                 key={product.id}
                 className="group border-t border-gray-100 align-top transition-colors hover:bg-gray-50/80"
               >
-                <td className="border-t border-gray-100 py-6 pl-4">
-                  <TableCheckbox
-                    label={`Select ${product.title}`}
-                    checked={selected.includes(product.id)}
-                    onChange={(checked) => toggleRow(product.id, checked)}
-                  />
-                </td>
-
                 {/* Product: thumbnail, title, hover actions */}
                 <td className="border-t border-gray-100 py-6 pr-6">
                   <div className="flex items-start gap-4">
@@ -280,9 +159,6 @@ export const ProductTable: React.FC<{ products?: ProductRow[] }> = ({
                       <p className="mt-1 text-sm text-gray-400">
                         {product.category}
                       </p>
-                      <div className="mt-3">
-                        <RowActions />
-                      </div>
                     </div>
                   </div>
                 </td>

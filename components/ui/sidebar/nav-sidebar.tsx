@@ -3,8 +3,9 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { ChevronDown, ChevronUp, CircleHelp, Home, Moon, Plus, Sparkles, Store, Sun, Tags, UserRound } from "lucide-react"
+import { ChevronDown, ChevronUp, CircleHelp, Home, MessageCircle, Moon, Plus, Sparkles, Store, Sun, Tags, UserRound } from "lucide-react"
 import { useTheme } from "next-themes"
+import PhsarDigitalLogo from "@/assets/svg/phsardigitalLogo"
 
 import {
   Sidebar,
@@ -37,19 +38,18 @@ export function SellerSidebar() {
   const [productsOpen, setProductsOpen] = React.useState(pathname.startsWith("/seller-dashboard/products"))
 
   return (
-    <Sidebar collapsible="icon" className="border-r bg-sidebar text-sidebar-foreground">
-      <SidebarHeader className="flex h-18 items-center border-b border-sidebar-border bg-sidebar px-4">
-        <Link href="/dashboard" className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
-          {/*<div className="flex size-8 items-center justify-center rounded-lg bg-[#6C4CD8] text-white">*/}
-          {/*  <Store className="size-5" />*/}
-          {/*</div>*/}
+    <Sidebar collapsible="icon" className="border-r bg-white text-sidebar-foreground dark:bg-sidebar">
+      <SidebarHeader className="flex h-18 items-center border-b border-sidebar-border bg-white px-4 dark:bg-sidebar">
+        <Link href="/seller-dashboard/home" aria-label="Phsar Digital seller dashboard" className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center">
+          <PhsarDigitalLogo className="size-9 shrink-0" aria-hidden="true" />
           <div className="flex flex-col gap-0.5 leading-none group-data-[collapsible=icon]:hidden">
-
+            <span className="text-base font-bold text-[#8C52FE]">Phsar Digital</span>
+            <span className="text-xs text-muted-foreground">Seller Dashboard</span>
           </div>
         </Link>
       </SidebarHeader>
 
-      <SidebarContent className="overflow-x-hidden bg-sidebar px-3 py-5">
+      <SidebarContent className="overflow-x-hidden bg-white px-3 py-5 dark:bg-sidebar">
         <nav aria-label="Seller dashboard" className="space-y-[4px]">
           <Link
             href="/seller-dashboard/home"
@@ -77,9 +77,8 @@ export function SellerSidebar() {
                 <Link
                   href="/seller-dashboard/products/new"
                   aria-label="Add product"
-                  className="grid size-8 place-items-center rounded-lg hover:bg-sidebar-accent hover:text-sidebar-accent-foreground text-muted-foreground"
+                  // className="grid size-8 place-items-center rounded-lg hover:bg-sidebar-accent hover:text-sidebar-accent-foreground text-muted-foreground"
                 >
-                  <Plus className="size-4" />
                 </Link>
                 <button
                   type="button"
@@ -153,7 +152,7 @@ export function SellerSidebar() {
         </nav>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border bg-sidebar p-4">
+      <SidebarFooter className="border-t border-sidebar-border bg-white p-4 dark:bg-sidebar">
         <div className="space-y-4 pb-4 group-data-[collapsible=icon]:hidden">
           <Link
             href="/dashboard/help"

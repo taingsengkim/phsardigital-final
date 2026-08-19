@@ -1,20 +1,23 @@
 "use client"
 
 import * as React from "react"
+import Image from "next/image"
+import Link from "next/link"
 import {
-  CalendarDays,
   Check,
-  CheckCircle2,
-  Grid2X2,
-  List,
-  LoaderCircle,
+  MoreHorizontal,
+  Eye,
+  Power,
   Pencil,
-  Search,
   Trash2,
 } from "lucide-react"
 
-import { cn } from "@/lib/utils"
+import { cn, getFileUrl } from "@/lib/utils"
+import { useGetMyListingsQuery, useUpdateListingStatusMutation } from "@/lib/api/sellerApi"
 import { readSellerDrafts, writeSellerDrafts } from "@/lib/seller-drafts"
+import { ProductTableToolbar } from "@/components/ui/products/product-table-toolbar"
+import { ProductTablePagination } from "@/components/ui/products/product-table-pagination"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
 type DraftProduct = {
   id: string
@@ -22,7 +25,9 @@ type DraftProduct = {
   url: string
   price: string
   editedAt: string
+  createdAt: string
   art: string
+  image?: string
 }
 
 const draftArt = [
@@ -30,6 +35,20 @@ const draftArt = [
   "from-[#ffb55c] via-[#ef835d] to-[#f1ded3]",
   "from-[#8ed9dc] via-[#dfd2c9] to-[#edae9c]",
 ]
+
+function draftImage(item: Record<string, unknown>): string | undefined {
+  const images = Array.isArray(item.images) ? item.images as Array<Record<string, unknown>> : []
+  const primary = images.find((image) => image.isPrimary || image.is_primary) ?? images[0]
+  const thumbnail = item.thumbnailUri
+  if (typeof thumbnail === "string") return getFileUrl(thumbnail)
+  const thumbnailUri = thumbnail && typeof thumbnail === "object" ? (thumbnail as Record<string, unknown>).uri : undefined
+  const objectName = typeof item.thumbnailObjectName === "string"
+    ? item.thumbnailObjectName
+    : Array.isArray(item.imageNames) && typeof item.imageNames[0] === "string"
+      ? item.imageNames[0]
+      : undefined
+  return getFileUrl(String(thumbnailUri ?? primary?.uri ?? primary?.url ?? objectName ?? "")) || undefined
+}
 
 function Checkbox({ checked, onChange, label }: { checked: boolean; onChange: () => void; label: string }) {
   return (
@@ -49,7 +68,8 @@ function Checkbox({ checked, onChange, label }: { checked: boolean; onChange: ()
   )
 }
 
-function ProductArtwork({ art, index }: { art: string; index: number }) {
+function ProductArtwork({ art, index, image, title }: { art: string; index: number; image?: string; title: string }) {
+  if (image) return <div className="relative size-[76px] shrink-0 overflow-hidden rounded-[8px] bg-muted"><Image src={image} alt={title} fill sizes="76px" unoptimized={image.startsWith("http")} className="object-cover" /></div>
   return (
     <div className={cn("relative size-[76px] shrink-0 overflow-hidden rounded-[8px] bg-gradient-to-br", art)} aria-hidden="true">
       <span className="absolute -bottom-3 left-3 h-10 w-16 rotate-[-13deg] rounded-full bg-white/55 blur-[1px]" />
@@ -61,27 +81,47 @@ function ProductArtwork({ art, index }: { art: string; index: number }) {
 
 export function Drafts({ variant = "drafts" }: { variant?: "drafts" | "schedualed" }) {
   const isScheduled = variant === "schedualed"
-  const [products, setProducts] = React.useState<DraftProduct[]>([])
+  const { data: serverDraftData } = useGetMyListingsQuery({ status: "DRAFT", pageNumber: 0, pageSize: 100 }, { skip: isScheduled })
+  const [updateListingStatus] = useUpdateListingStatusMutation()
+  const [products, setProducts] = React.useState<DraftProduct[]>(() => isScheduled ? [] : readSellerDrafts().map((draft, index) => ({
+    id: draft.id,
+    title: draft.title,
+    url: draft.imageNames.length ? draft.imageNames.join(", ") : "No images added",
+    price: draft.price ? `$${draft.price}` : "$0.00",
+    editedAt: new Date(draft.updatedAt).toLocaleString(),
+    createdAt: draft.updatedAt,
+    art: draftArt[index % draftArt.length],
+  })))
   const [selected, setSelected] = React.useState<Set<string>>(new Set())
   const [query, setQuery] = React.useState("")
-  const [view, setView] = React.useState<"list" | "grid">("list")
+  const [createdDate, setCreatedDate] = React.useState("")
+  const [visibleColumns, setVisibleColumns] = React.useState(() => new Set(["product", "price", "status", "edited", "view", "actions"]))
+  const [page, setPage] = React.useState(0)
 
-  React.useEffect(() => {
-    if (isScheduled) return
-    setProducts(readSellerDrafts().map((draft, index) => ({
-      id: draft.id,
-      title: draft.title,
-      url: draft.imageNames.length ? draft.imageNames.join(", ") : "No images added",
-      price: draft.price ? `$${draft.price}` : "$0.00",
-      editedAt: new Date(draft.updatedAt).toLocaleString(),
+  const serverItems = React.useMemo(() => {
+    const response = serverDraftData as Array<Record<string, unknown>> | { content?: Array<Record<string, unknown>>; data?: Array<Record<string, unknown>> } | undefined
+    const items = Array.isArray(response) ? response : response?.content ?? response?.data ?? []
+    return items.map((item, index): DraftProduct => ({
+      id: String(item.uuid ?? item.id ?? index),
+      title: String(item.title ?? "Untitled product"),
+      url: String(item.description ?? "Server draft"),
+      price: `$${Number(item.price ?? 0).toFixed(2)}`,
+      editedAt: item.lastModifiedAt || item.updatedAt || item.createdAt ? new Date(String(item.lastModifiedAt ?? item.updatedAt ?? item.createdAt)).toLocaleString() : "Recently edited",
+      createdAt: String(item.createdAt ?? item.updatedAt ?? item.lastModifiedAt ?? ""),
       art: draftArt[index % draftArt.length],
-    })))
-  }, [isScheduled])
-
-  const visibleProducts = products.filter((product) =>
+      image: draftImage(item),
+    }))
+  }, [serverDraftData])
+  const allProducts = [...products, ...serverItems.filter((server) => !products.some((local) => local.id === server.id))]
+  const serverIds = new Set(serverItems.map((item) => item.id))
+  const filteredProducts = allProducts.filter((product) =>
+    (!createdDate || product.createdAt.slice(0, 10) === createdDate) &&
     `${product.title} ${product.url}`.toLowerCase().includes(query.toLowerCase()),
   )
+  const totalPages = Math.ceil(filteredProducts.length / 10)
+  const visibleProducts = filteredProducts.slice(page * 10, page * 10 + 10)
   const allVisibleSelected = visibleProducts.length > 0 && visibleProducts.every((product) => selected.has(product.id))
+  const toggleColumn = (key: string) => setVisibleColumns((old) => { const next = new Set(old); if (next.has(key)) next.delete(key); else next.add(key); return next })
 
   function toggle(id: string) {
     setSelected((current) => {
@@ -101,105 +141,24 @@ export function Drafts({ variant = "drafts" }: { variant?: "drafts" | "scheduale
     })
   }
 
-  function deleteSelected() {
-    setProducts((current) => current.filter((product) => !selected.has(product.id)))
-    writeSellerDrafts(readSellerDrafts().filter((draft) => !selected.has(draft.id)))
-    setSelected(new Set())
-  }
-
   return (
-    <section className="flex min-h-[calc(100vh-104px)] flex-col bg-[#f7f7f8] px-[28px] py-[24px] text-[#27282b] sm:px-[38px] sm:py-[34px]">
-      <h1 className="mb-[22px] text-[32px] font-bold leading-none tracking-[-0.8px]">{isScheduled ? "Scheduled" : "Drafts"}</h1>
+    <section className="flex min-h-[calc(100vh-104px)] flex-1 flex-col bg-[#f7f7f8] px-7 py-7 text-[#27282b] sm:px-10">
+      <h1 className="mb-6 text-[32px] font-bold tracking-tight">{isScheduled ? "Scheduled" : "Drafts"}</h1>
 
-      <div className="flex-1 rounded-[10px] bg-white px-[12px] pb-[20px] pt-[18px] shadow-[0_1px_2px_rgba(0,0,0,0.02)] sm:px-[20px]">
-        <div className="flex flex-wrap items-center gap-[16px] px-[2px] pb-[25px]">
-          <div className="flex items-center gap-[14px]">
-            <span className="h-[31px] w-[14px] rounded-[5px] bg-[#c9b7ff]" />
-            <h2 className="text-[17px] font-semibold">Products</h2>
-          </div>
+      <div className="rounded-xl bg-white p-5">
+        <ProductTableToolbar query={query} onQueryChange={(value) => { setQuery(value); setPage(0) }} createdDate={createdDate} onCreatedDateChange={(value) => { setCreatedDate(value); setPage(0) }} columns={[{ key: "product", label: "Product" }, { key: "price", label: "Price" }, { key: "status", label: "Status" }, { key: "edited", label: isScheduled ? "Scheduled for" : "Last edited" }, { key: "view", label: "View" }, { key: "actions", label: "Actions" }]} visibleColumns={visibleColumns} onToggleColumn={toggleColumn} />
 
-          <label className="relative ml-0 w-full max-w-[345px] sm:ml-[8px]">
-            <Search className="absolute left-[13px] top-1/2 size-[18px] -translate-y-1/2 text-[#75808c]" />
-            <input
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search product"
-              className="h-[39px] w-full rounded-[10px] border-0 bg-[#f4f4f5] pl-[40px] pr-[14px] text-[13px] outline-none placeholder:text-[#8a929d] focus:ring-2 focus:ring-[#8068e8]/25"
-            />
-          </label>
-
-          <div className="ml-auto flex items-center gap-[10px]">
-            <button type="button" onClick={() => setView("list")} aria-label="List view" className={cn("grid size-[40px] place-items-center rounded-[9px] text-[#737b84]", view === "list" && "bg-[#f4f4f5] shadow-sm")}><List className="size-[20px]" /></button>
-            <button type="button" onClick={() => setView("grid")} aria-label="Grid view" className={cn("grid size-[40px] place-items-center rounded-[9px] text-[#737b84]", view === "grid" && "bg-[#f4f4f5] shadow-sm")}><Grid2X2 className="size-[18px]" /></button>
-          </div>
-        </div>
-
-        <div className="flex items-center border-b border-[#eceef0] px-[2px] pb-[14px] text-[11px] font-medium text-[#777f89]">
-          <Checkbox checked={allVisibleSelected} onChange={toggleAll} label="Select all products" />
-          <span className="ml-[32px] flex-1">Product</span>
-          <span className="hidden w-[88px] md:block">Price</span>
-          <span className="hidden w-[244px] md:block">{isScheduled ? "Scheduled for" : "Last edited"}</span>
-          <span className="w-[112px]" />
-        </div>
-
-        {view === "list" ? (
-          <div>
-            {visibleProducts.map((product, index) => {
-              const isSelected = selected.has(product.id)
-              return (
-                <div key={product.id} className={cn("group flex min-h-[116px] items-center border-b border-[#eceef0] px-[2px] py-[12px] transition-colors", index === 0 && "my-[10px] rounded-[9px] border-b-0 bg-[#f5f5f6] px-[10px]")}>
-                  <Checkbox checked={isSelected} onChange={() => toggle(product.id)} label={`Select ${product.title}`} />
-                  <div className="ml-[32px] flex min-w-0 flex-1 items-center gap-[18px]">
-                    <ProductArtwork art={product.art} index={index} />
-                    <div className="min-w-0">
-                      <p className="truncate text-[13px] font-semibold text-[#25272a]">{product.title}</p>
-                      <p className="mt-[2px] truncate text-[11px] text-[#858c95]">{product.url}</p>
-                    </div>
-                  </div>
-                  <div className="hidden w-[88px] md:block"><span className={cn("rounded-[6px] px-[9px] py-[7px] text-[12px] font-semibold", product.price === "$0.0" ? "bg-[#f0f0f0]" : "bg-[#b9ead2]")}>{product.price}</span></div>
-                  <p className="hidden w-[244px] text-[11px] text-[#66707a] md:block">{product.editedAt}</p>
-                  <div className="flex w-[112px] justify-end gap-[7px] opacity-100 md:opacity-0 md:group-hover:opacity-100">
-                    <button type="button" aria-label="Schedule product" className="grid size-[34px] place-items-center rounded-full bg-white text-[#75808a] shadow-sm"><CalendarDays className="size-[17px]" /></button>
-                    <button type="button" aria-label="Edit product" className="grid size-[34px] place-items-center rounded-full bg-white text-[#75808a] shadow-sm"><Pencil className="size-[16px]" /></button>
-                    <button type="button" onClick={() => { setProducts((items) => items.filter((item) => item.id !== product.id)); writeSellerDrafts(readSellerDrafts().filter((draft) => draft.id !== product.id)); setSelected((items) => { const next = new Set(items); next.delete(product.id); return next }) }} aria-label="Delete product" className="grid size-[34px] place-items-center rounded-full bg-white text-[#75808a] shadow-sm"><Trash2 className="size-[16px]" /></button>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-[16px] py-[18px] sm:grid-cols-2 xl:grid-cols-3">
-            {visibleProducts.map((product, index) => (
-              <article key={product.id} className="relative flex items-center gap-[15px] rounded-[10px] border border-[#eceef0] p-[14px]">
-                <div className="absolute right-[10px] top-[10px]"><Checkbox checked={selected.has(product.id)} onChange={() => toggle(product.id)} label={`Select ${product.title}`} /></div>
-                <ProductArtwork art={product.art} index={index} />
-                <div><p className="text-[13px] font-semibold">{product.title}</p><p className="mt-[3px] text-[11px] text-[#858c95]">{product.price}</p></div>
-              </article>
-            ))}
-          </div>
-        )}
+        <Table className="table-fixed">
+          <colgroup><col className="w-[5%]" /><col className="w-[42%]" /><col className="w-[12%]" /><col className="w-[12%]" /><col className="w-[15%]" /><col className="w-[7%]" /><col className="w-[7%]" /></colgroup>
+          <TableHeader><TableRow className="h-14 hover:bg-transparent"><TableHead className="px-6"><Checkbox checked={allVisibleSelected} onChange={toggleAll} label="Select all products" /></TableHead><TableHead className={cn("text-[12px] font-bold uppercase tracking-[0.08em] text-[#596273]", !visibleColumns.has("product") && "hidden")}>Product</TableHead><TableHead className={cn("text-[12px] font-bold uppercase tracking-[0.08em] text-[#596273]", !visibleColumns.has("price") && "hidden")}>Price</TableHead><TableHead className={cn("text-[12px] font-bold uppercase tracking-[0.08em] text-[#596273]", !visibleColumns.has("status") && "hidden")}>Status</TableHead><TableHead className={cn("text-[12px] font-bold uppercase tracking-[0.08em] text-[#596273]", !visibleColumns.has("edited") && "hidden")}>{isScheduled ? "Scheduled for" : "Last edited"}</TableHead><TableHead className={cn("text-[12px] font-bold uppercase tracking-[0.08em] text-[#596273]", !visibleColumns.has("view") && "hidden")}>View</TableHead><TableHead className={cn("text-center text-[12px] font-bold uppercase tracking-[0.08em] text-[#596273]", !visibleColumns.has("actions") && "hidden")}>Actions</TableHead></TableRow></TableHeader>
+          <TableBody>{visibleProducts.map((product, index) => <TableRow key={product.id} data-state={selected.has(product.id) ? "selected" : undefined} className="h-24"><TableCell className="px-6"><Checkbox checked={selected.has(product.id)} onChange={() => toggle(product.id)} label={`Select ${product.title}`} /></TableCell><TableCell className={cn(!visibleColumns.has("product") && "hidden")}><div className="flex min-w-0 items-center gap-4"><ProductArtwork art={product.art} index={index} image={product.image} title={product.title} /><div className="min-w-0"><p className="truncate font-semibold text-slate-900 dark:text-slate-100">{product.title}</p><p className="truncate text-xs text-muted-foreground">{product.url}</p></div></div></TableCell><TableCell className={cn("font-semibold", !visibleColumns.has("price") && "hidden")}>{product.price}</TableCell><TableCell className={cn(!visibleColumns.has("status") && "hidden")}><span className="inline-flex items-center gap-2 text-xs font-medium"><span className="size-2 rounded-full bg-amber-400" />Draft</span></TableCell><TableCell className={cn("text-xs text-muted-foreground", !visibleColumns.has("edited") && "hidden")}>{product.editedAt}</TableCell><TableCell className={cn(!visibleColumns.has("view") && "hidden")}>{serverIds.has(product.id) ? <Link href={`/products/${product.id}`} aria-label={`View ${product.title}`} className="inline-flex items-center gap-2 text-sm font-medium text-[#596273] hover:text-[#8068e8]"><Eye className="size-4" />View</Link> : <span className="text-sm text-muted-foreground">—</span>}</TableCell><TableCell className={cn(!visibleColumns.has("actions") && "hidden")}><details className="relative mx-auto w-fit"><summary className="grid size-9 cursor-pointer list-none place-items-center rounded-lg hover:bg-muted"><MoreHorizontal className="size-5" /></summary><div className="absolute right-0 z-20 mt-1 w-44 rounded-xl border bg-white p-1.5 text-left text-sm shadow-xl dark:bg-slate-900">{serverIds.has(product.id) && <Link href={`/products/${product.id}`} className="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-muted"><Eye className="size-4" />View</Link>}<Link href={`/seller-dashboard/products/new?edit=${product.id}`} className="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-muted"><Pencil className="size-4" />Edit</Link>{serverIds.has(product.id) && <><button type="button" onClick={() => updateListingStatus({ uuid: product.id, status: "ACTIVE" })} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 hover:bg-muted"><Power className="size-4" />Set active</button><button type="button" onClick={() => updateListingStatus({ uuid: product.id, status: "INACTIVE" })} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 hover:bg-muted"><Power className="size-4" />Set inactive</button></>}<button type="button" onClick={() => { setProducts((items) => items.filter((item) => item.id !== product.id)); writeSellerDrafts(readSellerDrafts().filter((draft) => draft.id !== product.id)); setSelected((items) => { const next = new Set(items); next.delete(product.id); return next }) }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-red-500 hover:bg-red-50"><Trash2 className="size-4" />Delete</button></div></details></TableCell></TableRow>)}</TableBody>
+        </Table>
 
         {visibleProducts.length === 0 && <p className="py-[60px] text-center text-[13px] text-[#858c95]">No draft products found.</p>}
+        <ProductTablePagination page={page} totalPages={totalPages} selectedCount={visibleProducts.filter((product) => selected.has(product.id)).length} rowCount={visibleProducts.length} onPageChange={setPage} />
 
-        <div className="flex justify-center pt-[22px]">
-          <button type="button" className="flex h-[38px] items-center gap-[9px] rounded-[8px] border border-[#e1e3e6] bg-white px-[16px] text-[11px] font-semibold shadow-sm hover:bg-[#fafafa]">
-            <LoaderCircle className="size-[17px]" /> Load more
-          </button>
-        </div>
       </div>
 
-      <div className="sticky bottom-0 -mx-[28px] -mb-[24px] mt-[32px] flex min-h-[82px] items-center border-t border-[#eceef0] bg-white px-[28px] sm:-mx-[38px] sm:-mb-[34px] sm:px-[38px]">
-        <div className="flex items-center gap-[12px] text-[12px] text-[#69727c]"><CheckCircle2 className="size-[18px]" /> {selected.size} products selected</div>
-        <div className="ml-auto flex items-center gap-[10px]">
-          {isScheduled ? (
-            <button type="button" disabled={selected.size === 0} className="flex h-[45px] items-center gap-[9px] rounded-[9px] border border-[#e4e5e7] px-[17px] text-[12px] font-semibold shadow-sm disabled:opacity-40"><CalendarDays className="size-[17px] text-[#757d87]" /> Reschedule</button>
-          ) : (
-            <button type="button" onClick={deleteSelected} disabled={selected.size === 0} className="flex h-[45px] items-center gap-[9px] rounded-[9px] border border-[#e4e5e7] px-[17px] text-[12px] font-semibold text-[#f06455] shadow-sm disabled:opacity-40">Deleted <Trash2 className="size-[17px] text-[#757d87]" /></button>
-          )}
-          <button type="button" disabled={selected.size === 0} className="h-[45px] rounded-[9px] bg-[#8068e8] px-[23px] text-[12px] font-semibold text-white shadow-sm hover:bg-[#7057df] disabled:opacity-40">{isScheduled ? "Publish now" : "Publish"}</button>
-        </div>
-      </div>
     </section>
   )
 }

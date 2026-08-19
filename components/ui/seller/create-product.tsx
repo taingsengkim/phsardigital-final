@@ -3,6 +3,9 @@
 import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useForm, useWatch } from "react-hook-form"
+import { z } from "zod"
 import {
   ArrowLeft,
   ChevronDown,
@@ -23,6 +26,27 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { readSellerDrafts, writeSellerDrafts } from "@/lib/seller-drafts"
+
+const productImageSchema = z.custom<File>(
+  (value) => typeof File !== "undefined" && value instanceof File,
+  "Please select a valid image file.",
+).refine((file) => file.type.startsWith("image/"), "Only image files are allowed.")
+  .refine((file) => file.size <= 5 * 1024 * 1024, "Each image must be 5 MB or smaller.")
+
+const createProductSchema = z.object({
+  title: z.string().trim().min(3, "Title must contain at least 3 characters.").max(120, "Title must not exceed 120 characters."),
+  description: z.string().trim().min(10, "Description must contain at least 10 characters.").max(5000, "Description must not exceed 5,000 characters."),
+  price: z.number({ error: "Enter a valid price." }).positive("Price must be greater than 0."),
+  stockQty: z.number({ error: "Enter a valid stock quantity." }).int("Stock quantity must be a whole number.").min(0, "Stock quantity cannot be negative."),
+  categoryUuid: z.string().min(1, "Please select a category."),
+  images: z.array(productImageSchema).min(1, "Please add at least one cover image.").max(8, "You can upload up to 8 images."),
+})
+
+type CreateProductForm = z.infer<typeof createProductSchema>
+
+function FieldError({ message }: { message?: string }) {
+  return message ? <p className="mt-2 text-sm font-medium text-red-600">{message}</p> : null
+}
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -102,29 +126,44 @@ function DropZone({
 
 export function CreateProduct() {
   const router = useRouter()
-  const [images, setImages] = React.useState<File[]>([])
-  const [categoryUuid, setCategoryUuid] = React.useState("")
   const [formError, setFormError] = React.useState("")
   const [requiresSubscription, setRequiresSubscription] = React.useState(false)
   const [draftSaved, setDraftSaved] = React.useState(false)
   const { data: categories = [], isLoading: categoriesLoading, isError: categoriesError } = useGetSellerCategoriesQuery()
   const [uploadProductFile] = useUploadProductFileMutation()
   const [createSellerListing, { isLoading: isCreating }] = useCreateSellerListingMutation()
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    getValues,
+    control,
+    formState: { errors },
+  } = useForm<CreateProductForm>({
+    resolver: zodResolver(createProductSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      price: undefined,
+      stockQty: undefined,
+      categoryUuid: "",
+      images: [],
+    },
+  })
+  const images = useWatch({ control, name: "images" })
+  const categoryUuid = useWatch({ control, name: "categoryUuid" })
 
-  const saveDraft = (form: HTMLFormElement | null) => {
-    if (!form) return
-
-    const data = new FormData(form)
-    const title = String(data.get("title") ?? "").trim()
+  const saveDraft = () => {
+    const data = getValues()
     const drafts = readSellerDrafts()
     drafts.unshift({
       id: crypto.randomUUID(),
-      title: title || "Untitled product",
-      description: String(data.get("description") ?? "").trim(),
-      categoryUuid: String(data.get("category") ?? ""),
-      price: String(data.get("price") ?? ""),
-      stockQty: String(data.get("stockQty") ?? ""),
-      imageNames: images.map((image) => image.name),
+      title: data.title.trim() || "Untitled product",
+      description: data.description.trim(),
+      categoryUuid: data.categoryUuid,
+      price: Number.isFinite(data.price) ? String(data.price) : "",
+      stockQty: Number.isFinite(data.stockQty) ? String(data.stockQty) : "",
+      imageNames: data.images.map((image) => image.name),
       updatedAt: new Date().toISOString(),
     })
     writeSellerDrafts(drafts)
@@ -133,33 +172,20 @@ export function CreateProduct() {
     setRequiresSubscription(false)
   }
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
+  const submitProduct = async (data: CreateProductForm) => {
     setFormError("")
     setRequiresSubscription(false)
-
-    if (!images.length) {
-      setFormError("Please add at least one cover image.")
-      return
-    }
-
-    if (!categoryUuid) {
-      setFormError("Please select a category.")
-      return
-    }
-
-    const form = new FormData(event.currentTarget)
     try {
       const uploadedImages = await Promise.all(
-        images.map((file) => uploadProductFile(file).unwrap()),
+        data.images.map((file) => uploadProductFile(file).unwrap()),
       )
 
       await createSellerListing({
-        categoryUuid: String(form.get("category") ?? ""),
-        title: String(form.get("title") ?? "").trim(),
-        description: String(form.get("description") ?? "").trim(),
-        price: Number(form.get("price")),
-        stockQty: Number(form.get("stockQty")),
+        categoryUuid: data.categoryUuid,
+        title: data.title,
+        description: data.description,
+        price: data.price,
+        stockQty: data.stockQty,
         isFeatured: false,
         thumbnailObjectName: uploadedImages[0]?.objectName,
         images: uploadedImages.map((image, index) => ({
@@ -184,7 +210,7 @@ export function CreateProduct() {
   }
 
   return (
-    <form className="mx-auto w-full max-w-5xl pb-10" onSubmit={handleSubmit}>
+    <form className="mx-auto w-full max-w-5xl pb-10" noValidate onSubmit={handleSubmit(submitProduct)}>
       <div className="mb-7 flex flex-wrap items-center justify-between gap-4">
         <div>
           <p className="mb-1 text-sm font-medium text-violet-600">Products / Create</p>
@@ -196,7 +222,7 @@ export function CreateProduct() {
           </Link>
           <button
             type="button"
-            onClick={(event) => saveDraft(event.currentTarget.form)}
+            onClick={saveDraft}
             className="h-11 rounded-xl border border-violet-300 bg-white px-5 text-sm font-semibold text-violet-700 shadow-sm transition hover:bg-violet-50"
           >
             Save draft
@@ -233,20 +259,23 @@ export function CreateProduct() {
           <div className="space-y-5">
             <div>
               <FieldLabel>Product title</FieldLabel>
-              <input required name="title" className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-base text-slate-900 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100" placeholder="Enter a clear product title" />
+              <input {...register("title")} aria-invalid={Boolean(errors.title)} className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-base text-slate-900 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100 aria-invalid:border-red-400 aria-invalid:ring-red-100" placeholder="Enter a clear product title" />
+              <FieldError message={errors.title?.message} />
             </div>
             <div>
               <FieldLabel>Description</FieldLabel>
               <div className="overflow-hidden rounded-xl border border-slate-200 focus-within:border-violet-400 focus-within:ring-4 focus-within:ring-violet-100">
-                <textarea name="description" rows={6} className="block w-full resize-y bg-white p-4 text-base outline-none" placeholder="Describe what buyers will receive..." />
+                <textarea {...register("description")} aria-invalid={Boolean(errors.description)} rows={6} className="block w-full resize-y bg-white p-4 text-base outline-none" placeholder="Describe what buyers will receive..." />
               </div>
+              <FieldError message={errors.description?.message} />
             </div>
           </div>
         </Section>
 
         <Section title="Images" color="bg-sky-200">
           <FieldLabel>Cover images</FieldLabel>
-          <DropZone accept="image/*" multiple label="Click to add images" files={images} onFiles={(files) => setImages((current) => [...current, ...files])} />
+          <DropZone accept="image/*" multiple label="Click to add images" files={images} onFiles={(files) => setValue("images", [...images, ...files], { shouldDirty: true, shouldValidate: true })} />
+          <FieldError message={errors.images?.message} />
         </Section>
 
         <Section title="Price" color="bg-emerald-200">
@@ -255,28 +284,29 @@ export function CreateProduct() {
               <FieldLabel>Amount</FieldLabel>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 font-semibold text-slate-500">$</span>
-                <input required min="0" step="0.01" type="number" name="price" className="h-12 w-full rounded-xl border border-slate-200 pl-9 pr-4 text-base outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100" placeholder="0.00" />
+                <input {...register("price", { valueAsNumber: true })} aria-invalid={Boolean(errors.price)} min="0" step="0.01" type="number" className="h-12 w-full rounded-xl border border-slate-200 pl-9 pr-4 text-base outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100 aria-invalid:border-red-400 aria-invalid:ring-red-100" placeholder="0.00" />
               </div>
+              <FieldError message={errors.price?.message} />
             </div>
             <div>
               <FieldLabel>Stock quantity</FieldLabel>
               <input
-                required
+                {...register("stockQty", { valueAsNumber: true })}
+                aria-invalid={Boolean(errors.stockQty)}
                 min="0"
                 step="1"
                 type="number"
-                name="stockQty"
                 inputMode="numeric"
-                className="h-12 w-full rounded-xl border border-slate-200 px-4 text-base outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                className="h-12 w-full rounded-xl border border-slate-200 px-4 text-base outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100 aria-invalid:border-red-400 aria-invalid:ring-red-100"
                 placeholder="0"
               />
+              <FieldError message={errors.stockQty?.message} />
             </div>
           </div>
         </Section>
 
         <Section title="Category" color="bg-violet-200">
           <FieldLabel>Category</FieldLabel>
-          <input type="hidden" name="category" value={categoryUuid} />
           <DropdownMenu>
             <DropdownMenuTrigger asChild disabled={categoriesLoading || categoriesError}>
               <button type="button" className="flex h-12 w-full items-center rounded-xl border border-border bg-background px-4 text-left text-sm text-foreground outline-none transition hover:bg-muted/50 focus-visible:border-violet-400 focus-visible:ring-4 focus-visible:ring-violet-100 dark:focus-visible:ring-violet-950 disabled:cursor-not-allowed disabled:opacity-60">
@@ -294,7 +324,7 @@ export function CreateProduct() {
               {categories.map((category) => (
                 <DropdownMenuItem
                   key={category.uuid}
-                  onSelect={() => setCategoryUuid(category.uuid)}
+                  onSelect={() => setValue("categoryUuid", category.uuid, { shouldDirty: true, shouldValidate: true })}
                   className="cursor-pointer rounded-lg px-3 py-2.5"
                 >
                   {category.name}
@@ -303,6 +333,7 @@ export function CreateProduct() {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
+          <FieldError message={errors.categoryUuid?.message} />
         </Section>
 
       </div>

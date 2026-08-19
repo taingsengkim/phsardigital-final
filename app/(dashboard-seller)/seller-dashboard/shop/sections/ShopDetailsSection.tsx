@@ -11,6 +11,7 @@ import {
   type UpdateSellerProfilePayload,
 } from "@/lib/api/sellerApi";
 import { AuthToast, type ToastState } from "@/components/auth/AuthToast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 /** Field caps from SellerProfileUpdateRequest. */
 const MAX = {
@@ -266,19 +267,15 @@ export default function ShopDetailsSection() {
           >
             Business type
           </label>
-          <select
-            id="shop-type"
-            value={current.businessType}
-            onChange={(e) => patch({ businessType: e.target.value })}
-            className="w-full rounded-xl border border-[#E2DFEC] bg-white px-4 py-3 text-sm text-[#1A1330] focus:border-[#6C4CD8] focus:outline-none focus:ring-2 focus:ring-[#6C4CD8]/15"
-          >
-            <option value="">Not specified</option>
-            {typeOptions.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
-              </option>
-            ))}
-          </select>
+          <Select value={current.businessType || "NOT_SPECIFIED"} onValueChange={(value) => patch({ businessType: value === "NOT_SPECIFIED" ? "" : value })}>
+            <SelectTrigger id="shop-type" className="h-[46px] border-[#E2DFEC] px-4 text-[#1A1330] focus:border-[#6C4CD8] focus:ring-[#6C4CD8]/15">
+              <SelectValue placeholder="Not specified" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="NOT_SPECIFIED">Not specified</SelectItem>
+              {typeOptions.map((type) => <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
 
         <CountedTextarea

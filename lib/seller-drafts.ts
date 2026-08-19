@@ -8,6 +8,10 @@ export type SellerProductDraft = {
   price: string
   stockQty: string
   imageNames: string[]
+  thumbnailObjectName?: string
+  isFeatured?: boolean
+  categoryPath?: string[]
+  listingAttributes?: Array<{ key: string; value: string; sortOrder: number }>
   updatedAt: string
 }
 
