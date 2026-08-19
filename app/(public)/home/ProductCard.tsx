@@ -11,6 +11,7 @@ import {
   getPrices,
   formatPrice,
 } from "./listing-helpers";
+import { addFavorite } from "@/app/api/favorites";
 
 type ProductCardProps = {
   listing: any;
@@ -63,10 +64,14 @@ export function ProductCard({ listing, sellerName }: ProductCardProps) {
           <motion.button
             whileHover={{ scale: 1.15 }}
             whileTap={{ scale: 0.9 }}
-            onClick={(e) => {
+            onClick={async (e) => {
               e.preventDefault();
               e.stopPropagation();
+              const targetUuid = listing.uuid || listing.slug || listing.id;
               setIsSaved((prev) => !prev);
+              if (targetUuid) {
+                await addFavorite(String(targetUuid));
+              }
             }}
             aria-label="Save item"
             className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#6C4CD8] shadow-md transition-all hover:bg-[#F1EFFA]"

@@ -27,7 +27,7 @@ export default function SavedPageClient() {
             sellerProfile: {
               sellerId: "f6b81134-6785-42c0-bf54-d04fcf35ffae",
               businessName: "Tinh Ey",
-              logoUri: "/picture/pic1.jpg",
+              logoUri: "http://51.79.146.203:9000/phsardigital/d1ce4f34-d59c-4abc-bd90-c6c46eeb7567-FB_IMG_1739463967982.jpg",
             },
             category: { name: "Electronics", slug: "electronics" },
             title: "Cats",
@@ -37,7 +37,9 @@ export default function SavedPageClient() {
             discountPrice: null,
             stockQty: 10,
             status: "ACTIVE",
-            thumbnailUri: { uri: "/picture/pic4.jpg" },
+            thumbnailUri: {
+              uri: "http://51.79.146.203:9000/phsardigital/bcfe3bf3-3994-42f7-9a64-449e567b7559-FB_IMG_1744861544967.jpg",
+            },
             averageRating: null,
             reviewCount: 0,
           },
@@ -46,7 +48,7 @@ export default function SavedPageClient() {
             sellerProfile: {
               sellerId: "6e443fad-e712-49f4-8e63-ad6c5e50f399",
               businessName: "SOMA Coffee & Roastery",
-              logoUri: "/picture/pic1.jpg",
+              logoUri: "http://51.79.146.203:9000/phsardigital/44ab3e99-17f1-4772-9536-af3a02ba94cd-image_4.png",
             },
             category: { name: "Electronics", slug: "electronics" },
             title: "Wireless Mechanical Keyboard",
@@ -55,7 +57,9 @@ export default function SavedPageClient() {
             discountPrice: null,
             stockQty: 50,
             status: "ACTIVE",
-            thumbnailUri: { uri: "/picture/pic7.jpg" },
+            thumbnailUri: {
+              uri: "http://51.79.146.203:9000/phsardigital/991a0995-06c2-434d-9c1a-c7ef7fc63530-Screenshot_2026-05-06_142117.png",
+            },
             averageRating: null,
             reviewCount: 0,
           },
@@ -64,7 +68,7 @@ export default function SavedPageClient() {
             sellerProfile: {
               sellerId: "6e443fad-e712-49f4-8e63-ad6c5e50f399",
               businessName: "SOMA Coffee & Roastery",
-              logoUri: "/picture/pic1.jpg",
+              logoUri: "http://51.79.146.203:9000/phsardigital/44ab3e99-17f1-4772-9536-af3a02ba94cd-image_4.png",
             },
             category: { name: "Electronics", slug: "electronics" },
             title: "ISTAD Friends Hoodie",
@@ -73,7 +77,9 @@ export default function SavedPageClient() {
             discountPrice: null,
             stockQty: 100,
             status: "ACTIVE",
-            thumbnailUri: { uri: "/picture/pic3.jpg" },
+            thumbnailUri: {
+              uri: "http://51.79.146.203:9000/phsardigital/67a58950-ba22-4a79-a9a5-31865c44506b-ITE-FRIENDS.jpg",
+            },
             averageRating: null,
             reviewCount: 0,
           },
@@ -186,7 +192,7 @@ export default function SavedPageClient() {
       {listings.length > 0 ? (
         <>
           {/* Category Filter bar */}
-          {categories.length > 2 && (
+          {categories.length > 1 && (
             <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
               <span className="text-sm font-semibold text-[#7C7596] mr-2">Filter:</span>
               {categories.map((cat) => (

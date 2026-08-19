@@ -13,3 +13,15 @@ export async function getFavorites(): Promise<any[]> {
 
   return [];
 }
+
+export async function addFavorite(listingUuid: string): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/favorites/${listingUuid}`, {
+      method: "POST",
+    });
+    return res.ok;
+  } catch (err) {
+    console.warn("Failed to add favorite:", err);
+    return false;
+  }
+}
