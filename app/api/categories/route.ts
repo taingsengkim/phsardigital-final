@@ -9,10 +9,13 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const pageNumber = searchParams.get("pageNumber") ?? "0";
   const pageSize = searchParams.get("pageSize") ?? "100";
+  const useTree = searchParams.get("tree") === "true";
 
   try {
     const res = await fetch(
-      `${BASE_URL}/api/v1/categories?pageNumber=${pageNumber}&pageSize=${pageSize}`,
+      useTree
+        ? `${BASE_URL}/api/v1/categories/tree`
+        : `${BASE_URL}/api/v1/categories?pageNumber=${pageNumber}&pageSize=${pageSize}`,
       {
         headers: {
           Accept: "application/json",
@@ -23,10 +26,10 @@ export async function GET(request: NextRequest) {
 
     const data = await res.json();
     return NextResponse.json(data, { status: res.status });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Error fetching categories:", err);
     return NextResponse.json(
-      { message: err?.message || "Failed to fetch categories" },
+      { message: err instanceof Error ? err.message : "Failed to fetch categories" },
       { status: 502 }
     );
   }
