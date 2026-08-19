@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Heart, Star } from "lucide-react";
+import { Heart, Star, Trash2 } from "lucide-react";
 import {
   getPrimaryImage,
   getAverageRating,
@@ -16,9 +16,11 @@ import { addFavorite } from "@/app/api/favorites";
 type ProductCardProps = {
   listing: any;
   sellerName?: string;
+  isSavedPage?: boolean;
+  onRemove?: (uuid: string) => void;
 };
 
-export function ProductCard({ listing, sellerName }: ProductCardProps) {
+export function ProductCard({ listing, sellerName, isSavedPage, onRemove }: ProductCardProps) {
   const [isSaved, setIsSaved] = useState(false);
 
   const image = getPrimaryImage(listing);
@@ -60,27 +62,47 @@ export function ProductCard({ listing, sellerName }: ProductCardProps) {
             </span>
           )}
 
-          {/* Saved Heart Button on Top-Right */}
-          <motion.button
-            whileHover={{ scale: 1.15 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={async (e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              const targetUuid = listing.uuid || listing.slug || listing.id;
-              setIsSaved((prev) => !prev);
-              if (targetUuid) {
-                await addFavorite(String(targetUuid));
-              }
-            }}
-            aria-label="Save item"
-            className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#6C4CD8] shadow-md transition-all hover:bg-[#F1EFFA]"
-          >
-            <Heart
-              size={17}
-              className={isSaved ? "fill-[#6C4CD8] text-[#6C4CD8]" : "text-[#6C4CD8]"}
-            />
-          </motion.button>
+          {/* Top-Right Action: Bin / Trash icon if on saved page, Heart icon otherwise */}
+          {isSavedPage ? (
+            <motion.button
+              whileHover={{ scale: 1.15, rotate: 12 }}
+              whileTap={{ scale: 0.85 }}
+              onClick={async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const targetUuid = listing.uuid || listing.slug || listing.id;
+                if (onRemove && targetUuid) {
+                  onRemove(String(targetUuid));
+                }
+              }}
+              aria-label="Remove from favorites"
+              title="Remove from saved items"
+              className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white text-rose-500 shadow-md backdrop-blur-xs transition-all hover:bg-rose-500 hover:text-white"
+            >
+              <Trash2 size={17} />
+            </motion.button>
+          ) : (
+            <motion.button
+              whileHover={{ scale: 1.15 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const targetUuid = listing.uuid || listing.slug || listing.id;
+                setIsSaved((prev) => !prev);
+                if (targetUuid) {
+                  await addFavorite(String(targetUuid));
+                }
+              }}
+              aria-label="Save item"
+              className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#6C4CD8] shadow-md transition-all hover:bg-[#F1EFFA]"
+            >
+              <Heart
+                size={17}
+                className={isSaved ? "fill-[#6C4CD8] text-[#6C4CD8]" : "text-[#6C4CD8]"}
+              />
+            </motion.button>
+          )}
         </div>
 
         {/* Content Below Image */}

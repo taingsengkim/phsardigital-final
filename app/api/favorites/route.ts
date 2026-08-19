@@ -71,3 +71,53 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const authHeader = await getAuthHeader(request);
+    const body = await request.json();
+
+    const headers: Record<string, string> = {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    };
+
+    if (authHeader) {
+      headers["Authorization"] = authHeader;
+    }
+
+    const targetUrl = `${BASE_URL}/api/v1/favorites`;
+
+    const res = await fetch(targetUrl, {
+      method: "DELETE",
+      headers,
+      body: JSON.stringify(body),
+    });
+
+    const text = await res.text();
+    let data: any = null;
+    if (text) {
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = { message: text };
+      }
+    }
+
+    if (!res.ok) {
+      console.warn(`Backend DELETE /api/v1/favorites responded with status ${res.status}`);
+      return NextResponse.json(
+        data || { message: "Failed to delete favorite(s)" },
+        { status: res.status }
+      );
+    }
+
+    return NextResponse.json(data || { success: true }, { status: res.status || 200 });
+  } catch (err: any) {
+    console.error("Error in /api/favorites DELETE route handler proxy:", err);
+    return NextResponse.json(
+      { message: err?.message || "Internal server error" },
+      { status: 502 }
+    );
+  }
+}

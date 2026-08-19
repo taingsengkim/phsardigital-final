@@ -5,7 +5,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Heart, Trash2, ShoppingCart, Check, ShoppingBag, Loader2 } from "lucide-react";
 import { ProductCard } from "@/app/(public)/home/ProductCard";
-import { getFavorites } from "@/app/api/favorites";
+import { getFavorites, removeFavorites } from "@/app/api/favorites";
 
 export default function SavedPageClient() {
   const [listings, setListings] = useState<any[]>([]);
@@ -103,9 +103,20 @@ export default function SavedPageClient() {
       ? listings
       : listings.filter((item) => item.category?.name === selectedCategory);
 
-  function clearAll() {
+  async function handleRemoveItem(uuid: string) {
+    const itemToRemove = listings.find((i) => (i.uuid || i.slug || i.id) === uuid);
+    setListings((prev) => prev.filter((item) => (item.uuid || item.slug || item.id) !== uuid));
+    await removeFavorites([uuid]);
+    showToast(`Removed "${itemToRemove?.title || "Product"}" from your saved items.`);
+  }
+
+  async function handleClearAll() {
     if (confirm("Are you sure you want to remove all saved items?")) {
+      const allUuids = listings.map((i) => i.uuid || i.slug || i.id).filter(Boolean);
       setListings([]);
+      if (allUuids.length > 0) {
+        await removeFavorites(allUuids);
+      }
       showToast("Cleared all saved items.");
     }
   }
@@ -179,7 +190,7 @@ export default function SavedPageClient() {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.94 }}
-              onClick={clearAll}
+              onClick={handleClearAll}
               className="flex items-center gap-2 rounded-full border border-[#EDEBF3] bg-white px-5 py-3 text-sm sm:text-base font-bold text-rose-600 shadow-sm transition-colors hover:bg-rose-50 hover:border-rose-200"
             >
               <Trash2 size={17} />
@@ -219,6 +230,8 @@ export default function SavedPageClient() {
               <ProductCard
                 key={listing.uuid || listing.id || idx}
                 listing={listing}
+                isSavedPage={true}
+                onRemove={handleRemoveItem}
               />
             ))}
           </div>

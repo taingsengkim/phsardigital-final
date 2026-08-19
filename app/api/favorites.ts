@@ -25,3 +25,17 @@ export async function addFavorite(listingUuid: string): Promise<boolean> {
     return false;
   }
 }
+
+export async function removeFavorites(uuids: string[]): Promise<boolean> {
+  try {
+    const res = await fetch("/api/favorites", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(uuids),
+    });
+    return res.ok;
+  } catch (err) {
+    console.warn("Failed to remove favorite(s):", err);
+    return false;
+  }
+}
