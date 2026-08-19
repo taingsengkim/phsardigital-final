@@ -346,6 +346,14 @@ export const sellerApi = createApi({
       },
       providesTags: ["SellerListings"],
     }),
+    updateListingStatus: builder.mutation<void, { uuid: string; status: "DRAFT" | "ACTIVE" | "INACTIVE" }>({
+      query: ({ uuid, status }) => ({
+        url: `/listings/${encodeURIComponent(uuid)}`,
+        method: "PATCH",
+        body: { status },
+      }),
+      invalidatesTags: ["SellerListings"],
+    }),
   }),
 });
 
@@ -363,5 +371,6 @@ export const {
   useGetSellerOrdersQuery,
   useGetSellerReviewsQuery,
   useGetMyListingsQuery,
+  useUpdateListingStatusMutation,
 } = sellerApi;
 

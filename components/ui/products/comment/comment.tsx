@@ -2,12 +2,15 @@
 
 import * as React from "react"
 import Image from "next/image"
-import { Check, CheckCircle2, Heart, LoaderCircle, Search, Smile, Trash2 } from "lucide-react"
+import { Check, Heart, LoaderCircle, Search, Smile, Trash2 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { getFileUrl } from "@/lib/utils"
+import { useGetSellerReviewsQuery } from "@/lib/redux/service/sellerDashboardApi"
+import type { SellerReview } from "@/lib/types/seller-dashboard"
 
 type CommentItem = {
-  id: number
+  id: string | number
   name: string
   message: string
   time: string
@@ -24,6 +27,12 @@ const initialComments: CommentItem[] = [
   { id: 5, name: "Corene Toy", message: "Awesome, keep it up,", time: "1 day", avatar: "/picture/sokhim.JPG", product: "Academe 3D Education Icons", art: "from-[#55526c] via-[#817db9] to-[#e8bbc5]" },
 ]
 
+const commentArt = [
+  "from-[#b8d6c4] via-[#eac3aa] to-[#b16f50]",
+  "from-[#eadcff] via-[#f3e1b9] to-[#c8a7ed]",
+  "from-[#ffbf69] via-[#ee805e] to-[#f2dfd4]",
+]
+
 function Checkbox({ checked, onChange, label }: { checked: boolean; onChange: () => void; label: string }) {
   return <button type="button" role="checkbox" aria-checked={checked} aria-label={label} onClick={onChange} className={cn("grid size-[22px] shrink-0 place-items-center rounded-[5px] border", checked ? "border-[#2f80ed] bg-[#2f80ed] text-white" : "border-[#c7ccd1] bg-white")}>{checked && <Check className="size-[15px]" strokeWidth={3} />}</button>
 }
@@ -33,30 +42,39 @@ function ProductArt({ art, index }: { art: string; index: number }) {
 }
 
 export function Comment() {
-  const [comments, setComments] = React.useState(initialComments)
-  const [selected, setSelected] = React.useState<Set<number>>(new Set())
+  const { data, isLoading, isError } = useGetSellerReviewsQuery({ pageNumber: 0, pageSize: 100 })
+  const apiComments = React.useMemo<CommentItem[]>(() => (data?.content ?? []).map((review: SellerReview, index) => ({
+    id: review.uuid,
+    name: review.buyer?.fullName || [review.buyer?.firstName, review.buyer?.lastName].filter(Boolean).join(" ") || review.buyer?.username || "Buyer",
+    message: review.comment || "",
+    time: review.createdAt ? new Date(review.createdAt).toLocaleDateString() : "",
+    avatar: getFileUrl(review.buyer?.avatarFile?.uri) || "/picture/lisa.PNG",
+    product: review.listing?.title || "Product",
+    art: commentArt[index % commentArt.length],
+  })), [data])
+  const [comments, setComments] = React.useState<CommentItem[]>([])
+  // Synchronize the editable local list when the API response changes.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  React.useEffect(() => setComments(apiComments), [apiComments])
+  const [selected, setSelected] = React.useState<Set<string | number>>(new Set())
   const [query, setQuery] = React.useState("")
-  const [replyingTo, setReplyingTo] = React.useState<number | null>(null)
-  const [replies, setReplies] = React.useState<Record<number, string>>({})
+  const [replyingTo, setReplyingTo] = React.useState<string | number | null>(null)
+  const [replies, setReplies] = React.useState<Record<string, string>>({})
   const [draftReply, setDraftReply] = React.useState("")
   const visible = comments.filter((item) => `${item.name} ${item.message} ${item.product}`.toLowerCase().includes(query.toLowerCase()))
   const allSelected = visible.length > 0 && visible.every((item) => selected.has(item.id))
 
-  function toggle(id: number) {
+  function toggle(id: string | number) {
     setSelected((current) => { const next = new Set(current); if (next.has(id)) next.delete(id); else next.add(id); return next })
   }
   function toggleAll() {
     setSelected((current) => { const next = new Set(current); if (allSelected) visible.forEach((item) => next.delete(item.id)); else visible.forEach((item) => next.add(item.id)); return next })
   }
-  function deleteSelected() {
-    setComments((current) => current.filter((item) => !selected.has(item.id)))
-    setSelected(new Set())
-  }
-  function startReply(id: number) {
+  function startReply(id: string | number) {
     setReplyingTo(id)
     setDraftReply(replies[id] ?? "")
   }
-  function saveReply(id: number) {
+  function saveReply(id: string | number) {
     if (draftReply.trim()) setReplies((current) => ({ ...current, [id]: draftReply.trim() }))
     setReplyingTo(null)
     setDraftReply("")
@@ -90,7 +108,6 @@ export function Comment() {
         {visible.length === 0 && <p className="py-[70px] text-center text-[13px] text-[#858c95]">No comments found.</p>}
         <div className="flex justify-center pt-[22px]"><button type="button" className="flex h-[38px] items-center gap-[9px] rounded-[8px] border border-[#e1e3e6] px-[16px] text-[11px] font-semibold shadow-sm"><LoaderCircle className="size-[17px]" /> Load more</button></div>
       </div>
-      <div className="sticky bottom-0 -mx-[28px] -mb-[28px] mt-[32px] flex min-h-[82px] items-center border-t border-[#eceef0] bg-white px-[28px] sm:-mx-[38px] sm:px-[38px]"><div className="flex items-center gap-[12px] text-[12px] text-[#69727c]"><CheckCircle2 className="size-[18px]" /> {selected.size ? `${selected.size} comments selected` : "No comment selected"}</div><button type="button" onClick={deleteSelected} disabled={!selected.size} className="ml-auto flex h-[45px] items-center gap-[9px] rounded-[9px] border border-[#e4e5e7] px-[17px] text-[12px] font-semibold text-[#f06455] shadow-sm disabled:opacity-50">Deleted <Trash2 className="size-[17px] text-[#757d87]" /></button></div>
     </section>
   )
 }

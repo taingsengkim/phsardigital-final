@@ -12,10 +12,10 @@ const viewData = [
 
 export const ProductViews: React.FC = () => {
   return (
-    <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm h-full flex flex-col">
+    <div className="flex h-full flex-col rounded-3xl border border-border bg-card p-6 text-card-foreground shadow-sm">
       <div className="flex items-center gap-3 mb-10">
         <div className="w-4 h-8 bg-blue-200 rounded-full" />
-        <h2 className="text-2xl font-bold text-gray-900">Product views</h2>
+        <h2 className="text-2xl font-bold text-foreground">Product views</h2>
       </div>
 
       <div className="flex-1 flex items-end justify-between gap-2 px-2 pb-2">
@@ -37,7 +37,7 @@ export const ProductViews: React.FC = () => {
               className={`w-full rounded-md ${item.color} transition-all duration-300`} 
               style={{ height: `${item.value}%` }} 
             />
-            <span className="text-gray-400 text-sm font-medium">{item.day}</span>
+            <span className="text-sm font-medium text-muted-foreground">{item.day}</span>
           </div>
         ))}
       </div>

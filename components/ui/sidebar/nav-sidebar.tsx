@@ -3,8 +3,9 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { ChevronDown, ChevronUp, CircleHelp, Home, Moon, Plus, Sparkles, Store, Sun, Tags, UserRound } from "lucide-react"
+import { ChevronDown, ChevronUp, CircleHelp, Home, MessageCircle, Moon, Plus, Sparkles, Store, Sun, Tags, UserRound } from "lucide-react"
 import { useTheme } from "next-themes"
+import PhsarDigitalLogo from "@/assets/svg/phsardigitalLogo"
 
 import {
   Sidebar,
@@ -26,12 +27,6 @@ const productLinks: SidebarChildLink[] = [
   { title: "Drafts", url: "/seller-dashboard/products/drafts" },
   { title: "Released", url: "/seller-dashboard/products/released" },
   { title: "Comments", url: "/seller-dashboard/products/comment" },
-  { title: "Scheduled", url: "/seller-dashboard/products/schedualed" },
-]
-
-const customerLinks: SidebarChildLink[] = [
-  { title: "Overview", url: "/seller-dashboard/customers/overview" },
-  { title: "Customer list", url: "/seller-dashboard/customer/customer-list" },
 ]
 
 const subscribe = () => () => {}
@@ -41,23 +36,20 @@ export function SellerSidebar() {
   const { resolvedTheme, setTheme } = useTheme()
   const mounted = React.useSyncExternalStore(subscribe, () => true, () => false)
   const [productsOpen, setProductsOpen] = React.useState(pathname.startsWith("/seller-dashboard/products"))
-  const [customersOpen, setCustomersOpen] = React.useState(pathname.startsWith("/seller-dashboard/customer"))
 
   return (
-    <Sidebar collapsible="icon" className="border-r bg-white">
-      <SidebarHeader className="flex h-18 items-center border-b border-sidebar-border bg-white px-4">
-        <Link href="/dashboard" className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-[#6C4CD8] text-white">
-            <Store className="size-5" />
-          </div>
+    <Sidebar collapsible="icon" className="border-r bg-white text-sidebar-foreground dark:bg-sidebar">
+      <SidebarHeader className="flex h-18 items-center border-b border-sidebar-border bg-white px-4 dark:bg-sidebar">
+        <Link href="/seller-dashboard/home" aria-label="Phsar Digital seller dashboard" className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center">
+          <PhsarDigitalLogo className="size-9 shrink-0" aria-hidden="true" />
           <div className="flex flex-col gap-0.5 leading-none group-data-[collapsible=icon]:hidden">
-            <span className="font-semibold text-[#6C4CD8]">Seller Portal</span>
+            <span className="text-base font-bold text-[#8C52FE]">Phsar Digital</span>
             <span className="text-xs text-muted-foreground">Seller Dashboard</span>
           </div>
         </Link>
       </SidebarHeader>
 
-      <SidebarContent className="overflow-x-hidden bg-white px-3 py-5">
+      <SidebarContent className="overflow-x-hidden bg-white px-3 py-5 dark:bg-sidebar">
         <nav aria-label="Seller dashboard" className="space-y-[4px]">
           <Link
             href="/seller-dashboard/home"
@@ -85,9 +77,8 @@ export function SellerSidebar() {
                 <Link
                   href="/seller-dashboard/products/new"
                   aria-label="Add product"
-                  className="grid size-8 place-items-center rounded-lg hover:bg-sidebar-accent hover:text-sidebar-accent-foreground text-muted-foreground"
+                  // className="grid size-8 place-items-center rounded-lg hover:bg-sidebar-accent hover:text-sidebar-accent-foreground text-muted-foreground"
                 >
-                  <Plus className="size-4" />
                 </Link>
                 <button
                   type="button"
@@ -110,7 +101,7 @@ export function SellerSidebar() {
                       href={item.url}
                       className={cn(
                         "relative flex h-[42px] items-center rounded-[11px] px-3 text-[14px] font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground before:absolute before:-left-5 before:bottom-1/2 before:top-[-3px] before:w-5 before:rounded-bl-[14px] before:border-b before:border-l before:border-[#e7e8ea]",
-                        active && "bg-[#f0f0f1] font-semibold text-[#25272a] shadow-[0_2px_0_rgba(0,0,0,0.07)]",
+                        active && "bg-sidebar-accent font-semibold text-sidebar-accent-foreground shadow-sm",
                       )}
                     >
                       <span>{item.title}</span>
@@ -126,37 +117,16 @@ export function SellerSidebar() {
             )}
           </div>
 
-          <div>
-            <button
-              type="button"
-              onClick={() => setCustomersOpen((open) => !open)}
-              className="flex h-12 w-full items-center gap-4 rounded-xl px-3 text-[15px] font-semibold text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
-              aria-expanded={customersOpen}
-            >
-              <UserRound className="size-5 shrink-0" strokeWidth={2} />
-              <span className="group-data-[collapsible=icon]:hidden">Customers</span>
-              {customersOpen ? <ChevronUp className="ml-auto size-5 group-data-[collapsible=icon]:hidden" /> : <ChevronDown className="ml-auto size-5 group-data-[collapsible=icon]:hidden" />}
-            </button>
-            {customersOpen && (
-              <div className="relative ml-[27px] space-y-[2px] pl-5 pb-[2px] group-data-[collapsible=icon]:hidden">
-                {customerLinks.map((item) => {
-                  const active = pathname === item.url
-                  return (
-                    <Link
-                      key={item.url}
-                      href={item.url}
-                      className={cn(
-                        "relative flex h-[42px] items-center rounded-[11px] px-3 text-[14px] font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground before:absolute before:-left-5 before:bottom-1/2 before:top-[-3px] before:w-5 before:rounded-bl-[14px] before:border-b before:border-l before:border-[#e7e8ea]",
-                        active && "bg-[#f0f0f1] font-semibold text-[#25272a] shadow-[0_2px_0_rgba(0,0,0,0.07)]",
-                      )}
-                    >
-                      {item.title}
-                    </Link>
-                  )
-                })}
-              </div>
+          <Link
+            href="/seller-dashboard/customer/customer-list"
+            className={cn(
+              "flex h-12 items-center gap-4 rounded-xl px-3 text-[15px] font-semibold text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0",
+              pathname.startsWith("/seller-dashboard/customer") && "bg-sidebar-accent text-sidebar-accent-foreground",
             )}
-          </div>
+          >
+            <UserRound className="size-5 shrink-0" strokeWidth={2} />
+            <span className="group-data-[collapsible=icon]:hidden">Customers</span>
+          </Link>
 
           <Link
             href="/seller-dashboard/shop"
@@ -182,7 +152,7 @@ export function SellerSidebar() {
         </nav>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border bg-white p-4">
+      <SidebarFooter className="border-t border-sidebar-border bg-white p-4 dark:bg-sidebar">
         <div className="space-y-4 pb-4 group-data-[collapsible=icon]:hidden">
           <Link
             href="/dashboard/help"

@@ -1,8 +1,7 @@
 "use client";
 
 import React from "react";
-import { ChevronsUpDown, Activity, ShoppingBag, Loader2, Sparkles, Plus } from "lucide-react";
-import Link from "next/link";
+import { ChevronsUpDown, Activity, ShoppingBag, Loader2, Sparkles } from "lucide-react";
 import { OverviewCard } from "./overview-card";
 import { ProductActivity } from "./product-activity";
 import { ProductViews } from "./product-views";
@@ -11,12 +10,16 @@ import { useGetListingsQuery } from "@/lib/api/homeApi";
 import { useGetSellerOrdersQuery, useGetMyListingsQuery } from "@/lib/api/sellerApi";
 
 export const ProductDashboardUI: React.FC = () => {
-  const { data: myListingsData, isLoading: isLoadingMyListings } = useGetMyListingsQuery();
+  const { data: myListingsData, isLoading: isLoadingMyListings } = useGetMyListingsQuery({ pageNumber: 0, pageSize: 100 });
   const { data: publicListingsData, isLoading: isLoadingPublicListings } = useGetListingsQuery();
   const { data: ordersData, isLoading: isLoadingOrders } = useGetSellerOrdersQuery();
 
-  const myListings = myListingsData?.content || myListingsData?.data || [];
-  const publicListings = publicListingsData?.data || (publicListingsData as any)?.content || [];
+  const myListings = Array.isArray(myListingsData)
+    ? myListingsData
+    : myListingsData?.content || myListingsData?.data || [];
+  const publicListings = Array.isArray(publicListingsData)
+    ? publicListingsData
+    : publicListingsData?.data || (publicListingsData as any)?.content || [];
   const rawListings = myListings.length > 0 ? myListings : publicListings;
   const isLoadingListings = isLoadingMyListings && isLoadingPublicListings;
   const ordersList = ordersData?.content || [];
@@ -34,6 +37,9 @@ export const ProductDashboardUI: React.FC = () => {
     const primaryImg =
       item.images?.find((img: any) => img.is_primary || img.isPrimary)?.url ||
       item.images?.[0]?.url ||
+      item.images?.find((img: any) => img.is_primary || img.isPrimary)?.uri ||
+      item.images?.[0]?.uri ||
+      (typeof item.thumbnailUri === "string" ? item.thumbnailUri : undefined) ||
       item.thumbnailUri?.uri ||
       item.thumbnail_url ||
       `/picture/pic${(index % 8) + 1}.jpg`;
@@ -74,23 +80,16 @@ export const ProductDashboardUI: React.FC = () => {
           </p>
         </div>
 
-        <Link
-          href="/seller-dashboard/products/new"
-          className="inline-flex items-center gap-2 rounded-xl bg-[#6C4CD8] px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-[#6C4CD8]/20 hover:bg-[#5C3DC8] transition"
-        >
-          <Plus className="size-4" />
-          Create New Product
-        </Link>
       </div>
 
       {/* Overview Section */}
-      <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
+      <div className="rounded-3xl border border-border bg-card p-6 text-card-foreground shadow-sm">
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-3">
             <div className="w-4 h-8 bg-purple-200 rounded-full" />
-            <h2 className="text-2xl font-bold text-gray-900">Overview</h2>
+            <h2 className="text-2xl font-bold text-foreground">Overview</h2>
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50">
+          <button className="flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted">
             This week
             <ChevronsUpDown className="w-4 h-4" />
           </button>
@@ -103,8 +102,8 @@ export const ProductDashboardUI: React.FC = () => {
             change="Live API Data"
             changeType="up"
             icon={<Activity className="w-6 h-6" />}
-            bgColor="bg-[#E6F4EA]"
-            iconBgColor="bg-gray-900"
+            bgColor="bg-emerald-50 dark:bg-emerald-950/50"
+            iconBgColor="bg-slate-900 dark:bg-slate-950"
             chartColor="#34A853"
             chartPath="M 0 30 Q 25 10 50 25 T 100 10"
           />
@@ -114,8 +113,8 @@ export const ProductDashboardUI: React.FC = () => {
             change="Live API Data"
             changeType="up"
             icon={<ShoppingBag className="w-6 h-6" />}
-            bgColor="bg-[#E8F0FE]"
-            iconBgColor="bg-gray-900"
+            bgColor="bg-blue-50 dark:bg-blue-950/50"
+            iconBgColor="bg-slate-900 dark:bg-slate-950"
             chartColor="#4285F4"
             chartPath="M 0 25 Q 25 35 50 20 T 100 15"
           />
@@ -137,9 +136,7 @@ export const ProductDashboardUI: React.FC = () => {
           Loading products inventory...
         </div>
       ) : (
-        <ProductTable
-          products={transformedProducts.length > 0 ? transformedProducts : undefined}
-        />
+        <ProductTable products={transformedProducts} />
       )}
     </div>
   );

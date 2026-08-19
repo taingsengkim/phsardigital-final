@@ -33,13 +33,13 @@ export const OverviewCard: React.FC<OverviewCardProps> = ({
             {icon}
           </div>
           <div className="flex items-center gap-1">
-            <span className="text-gray-600 font-medium">{title}</span>
-            <Info className="w-4 h-4 text-gray-400" />
+            <span className="font-medium text-muted-foreground">{title}</span>
+            <Info className="h-4 w-4 text-muted-foreground" />
           </div>
         </div>
         
         <div>
-          <div className="text-4xl font-bold text-gray-900 mb-2">{value}</div>
+          <div className="mb-2 text-4xl font-bold text-foreground">{value}</div>
           <div className={cn(
             "inline-flex items-center px-2 py-1 rounded-lg text-sm font-medium",
             changeType === 'up' ? "bg-green-100/50 text-green-600" : "bg-red-100/50 text-red-600"
