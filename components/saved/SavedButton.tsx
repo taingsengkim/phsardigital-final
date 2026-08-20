@@ -1,17 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Heart } from "lucide-react";
+import { HeartIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { getAccessToken, redirectToLogin } from "@/lib/api";
+import { saveListings, unsaveListing } from "@/app/api/savedListings";
 
 type Props = {
-<<<<<<< HEAD
-  listingId: string | number;
-=======
   listingId: number | string;
   /** Whether the item is already saved (pass from parent/server) */
->>>>>>> origin/main
   initialSaved?: boolean;
   className?: string;
 };
@@ -21,67 +18,41 @@ export default function SavedButton({
   initialSaved = false,
   className,
 }: Props) {
-  const [saved,   setSaved]   = useState(initialSaved);
+  const [saved, setSaved] = useState(initialSaved);
   const [loading, setLoading] = useState(false);
 
   async function toggle() {
-    const token = getAccessToken();
-    if (!token) { redirectToLogin(); return; }
-
     setLoading(true);
     try {
-      const base = process.env.NEXT_PUBLIC_API_URL ?? "https://phsardigital.quizzy.it.com";
-      const headers = {
-        "Content-Type":  "application/json",
-        "Authorization": `Bearer ${token}`,
-      };
-
       if (saved) {
-        /* DELETE /api/v1/favorites  — body: [uuid] */
-        const res = await fetch(`${base}/api/v1/favorites`, {
-          method: "DELETE",
-          headers,
-          body: JSON.stringify([listingId]),
-        });
-        if (!res.ok && res.status !== 204) throw new Error(`${res.status}`);
+        await unsaveListing(listingId);
       } else {
-        /* POST /api/v1/favorites/{listingUuid} */
-        const res = await fetch(`${base}/api/v1/favorites/${listingId}`, {
-          method: "POST",
-          headers,
-        });
-        if (!res.ok) throw new Error(`${res.status}`);
+        await saveListings(listingId);
       }
-
-      setSaved((s) => !s);
+      setSaved((prev) => !prev);
     } catch {
-      /* silent — button stays in previous state */
+      // silently ignore — user can retry
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <button
-      type="button"
-      onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggle(); }}
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={toggle}
       disabled={loading}
-      aria-label={saved ? "Remove from wishlist" : "Add to wishlist"}
-      className={cn(
-        "flex h-9 w-9 items-center justify-center rounded-full shadow-md transition-all disabled:opacity-50",
-        saved
-          ? "bg-[#6C4CD8] hover:bg-[#5B3DC0]"
-          : "bg-white/95 hover:bg-[#F1EFFA]",
-        className
-      )}
+      aria-label={saved ? "Remove from saved" : "Save listing"}
+      className={cn("rounded-full bg-background/80 backdrop-blur-sm", className)}
     >
-      <Heart
-        size={16}
+      <HeartIcon
+        size={18}
         className={cn(
           "transition-colors",
-          saved ? "fill-white text-white" : "text-[#6C4CD8]"
+          saved ? "fill-red-500 text-red-500" : "text-muted-foreground"
         )}
       />
-    </button>
+    </Button>
   );
 }

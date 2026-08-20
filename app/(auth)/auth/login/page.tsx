@@ -6,80 +6,6 @@ import { ArrowUpDown, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AuthLeftPanel from "@/components/auth/AuthLeftPanel";
 import { AuthToast, type ToastState } from "@/components/auth/AuthToast";
-<<<<<<< HEAD
-
-const KC_ISSUER = "https://auth.quizzy.it.com/realms/phsardigital";
-const KC_CLIENT = "phsardigital-client";
-
-/* ── PKCE helpers ─────────────────────────────────────────────────────── */
-async function generatePKCE() {
-  const verifier = crypto.randomUUID().replace(/-/g, "") +
-                   crypto.randomUUID().replace(/-/g, "");
-  const encoder  = new TextEncoder();
-  const data     = encoder.encode(verifier);
-  const digest   = await crypto.subtle.digest("SHA-256", data);
-  const challenge = btoa(String.fromCharCode(...new Uint8Array(digest)))
-    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
-  return { verifier, challenge };
-}
-
-/** Build Keycloak login URL with PKCE + CSRF state */
-async function buildLoginUrl(returnTo = "/home"): Promise<string> {
-  const state              = crypto.randomUUID();
-  const { verifier, challenge } = await generatePKCE();
-  const callbackUri        = `${window.location.origin}/auth/callback`;
-
-  sessionStorage.setItem("kc_state",    state);
-  sessionStorage.setItem("kc_verifier", verifier);
-  sessionStorage.setItem("kc_return_to", returnTo);
-
-  const p = new URLSearchParams({
-    client_id:             KC_CLIENT,
-    redirect_uri:          callbackUri,
-    response_type:         "code",
-    scope:                 "openid email profile",
-    state,
-    code_challenge:        challenge,
-    code_challenge_method: "S256",
-  });
-  return `${KC_ISSUER}/protocol/openid-connect/auth?${p}`;
-}
-
-export default function LoginPage() {
-  const [identifier, setIdentifier] = useState("");
-  const [password,   setPassword]   = useState("");
-  const [showPw,     setShowPw]     = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [error,      setError]      = useState<string | null>(null);
-  const [toast,      setToast]      = useState<ToastState | null>(null);
-
-  /* already logged in → skip form */
-  useEffect(() => {
-    const token = sessionStorage.getItem("kc_access_token");
-    const exp   = Number(sessionStorage.getItem("kc_expires_at") ?? "0");
-    if (token && Date.now() < exp) window.location.replace("/home");
-  }, []);
-
-  useEffect(() => {
-    if (!toast) return;
-    const t = window.setTimeout(() => setToast(null), 3200);
-    return () => window.clearTimeout(t);
-  }, [toast]);
-
-  async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setError(null);
-    setToast(null);
-
-    if (!identifier.trim() || !password)
-      return setError("Please enter your email/username and password.");
-
-    setSubmitting(true);
-    setToast({ type: "success", message: "Redirecting to secure sign-in…" });
-    buildLoginUrl("/home").then((url) => {
-      setTimeout(() => window.location.assign(url), 400);
-    });
-=======
 import { authClient } from "@/lib/auth-client";
 
 export default function LoginPage() {
@@ -101,7 +27,6 @@ export default function LoginPage() {
       });
       setLoading(false);
     }
->>>>>>> origin/main
   }
 
   const statsBlock = (

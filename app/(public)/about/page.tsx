@@ -1,9 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Star, Shield, Sparkles, Users } from "lucide-react";
-import { getListings } from "@/app/api/listings";
-import type { Listing } from "@/app/api/listings";
-import AddToCartButton from "@/components/product/AddToCartButton";
 
 /* ─────────────────────────────────────────────────────────────────────────
    Photos live at /public/picture/  (moved from app/(public)/picture/).
@@ -72,15 +69,7 @@ const VALUE_FG: Record<ValueVariant, string> = { dark: "#fff", lime: "#1A1330", 
 const VALUE_SUB: Record<ValueVariant, string> = { dark: "rgba(255,255,255,0.78)", lime: "#3A3A1A", light: "#5A5470", light2: "#5A5470" };
 const VALUE_ICON: Record<ValueVariant, string> = { dark: "#C4AFFE", lime: "#3A1D9E", light: "#6C4CD8", light2: "#6C4CD8" };
 
-export default async function AboutPage() {
-  /* fetch up to 4 featured/active listings for the product showcase */
-  let featuredListings: Listing[] = [];
-  try {
-    const data = await getListings({ status: "ACTIVE", pageSize: 4 });
-    featuredListings = data.content.slice(0, 4);
-  } catch {
-    featuredListings = [];
-  }
+export default function AboutPage() {
   return (
     <div className="bg-white text-[#241F35]">
       {/* ══ HERO ══════════════════════════════════════════════════════════ */}
@@ -235,124 +224,6 @@ export default async function AboutPage() {
           })}
         </div>
       </section>
-
-      {/* ══ FEATURED PRODUCTS ═════════════════════════════════════════ */}
-      {featuredListings.length > 0 && (
-        <section className="bg-[#F6F5FA] py-14">
-          <div className="mx-auto max-w-[1240px] px-6">
-            {/* heading */}
-            <div className="mb-8 flex items-end justify-between">
-              <div>
-                <p className="text-[13px] font-bold uppercase tracking-widest text-[#6C4CD8]">
-                  Marketplace Picks
-                </p>
-                <h2 className="mt-1 text-[26px] font-extrabold text-[#1A1330]">
-                  Featured Products
-                </h2>
-              </div>
-              <Link
-                href="/products"
-                className="hidden rounded-xl border border-[#E2DFEC] bg-white px-5 py-2.5 text-[14px] font-bold text-[#6C4CD8] transition hover:bg-[#F1EFFA] sm:block"
-              >
-                View All →
-              </Link>
-            </div>
-
-            {/* product cards grid — max 4 */}
-            <div className="grid grid-cols-2 gap-5 md:grid-cols-4">
-              {featuredListings.map((listing) => {
-                const imgSrc =
-                  listing.images?.find((i) => i.isPrimary)?.uri ??
-                  listing.images?.[0]?.uri ??
-                  listing.thumbnailUri?.uri;
-
-                return (
-                  <article
-                    key={listing.uuid}
-                    className="group flex flex-col overflow-hidden rounded-2xl bg-white shadow-[0_2px_12px_rgba(36,31,53,0.08)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_32px_rgba(108,76,216,0.18)]"
-                  >
-                    {/* image */}
-                    <Link href={`/products/${listing.slug}`}>
-                      <div className="relative aspect-square w-full overflow-hidden bg-[#F5F3FA]">
-                        {imgSrc ? (
-                          <Image
-                            src={imgSrc}
-                            alt={listing.title}
-                            fill
-                            sizes="(max-width:640px) 50vw, 25vw"
-                            className="object-cover transition-transform duration-500 group-hover:scale-[1.06]"
-                            unoptimized={imgSrc.startsWith("http://")}
-                          />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center text-[#C4B5FD]">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" className="h-12 w-12">
-                              <rect x="3" y="3" width="18" height="18" rx="3" />
-                              <circle cx="8.5" cy="8.5" r="1.5" />
-                              <path d="m21 15-5-5L5 21" />
-                            </svg>
-                          </div>
-                        )}
-
-                        {/* featured badge */}
-                        {listing.isFeatured && (
-                          <span className="absolute left-3 top-3 rounded-lg bg-[#6C4CD8] px-2.5 py-1 text-[12px] font-bold text-white shadow-sm">
-                            Featured
-                          </span>
-                        )}
-                      </div>
-                    </Link>
-
-                    {/* body */}
-                    <div className="flex flex-1 flex-col gap-2 p-4">
-                      <Link
-                        href={`/products/${listing.slug}`}
-                        className="line-clamp-2 text-[14px] font-semibold leading-snug text-[#241F35] transition-colors hover:text-[#6C4CD8]"
-                      >
-                        {listing.title}
-                      </Link>
-
-                      {/* category */}
-                      {listing.category && (
-                        <span className="inline-flex w-fit rounded-full bg-[#F0EDFB] px-2.5 py-0.5 text-[11px] font-semibold text-[#6C4CD8]">
-                          {listing.category.name}
-                        </span>
-                      )}
-
-                      {/* stars */}
-                      <div className="flex items-center gap-0.5">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <Star key={i} size={11} fill="#F5B301" color="#F5B301" />
-                        ))}
-                        {listing.sold > 0 && (
-                          <span className="ml-1.5 text-[11px] text-[#8B85A0]">{listing.sold} sold</span>
-                        )}
-                      </div>
-
-                      {/* price + add to cart */}
-                      <div className="mt-auto flex items-center justify-between gap-2 pt-2">
-                        <span className="text-[18px] font-extrabold text-[#6C4CD8]">
-                          ${listing.price.toFixed(2)}
-                        </span>
-                        <AddToCartButton listingUuid={listing.uuid} size="sm" />
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-
-            {/* mobile view all */}
-            <div className="mt-6 flex justify-center sm:hidden">
-              <Link
-                href="/products"
-                className="rounded-xl border border-[#E2DFEC] bg-white px-6 py-3 text-[14px] font-bold text-[#6C4CD8]"
-              >
-                View All Products →
-              </Link>
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* ══ MISSION STRIP ═════════════════════════════════════════════════ */}
       <section className="bg-[#6C4CD8] py-14">

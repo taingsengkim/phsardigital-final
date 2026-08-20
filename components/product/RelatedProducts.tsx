@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ChevronRight, Star } from "lucide-react";
 import { getListings } from "@/app/api/listings";
-import type { Listing } from "@/app/api/listings";
+import type { Listing } from "@/lib/types";
 
 type Props = {
   categorySlug?: string;
@@ -11,9 +11,9 @@ type Props = {
 
 function ProductCard({ listing }: { listing: Listing }) {
   const primary =
-    listing.images?.find((img) => img.isPrimary) ??
+    listing.images?.find((img) => img.is_primary) ??
     listing.images?.[0];
-  const imgSrc = primary?.uri ?? listing.thumbnailUri?.uri;
+  const imgSrc = primary?.url;
 
   return (
     <article className="group relative flex flex-col overflow-hidden rounded-2xl bg-white shadow-[0_2px_12px_rgba(36,31,53,0.08)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_32px_rgba(108,76,216,0.18)]">
@@ -51,10 +51,10 @@ function ProductCard({ listing }: { listing: Listing }) {
         </Link>
 
         {/* sold count as proxy for popularity */}
-        {listing.sold > 0 && (
+        {typeof listing.stock === "number" && listing.stock > 0 && (
           <div className="flex items-center gap-1.5">
             <Star size={12} fill="#F5B301" className="text-[#F5B301]" />
-            <span className="text-[13px] text-[#8B85A0]">{listing.sold} sold</span>
+            <span className="text-[13px] text-[#8B85A0]">In stock</span>
           </div>
         )}
 
@@ -73,8 +73,8 @@ export default async function RelatedProducts({ categorySlug, excludeUuid }: Pro
   let listings: Listing[] = [];
 
   try {
-    const result = await getListings({ status: "ACTIVE", pageSize: 8 });
-    listings = result.content
+    const result = await getListings({ pageSize: 8 });
+    listings = result.data
       .filter((l) => l.uuid !== excludeUuid)
       .slice(0, 4);
   } catch {

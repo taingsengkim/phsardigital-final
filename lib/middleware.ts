@@ -1,10 +1,3 @@
-<<<<<<< HEAD
-// export { auth as middleware } from "@/auth";
-
-// export const config = {
-//   matcher: ["/listings/:path*", "/cart/:path*"], // add protected routes
-// };
-=======
 ﻿import { getSessionCookie } from "better-auth/cookies";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -20,4 +13,3 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: ["/listings/:path*", "/cart/:path*"],
 };
->>>>>>> origin/main

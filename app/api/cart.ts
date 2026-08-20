@@ -1,29 +1,8 @@
-<<<<<<< HEAD
-/**
- * Cart API — maps to /api/v1/carts
- * Real endpoints from: https://phsardigital.quizzy.it.com/swagger-ui/index.html
- *
- * The cart is seller-scoped: each seller has their own cart.
- * GET  /api/v1/carts                         → all carts (array)
- * GET  /api/v1/carts/{sellerId}              → cart for one seller
- * POST /api/v1/carts/items                   → add item
- * PATCH /api/v1/carts/{sellerId}/items/{uuid} → update qty
- * DELETE /api/v1/carts/{sellerId}/items/{uuid} → remove item
- * DELETE /api/v1/carts/{sellerId}            → clear cart
- */
-=======
 import type { Cart, CartItem } from "@/lib/types";
 import { generateDynamicMockListing } from "./listings";
->>>>>>> origin/main
 
-import { clientFetch } from "@/lib/api";
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
-<<<<<<< HEAD
-export type CartItem = {
-  uuid: string;
-  listingUuid: string;
-  title: string;
-=======
 /**
  * Pre-populated default multi-item cart containing 3 distinct products
  */
@@ -75,37 +54,11 @@ export type ApiCartItem = {
   title: string;
   thumbnailUri?: string | { uri?: string; objectName?: string } | null;
   fullPrice?: number | null;
->>>>>>> origin/main
   unitPrice: number;
   quantity: number;
   lineTotal: number;
 };
 
-<<<<<<< HEAD
-export type Cart = {
-  uuid: string;
-  sellerId: string;
-  items: CartItem[];
-  totalPrice: number;
-};
-
-/** GET /api/v1/carts — returns all seller carts for the logged-in buyer */
-export async function getMyCarts(): Promise<Cart[]> {
-  return clientFetch<Cart[]>("/api/v1/carts");
-}
-
-/** GET /api/v1/carts/{sellerId} */
-export async function getCartBySeller(sellerId: string): Promise<Cart> {
-  return clientFetch<Cart>(`/api/v1/carts/${sellerId}`);
-}
-
-/** POST /api/v1/carts/items */
-export async function addToCart(listingUuid: string, quantity = 1): Promise<Cart> {
-  return clientFetch<Cart>("/api/v1/carts/items", {
-    method: "POST",
-    body: JSON.stringify({ listingUuid, quantity }),
-  });
-=======
 export type VendorCart = {
   uuid: string;
   sellerId?: string | null;
@@ -228,36 +181,11 @@ export async function addToCart(
 
   mockCartItems.push(newItem);
   return newItem;
->>>>>>> origin/main
 }
 
-/** PATCH /api/v1/carts/{sellerId}/items/{itemUuid} */
 export async function updateCartItem(
-  sellerId: string,
-  itemUuid: string,
+  itemId: number,
   quantity: number
-<<<<<<< HEAD
-): Promise<Cart> {
-  return clientFetch<Cart>(`/api/v1/carts/${sellerId}/items/${itemUuid}`, {
-    method: "PATCH",
-    body: JSON.stringify({ quantity }),
-  });
-}
-
-/** DELETE /api/v1/carts/{sellerId}/items/{itemUuid} */
-export async function removeCartItem(
-  sellerId: string,
-  itemUuid: string
-): Promise<Cart> {
-  return clientFetch<Cart>(`/api/v1/carts/${sellerId}/items/${itemUuid}`, {
-    method: "DELETE",
-  });
-}
-
-/** DELETE /api/v1/carts/{sellerId} — clear entire cart */
-export async function clearCart(sellerId: string): Promise<void> {
-  return clientFetch<void>(`/api/v1/carts/${sellerId}`, { method: "DELETE" });
-=======
 ): Promise<CartItem> {
   if (BASE_URL) {
     try {
@@ -295,5 +223,4 @@ export async function removeCartItem(itemId: number): Promise<void> {
   }
 
   mockCartItems = mockCartItems.filter((i) => i.id !== itemId && i.listing_id !== itemId);
->>>>>>> origin/main
 }

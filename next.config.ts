@@ -13,30 +13,15 @@ const nextConfig: NextConfig = {
   reactCompiler: true,
   images: {
     remotePatterns: [
+      /* allow all http images (MinIO, local dev) */
       {
-<<<<<<< HEAD
-        // Phsar Digital API
-        protocol: "https",
-        hostname: "phsardigital.quizzy.it.com",
-      },
-      {
-        // MinIO object storage — where product images are actually hosted
-        protocol: "http",
-        hostname: "51.79.146.203",
-        port: "9000",
-        pathname: "/**",
-      },
-      {
-        protocol: "https",
-        hostname: "images.unsplash.com",
-=======
         protocol: "http",
         hostname: "**",
       },
+      /* allow all https images (API, Unsplash, CDNs) */
       {
         protocol: "https",
         hostname: "**",
->>>>>>> origin/main
       },
     ],
   },
