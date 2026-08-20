@@ -543,28 +543,28 @@ export default function AccountPageClient() {
                       href={item.href}
                       className={cn(
                         "flex w-full items-center justify-between gap-2 rounded-xl px-4 py-3 text-sm font-medium transition",
-                        item.id === "seller" && isSeller
-                          ? "bg-[#EDE9FB] text-[#6C4CD8] font-bold hover:bg-[#6C4CD8] hover:text-white group"
+                        isActive
+                          ? "bg-[#6C4CD8] text-white font-bold shadow-md shadow-[#6C4CD8]/20"
                           : "text-[#5A5470] hover:bg-[#F8F7FB] hover:text-[#1A1330]"
                       )}
                     >
                       <div className="flex min-w-0 flex-1 items-center gap-3">
-                        <Icon size={18} className="shrink-0 text-[#8D86A8] group-hover:text-white" />
+                        <Icon size={18} className={cn("shrink-0", isActive ? "text-white" : "text-[#8D86A8]")} />
                         <span className="truncate text-left">{item.label}</span>
                       </div>
                       {item.badge ? (
                         <span
                           className={cn(
-                            "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wide",
-                            isSeller
-                              ? "bg-[#6C4CD8] text-white group-hover:bg-white group-hover:text-[#6C4CD8]"
+                            "shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-wide",
+                            isActive
+                              ? "bg-white text-[#6C4CD8]"
                               : "bg-[#F1EFFA] text-[#6C4CD8]"
                           )}
                         >
                           {item.badge}
                         </span>
                       ) : (
-                        <ChevronsUpDown size={16} className="shrink-0 text-[#B5B0CA]" />
+                        <ChevronsUpDown size={16} className={cn("shrink-0", isActive ? "text-white/70" : "text-[#B5B0CA]")} />
                       )}
                     </Link>
                   );
