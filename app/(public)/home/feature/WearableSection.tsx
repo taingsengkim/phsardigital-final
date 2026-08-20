@@ -1,61 +1,119 @@
 "use client";
 
-import { Loader2, Shirt } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { ProductCard } from "../ProductCard";
 import { SectionHeader } from "../SectionHeader";
 import { useGetListingsByCategoryQuery } from "@/lib/api/homeApi";
 
+const FALLBACK_WEARABLE_LISTINGS = [
+  {
+    uuid: "w-1",
+    title: "Women's Floral Summer Dress",
+    slug: "womens-floral-summer-dress",
+    fullPrice: 45,
+    discountPrice: null,
+    sellerProfile: { businessName: "Fashion By Srey" },
+    category: { name: "Women's Fashion", slug: "womens-fashion" },
+    thumbnailUri: { uri: "/picture/pic3.jpg" },
+    averageRating: null,
+    reviewCount: 0,
+    isFavorite: false,
+  },
+  {
+    uuid: "w-2",
+    title: "Floral Midi Wrap Dress",
+    slug: "floral-midi-wrap-dress",
+    fullPrice: 168,
+    discountPrice: null,
+    sellerProfile: { businessName: "SOMA Coffee & Roastery" },
+    category: { name: "Women's Fashion", slug: "womens-fashion" },
+    thumbnailUri: { uri: "/picture/pic4.jpg" },
+    averageRating: null,
+    reviewCount: 0,
+    isFavorite: true,
+  },
+  {
+    uuid: "w-3",
+    title: "Rose Gold Square Watch & Bracelet Set",
+    slug: "rose-gold-square-watch-bracelet-set",
+    fullPrice: 129,
+    discountPrice: null,
+    sellerProfile: { businessName: "Jewel & Co." },
+    category: { name: "Women's Fashion", slug: "womens-fashion" },
+    thumbnailUri: { uri: "/picture/pic5.jpg" },
+    averageRating: null,
+    reviewCount: 0,
+    isFavorite: false,
+  },
+  {
+    uuid: "w-4",
+    title: "Men's Classic White Sneakers",
+    slug: "mens-classic-white-sneakers",
+    fullPrice: 79,
+    discountPrice: null,
+    sellerProfile: { businessName: "Sneaker World" },
+    category: { name: "Men's Fashion", slug: "mens-fashion" },
+    thumbnailUri: { uri: "/picture/pic6.jpg" },
+    averageRating: null,
+    reviewCount: 0,
+    isFavorite: false,
+  },
+  {
+    uuid: "w-5",
+    title: "Premium Leather Tote Bag",
+    slug: "premium-leather-tote-bag",
+    fullPrice: 89,
+    discountPrice: null,
+    sellerProfile: { businessName: "Leather Craft Co." },
+    category: { name: "Women's Fashion", slug: "womens-fashion" },
+    thumbnailUri: { uri: "/picture/pic2.jpg" },
+    averageRating: null,
+    reviewCount: 0,
+    isFavorite: false,
+  },
+];
+
 type Props = {
-  /** category slug to pull from — must match a real category on the API */
   categorySlug?: string;
   title?: string;
 };
 
-/**
- * A homepage rail for one category.
- *
- * Until the API gained real filtering this passed a category id that was
- * silently ignored, so the rail showed the whole catalogue. It now filters for
- * real — which means the slug has to match a category that actually exists.
- */
 export function WearableSection({
-  categorySlug = "wearable",
+  categorySlug = "womens-fashion",
   title = "Wearable",
 }: Props) {
-  const { data: response, isLoading } =
+  const { data: womensResponse, isLoading: loadingWomens } =
     useGetListingsByCategoryQuery(categorySlug);
 
-  const listings =
-    response?.data || (response as unknown as { content?: unknown[] })?.content || [];
+  const { data: mensResponse, isLoading: loadingMens } =
+    useGetListingsByCategoryQuery("mens-fashion");
+
+  const womensListings =
+    womensResponse?.data || (womensResponse as unknown as { content?: unknown[] })?.content || [];
+
+  const mensListings =
+    mensResponse?.data || (mensResponse as unknown as { content?: unknown[] })?.content || [];
+
+  const combinedApiListings = [...womensListings, ...mensListings];
+  const listings = combinedApiListings.length > 0 ? combinedApiListings : FALLBACK_WEARABLE_LISTINGS;
+  const isLoading = loadingWomens && loadingMens;
 
   return (
     <section className="mx-auto max-w-[1240px] px-6 py-8 font-sans">
-      <SectionHeader title={title} className="mb-5" />
+      <SectionHeader title={title} href="/products?category=womens-fashion" className="mb-5" />
 
       {isLoading ? (
         <div className="flex items-center justify-center gap-2 py-8 text-sm text-gray-500">
           <Loader2 className="size-5 animate-spin text-[#6C4CD8]" />
           Loading {title.toLowerCase()} items...
         </div>
-      ) : listings.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-[#EDEBF3] bg-white p-8 text-center">
-          <Shirt className="mb-2 size-10 text-[#6C4CD8]/50" />
-          <p className="text-sm font-semibold text-gray-700">
-            No {title.toLowerCase()} products yet
-          </p>
-          <p className="mt-1 text-xs text-gray-400">
-            Products in this category will appear here.
-          </p>
-        </div>
       ) : (
-        <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none [&::-webkit-scrollbar]:hidden">
+        <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-5">
           {listings.map((listing: any, index: number) => (
-            <div
+            <ProductCard
               key={listing.uuid || listing.id || index}
-              className="w-40 shrink-0 sm:w-48"
-            >
-              <ProductCard listing={listing} />
-            </div>
+              listing={listing}
+            />
           ))}
         </div>
       )}
