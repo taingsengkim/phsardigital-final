@@ -112,14 +112,11 @@ export default function Footer() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Phsar.Digital@com.kh"
-              className="w-44 px-2.5 py-2.5 text-[18px] text-[#3F3A52] outline-none
-                         placeholder:text-[#6C4CD8] placeholder:underline sm:w-52"
+              className="w-44 px-2.5 py-2.5 text-[18px] text-[#3F3A52] outline-none placeholder:text-[#6C4CD8] placeholder:underline sm:w-52"
             />
             <button
               type="submit"
-              className="flex items-center gap-1 bg-[#6C4CD8] px-4 py-2.5
-                         text-[18px] font-semibold text-white transition-colors
-                         hover:bg-[#5C3DC8]"
+              className="flex items-center gap-1 bg-[#6C4CD8] px-4 py-2.5 text-[18px] font-semibold text-white transition-colors hover:bg-[#5C3DC8]"
             >
               <Send size={17} /> Sign up
             </button>

@@ -1,10 +1,14 @@
 "use client";
 
+<<<<<<< HEAD
 import { useEffect, useState } from "react";
+=======
+>>>>>>> origin/main
 import { authClient } from "@/lib/auth-client";
 import { Button } from "../ui/button";
 
 export default function LoginButton() {
+<<<<<<< HEAD
   const [loggedIn, setLoggedIn] = useState(false);
 
   /* check session once on mount (client-only) */
@@ -33,6 +37,10 @@ export default function LoginButton() {
         Sign Out
       </Button>
     );
+=======
+  async function handleKeycloakSignIn() {
+    await authClient.signIn.oauth2({ providerId: "keycloak", callbackURL: "/" });
+>>>>>>> origin/main
   }
 
   return (

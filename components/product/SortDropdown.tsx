@@ -7,7 +7,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { ChevronDownIcon } from "lucide-react";
+import { ChevronsUpDownIcon } from "lucide-react";
 import type { ListingsQuery } from "@/lib/types";
 
 type SortOption = NonNullable<ListingsQuery["sort"]>;
@@ -30,7 +30,7 @@ export default function SortDropdown({ value, onChange }: Props) {
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="sm" className="gap-1 text-sm font-medium">
           Sort by
-          <ChevronDownIcon size={13} />
+          <ChevronsUpDownIcon size={13} />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[160px]">

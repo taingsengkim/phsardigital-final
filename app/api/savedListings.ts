@@ -23,16 +23,26 @@ export async function getFavorites(
   return clientFetch<PagedListings>(`/api/v1/favorites?${params}`);
 }
 
+<<<<<<< HEAD
 /** POST /api/v1/favorites/{listingUuid} */
 export async function addFavorite(listingUuid: string): Promise<string> {
   return clientFetch<string>(`/api/v1/favorites/${listingUuid}`, {
+=======
+export async function saveListings(listingId: number | string): Promise<SavedListing> {
+  const res = await fetch(`${BASE_URL}/api/saved`, {
+>>>>>>> origin/main
     method: "POST",
   });
 }
 
+<<<<<<< HEAD
 /** DELETE /api/v1/favorites — pass array of listing UUIDs to remove */
 export async function removeFavorites(listingUuids: string[]): Promise<void> {
   return clientFetch<void>("/api/v1/favorites", {
+=======
+export async function unsaveListing(listingId: number | string): Promise<void> {
+  const res = await fetch(`${BASE_URL}/api/saved/${listingId}`, {
+>>>>>>> origin/main
     method: "DELETE",
     body: JSON.stringify(listingUuids),
   });

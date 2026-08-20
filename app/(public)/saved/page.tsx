@@ -2,6 +2,7 @@ import SavedPageClient from "./SavedPageClient";
 
 export default function SavedPage() {
   return (
+<<<<<<< HEAD
     <div className="min-h-screen bg-[#F6F5FA]">
       <div className="mx-auto max-w-[1240px] px-6 py-10">
         <div className="mb-8">
@@ -10,8 +11,13 @@ export default function SavedPage() {
             Products you&apos;ve saved for later
           </p>
         </div>
+=======
+    <div className="min-h-screen bg-[#F9F8FD] text-[#1A1330] py-8">
+      <div className="mx-auto max-w-[1240px] px-4 sm:px-6">
+>>>>>>> origin/main
         <SavedPageClient />
       </div>
     </div>
   );
 }
+

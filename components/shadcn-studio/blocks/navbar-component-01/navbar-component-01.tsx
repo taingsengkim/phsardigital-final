@@ -1,26 +1,39 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState } from "react";
 import {
   Search,
   Heart,
   ShoppingBag,
-  User,
+  ShoppingCart,
   MapPin,
   Menu,
-  ChevronDown,
-  ShoppingCart,
+  ChevronsUpDown,
+  LogOut,
+  User,
+  Settings,
+  Package,
+  Store,
+  Clock,
+  BadgeCheck,
 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import LogoSvg from "@/assets/svg/logo";
+import SvgComponentSvg from "@/assets/svg/phsardigitalLogo";
 import LoginButton from "@/components/auth/LoginButton";
+import { useSession, logoutFromKeycloak } from "@/lib/auth-client";
+import { useGetMeQuery } from "@/lib/api/authApi";
+import { useGetSellerApplicationQuery } from "@/lib/api/sellerApi";
+import { useGetCategoriesQuery } from "@/lib/api/homeApi";
 
 const BRAND = "#6C4CD8";
 
@@ -37,194 +50,220 @@ const CATEGORIES = [
   "Cars & Vehicles",
 ];
 
+function getInitials(name?: string | null, email?: string | null): string {
+  if (name) {
+    const parts = name.trim().split(" ");
+    if (parts.length >= 2)
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    return parts[0][0].toUpperCase();
+  }
+  if (email) return email[0].toUpperCase();
+  return "U";
+}
+
 export default function Navbar() {
   const [search, setSearch] = useState("");
-  const [isLoggedIn] = useState(false);
   const savedCount = 2;
   const cartCount = 2;
+  const messageCount = 1;
+
+  const { data: session, isPending } = useSession();
+  const isLoggedIn = !!session?.user;
+  const user = session?.user;
+
+  const { data: profile } = useGetMeQuery(undefined, {
+    skip: !isLoggedIn,
+  });
+
+  const { data: sellerApp } = useGetSellerApplicationQuery(undefined, {
+    skip: !isLoggedIn,
+  });
+
+  const { data: apiCategories } = useGetCategoriesQuery();
+
+  const isSeller = Boolean((profile as any)?.isSeller || sellerApp?.status === "APPROVED");
+  const isPendingSeller = sellerApp?.status === "PENDING";
+
+  const userAvatar = profile?.avatarUrl || sellerApp?.logoUri || user?.image || "";
+  const storeName = sellerApp?.storeDisplayName || sellerApp?.businessName;
+
+  const categoriesList =
+    apiCategories && apiCategories.length > 0
+      ? apiCategories.map((c: any) => ({
+        name: c.name,
+        slug: c.slug || String(c.id),
+      }))
+      : CATEGORIES.map((cat) => ({
+        name: cat,
+        slug: cat.toLowerCase().replace(/\s+/g, "-"),
+      }));
+
+  async function handleLogout() {
+    await logoutFromKeycloak("/");
+  }
 
   return (
-    <header className="sticky top-0 z-50">
+    <header className="sticky top-0 z-50 shadow-sm transition-all duration-300">
       {/* ── top bar: white ── */}
-      <div style={{ background: "#fff", borderBottom: "1px solid #EDEBF3" }}>
-        <div
-          style={{
-            maxWidth: 1240,
-            margin: "0 auto",
-            padding: "12px 24px",
-            display: "flex",
-            alignItems: "center",
-            gap: 16,
-          }}
-        >
+      <div className="border-b border-[#EDEBF3] bg-white">
+        <div className="mx-auto flex max-w-[1240px] items-center gap-4 px-6 py-3">
           {/* logo */}
           <Link
             href="/home"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              textDecoration: "none",
-              flexShrink: 0,
-            }}
+            className="flex shrink-0 items-center gap-2 text-decoration-none group transition-transform hover:scale-105 active:scale-95"
             aria-label="Phsar Digital home"
           >
-            {/* real project logo mark */}
-            <LogoSvg style={{ width: 32, height: 32 }} />
-            <span style={{ fontSize: 17, fontWeight: 700, color: "#241F35" }}>
+            <Image
+              src="/picture/logo.png"
+              alt="Phsar Digital logo"
+              width={36}
+              height={36}
+              className="h-9 w-9 object-contain rounded-xl"
+            />
+            <span className="text-xl font-bold text-[#241F35]">
               Phsar Digital
             </span>
           </Link>
 
           {/* search */}
-          <div style={{ flex: 1, maxWidth: 480, position: "relative" }}>
+          <div className="relative w-full max-w-[480px]">
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search Products..."
               aria-label="Search products"
-              style={{
-                width: "100%",
-                padding: "9px 40px 9px 14px",
-                borderRadius: 999,
-                border: "1px solid #E2DFEC",
-                fontSize: 13,
-                background: "#F8F7FB",
-                outline: "none",
-              }}
+              className="w-full rounded-full border border-[#E2DFEC] bg-[#F8F7FC] py-2.5 pl-4 pr-10 text-sm outline-none transition-all focus:border-[#6C4CD8] focus:bg-white focus:ring-4 focus:ring-[#6C4CD8]/10"
             />
             <Search
-              size={15}
-              color={BRAND}
-              style={{
-                position: "absolute",
-                right: 14,
-                top: "50%",
-                transform: "translateY(-50%)",
-              }}
+              size={18}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-[#6C4CD8]"
             />
           </div>
 
-          <div style={{ flex: 1 }} />
+          <div className="flex-1" />
 
-          {/* icon buttons */}
-          {!isLoggedIn && (
+          {/* Saved â€” only when logged in */}
+          {isLoggedIn && (
             <Link
               href="/saved"
               aria-label="Saved"
-              style={{
-                position: "relative",
-                background: "#F1EFFA",
-                borderRadius: 999,
-                width: 36,
-                height: 36,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-              }}
+              className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F1EFFA] transition-all hover:bg-[#E5E0F5] hover:scale-105 active:scale-95 group"
             >
-              <Heart size={16} color={BRAND} />
+              <Heart size={18} className="text-[#6C4CD8] transition-transform group-hover:scale-110" />
               {savedCount > 0 && (
-                <span
-                  style={{
-                    position: "absolute",
-                    top: -4,
-                    right: -4,
-                    background: BRAND,
-                    color: "#fff",
-                    fontSize: 10,
-                    fontWeight: 700,
-                    borderRadius: 999,
-                    width: 16,
-                    height: 16,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
+                <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#6C4CD8] text-[10px] font-bold text-white shadow-sm animate-in zoom-in">
                   {savedCount}
                 </span>
               )}
             </Link>
           )}
 
-          {!isLoggedIn && (
+          {/* Orders — only when logged in */}
+          {isLoggedIn && (
             <Link
               href="/orders"
               aria-label="Orders"
-              style={{
-                position: "relative",
-                background: "#F1EFFA",
-                borderRadius: 999,
-                width: 36,
-                height: 36,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-              }}
+              className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F1EFFA] transition-all hover:bg-[#E5E0F5] hover:scale-105 active:scale-95 group"
             >
-              <ShoppingBag size={16} color={BRAND} />
+              <ShoppingBag size={18} className="text-[#6C4CD8] transition-transform group-hover:scale-110" />
             </Link>
           )}
 
-          {isLoggedIn ? (
-            <Link
-              href="/account"
-              aria-label="Account"
-              style={{
-                position: "relative",
-                background: "#F1EFFA",
-                borderRadius: 999,
-                width: 36,
-                height: 36,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-              }}
-            >
-              <User size={16} color={BRAND} />
-            </Link>
+          {/* Profile dropdown or Login */}
+          {isPending ? (
+            <div className="h-10 w-10 shrink-0 animate-pulse rounded-full bg-[#EDE9FB] opacity-60" />
+          ) : isLoggedIn ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  id="profile-menu-btn"
+                  aria-label="Profile menu"
+                  className="flex shrink-0 items-center gap-2 rounded-full p-1 transition-all hover:bg-[#F8F7FB] active:scale-95"
+                >
+                  {userAvatar ? (
+                    <img
+                      src={userAvatar}
+                      alt={user?.name ?? storeName ?? "Profile"}
+                      className="h-9 w-9 rounded-full border-2 border-[#6C4CD8] object-cover shadow-sm transition-transform hover:scale-105"
+                    />
+                  ) : (
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-[#6C4CD8]/30 bg-[#6C4CD8] text-sm font-bold text-white shadow-sm transition-transform hover:scale-105">
+                      {getInitials(user?.name, user?.email)}
+                    </div>
+                  )}
+                  <ChevronsUpDown size={14} className="text-[#6B7280] transition-transform group-hover:rotate-180" />
+                </button>
+              </DropdownMenuTrigger>
+
+              <DropdownMenuContent className="w-60 mt-2 p-2" align="end">
+                <DropdownMenuLabel>
+                  <div className="flex items-center gap-3 py-1">
+                    {userAvatar ? (
+                      <img
+                        src={userAvatar}
+                        alt="Avatar"
+                        className="h-10 w-10 rounded-full border border-[#6C4CD8]/30 object-cover shrink-0"
+                      />
+                    ) : (
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#6C4CD8] text-xs font-bold text-white">
+                        {getInitials(user?.name, user?.email)}
+                      </div>
+                    )}
+                    <div className="flex flex-col min-w-0">
+                      <span className="truncate text-sm font-bold text-[#1A1330]">
+                        {isSeller ? storeName || user?.name : user?.name || "My Account"}
+                      </span>
+                      <span className="truncate text-xs text-[#9B94B4]">
+                        {user?.email}
+                      </span>
+                    </div>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                  <DropdownMenuItem asChild>
+                    <Link href="/account" className="flex items-center gap-2.5 cursor-pointer py-2 transition-colors hover:text-[#6C4CD8]">
+                      <User size={16} className="text-[#6C4CD8]" />
+                      <span className="text-sm font-medium">My Account</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/orders" className="flex items-center gap-2.5 cursor-pointer py-2 transition-colors hover:text-[#6C4CD8]">
+                      <Package size={16} className="text-[#8D86A8]" />
+                      <span className="text-sm font-medium">My Orders</span>
+                    </Link>
+                  </DropdownMenuItem>
+
+                  <DropdownMenuItem asChild>
+                    <Link href="/account" className="flex items-center gap-2.5 cursor-pointer py-2 transition-colors hover:text-[#6C4CD8]">
+                      <Settings size={16} className="text-[#8D86A8]" />
+                      <span className="text-sm font-medium">Settings</span>
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={handleLogout}
+                  className="flex items-center gap-2.5 cursor-pointer py-2 text-rose-600 transition-colors focus:bg-rose-50 focus:text-rose-700"
+                >
+                  <LogOut size={16} />
+                  <span className="text-sm font-semibold">Sign Out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : (
             <LoginButton />
           )}
 
+          {/* Cart */}
           <Link
             href="/cart"
             aria-label="Cart"
-            style={{
-              position: "relative",
-              background: "#F1EFFA",
-              borderRadius: 999,
-              width: 36,
-              height: 36,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-            }}
+            className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F1EFFA] transition-all hover:bg-[#E5E0F5] hover:scale-105 active:scale-95 group ml-2"
           >
-            <ShoppingCart size={16} color={BRAND} />
+            <ShoppingCart size={18} className="text-[#6C4CD8] transition-transform group-hover:scale-110" />
             {cartCount > 0 && (
-              <span
-                style={{
-                  position: "absolute",
-                  top: -4,
-                  right: -4,
-                  background: BRAND,
-                  color: "#fff",
-                  fontSize: 10,
-                  fontWeight: 700,
-                  borderRadius: 999,
-                  width: 16,
-                  height: 16,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
+              <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#6C4CD8] text-[10px] font-bold text-white shadow-sm animate-in zoom-in">
                 {cartCount}
               </span>
             )}
@@ -233,50 +272,29 @@ export default function Navbar() {
       </div>
 
       {/* ── purple nav rail ── */}
-      <div style={{ background: BRAND }}>
-        <div
-          style={{
-            maxWidth: 1240,
-            margin: "0 auto",
-            padding: "8px 24px",
-            display: "flex",
-            alignItems: "center",
-            gap: 20,
-          }}
-        >
+      <div className="bg-[#6C4CD8] shadow-inner">
+        <div className="mx-auto flex max-w-[1240px] items-center gap-6 px-6 py-2.5">
           {/* category dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  background: "rgba(255,255,255,0.15)",
-                  border: "none",
-                  color: "#fff",
-                  borderRadius: 6,
-                  padding: "6px 12px",
-                  fontSize: 12,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  flexShrink: 0,
-                }}
+                className="flex shrink-0 items-center gap-2 rounded-lg bg-white/15 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-white/25 active:scale-95"
                 aria-label="Select Category"
               >
-                <Menu size={13} />
+                <Menu size={16} />
                 Select Category
-                <ChevronDown size={12} />
+                <ChevronsUpDown size={14} className="opacity-70 transition-transform group-hover:rotate-180" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="start">
+            <DropdownMenuContent className="w-56 mt-2" align="start">
               <DropdownMenuGroup>
-                {CATEGORIES.map((cat) => (
-                  <DropdownMenuItem key={cat} asChild>
+                {categoriesList.map((cat) => (
+                  <DropdownMenuItem key={cat.slug} asChild>
                     <Link
-                      href={`/category/${cat.toLowerCase().replace(/\s+/g, "-").replace(/[&]/g, "and")}`}
+                      href={`/products?category=${cat.slug}`}
+                      className="cursor-pointer text-sm transition-colors hover:text-[#6C4CD8]"
                     >
-                      {cat}
+                      {cat.name}
                     </Link>
                   </DropdownMenuItem>
                 ))}
@@ -285,48 +303,50 @@ export default function Navbar() {
           </DropdownMenu>
 
           {/* nav links */}
-          {NAV_LINKS.map((name) => (
-            <Link
-              key={name}
-              href={
-                name === "Home"
-                  ? "/home"
-                  : name === "All Products"
-                    ? "/products"
-                    : name === "Offers"
-                      ? "/products?sort=price_asc"
-                      : `#`
-              }
-              style={{
-                color: "rgba(255,255,255,0.92)",
-                fontSize: 12,
-                fontWeight: 600,
-                textDecoration: "none",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {name}
-            </Link>
-          ))}
+          <div className="flex items-center gap-5">
+            {NAV_LINKS.map((name) => (
+              <Link
+                key={name}
+                href={
+                  name === "Home"
+                    ? "/home"
+                    : name === "All Products"
+                      ? "/products"
+                      : name === "Offers"
+                        ? "/products?sort=price_asc"
+                        : `#`
+                }
+                className="relative text-sm font-medium text-white/90 whitespace-nowrap transition-colors hover:text-white after:absolute after:bottom-[-2px] after:left-0 after:h-[2px] after:w-0 after:bg-white after:transition-all hover:after:w-full"
+              >
+                {name}
+              </Link>
+            ))}
+          </div>
 
-          <div style={{ flex: 1 }} />
+          <div className="flex-1" />
+
+          {/* Seller Link in Nav Rail */}
+          {isSeller ? (
+            <Link
+              href="/seller-dashboard/home"
+              className="flex shrink-0 items-center gap-1.5 rounded-full bg-white px-4 py-1 text-xs font-bold text-[#6C4CD8] transition hover:bg-white/90 shadow-sm"
+            >
+              <Store size={14} />
+              <span>{storeName || "Seller Dashboard"}</span>
+            </Link>
+          ) : (
+            <Link
+              href="/account/seller-application"
+              className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/20 px-3.5 py-1 text-xs font-bold text-white transition hover:bg-white/30"
+            >
+              <Store size={14} />
+              <span>Become a Seller</span>
+            </Link>
+          )}
 
           {/* location pill */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 5,
-              color: "#fff",
-              fontSize: 12,
-              fontWeight: 600,
-              background: "rgba(255,255,255,0.12)",
-              borderRadius: 999,
-              padding: "5px 12px",
-              flexShrink: 0,
-            }}
-          >
-            <MapPin size={12} />
+          <div className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-white shadow-inner backdrop-blur-sm transition-colors hover:bg-white/20 cursor-default">
+            <MapPin size={14} className="opacity-80" />
             Phnom Penh
           </div>
         </div>

@@ -49,7 +49,7 @@
 }
 
 :root {
-  /* brand purple: #E7E3F9 → oklch approx 0.908 0.049 294 */
+  /* brand purple: #E7E3F9 -> oklch approx 0.908 0.049 294 (pre-existing, unused below, kept in case it's referenced elsewhere) */
   --brand: #E7E3F9;
   --background: oklch(1 0 0);       /* pure white */
   --foreground: oklch(0.145 0 0);
@@ -57,18 +57,21 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
+
+  /* Phsar Digital brand colors */
+  --primary: oklch(0.47 0.24 296.5);            /* #5F22D9 indigo-purple */
   --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
+  --secondary: oklch(0.8 0.13 70.5);            /* #F2A93B marigold gold */
   --secondary-foreground: oklch(0.205 0 0);
+
   --muted: oklch(0.97 0 0);
   --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --accent: oklch(0.94 0.035 296.5);            /* light purple tint, derived from primary */
+  --accent-foreground: oklch(0.35 0.2 296.5);
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --ring: oklch(0.47 0.24 296.5);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -77,7 +80,7 @@
   --radius: 0.625rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary: oklch(0.47 0.24 296.5);
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.97 0 0);
   --sidebar-accent-foreground: oklch(0.205 0 0);
@@ -92,18 +95,21 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
+
+  /* Same brand hues, lifted in lightness so they hold contrast on dark cards */
+  --primary: oklch(0.62 0.2 296.5);             /* lighter #5F22D9 for dark bg */
+  --primary-foreground: oklch(0.145 0 0);
+  --secondary: oklch(0.8 0.13 70.5);            /* gold reads fine unchanged on dark */
+  --secondary-foreground: oklch(0.145 0 0);
+
   --muted: oklch(0.269 0 0);
   --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  --accent: oklch(0.32 0.09 296.5);
+  --accent-foreground: oklch(0.9 0.05 296.5);
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --ring: oklch(0.62 0.2 296.5);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -124,7 +130,6 @@
     @apply border-border outline-ring/50;
   }
   html {
-    /* Base font: Inter at 18px — every rem/em and Tailwind size class scales from here */
     font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
     font-size: 24px;
     -webkit-font-smoothing: antialiased;
@@ -132,31 +137,111 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-size: 1rem; /* 18px */
+    font-size: 1rem;
     line-height: 1.65;
   }
 
-  /* Raise any hardcoded small sizes across the app */
   p, span, a, li, td, th, label, input, select, textarea, button {
     font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
   }
 
-  /* sidebar hover */
   .sidebar-link:hover {
     background: #F8F7FB;
   }
 
-  /* footer link hover on dark background */
   .footer-link:hover {
     color: #fff !important;
   }
 
-  /* hide scrollbar for category row */
   .scrollbar-none::-webkit-scrollbar {
     display: none;
   }
   .scrollbar-none {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+}
+
+/* Seller pages predate the shared color tokens in a few places. Keep every
+   seller route readable while those screens use the global light/dark switch. */
+@layer utilities {
+  .dark [data-seller-dashboard] .bg-white {
+    background-color: var(--card) !important;
+  }
+  .dark [data-seller-dashboard] .bg-gray-50,
+  .dark [data-seller-dashboard] .bg-gray-100,
+  .dark [data-seller-dashboard] .bg-slate-50 {
+    background-color: var(--muted) !important;
+  }
+  .dark [data-seller-dashboard] .text-gray-900,
+  .dark [data-seller-dashboard] .text-slate-900,
+  .dark [data-seller-dashboard] .text-slate-950,
+  .dark [data-seller-dashboard] .text-black {
+    color: var(--foreground) !important;
+  }
+  .dark [data-seller-dashboard] .text-gray-700,
+  .dark [data-seller-dashboard] .text-gray-600,
+  .dark [data-seller-dashboard] .text-slate-700,
+  .dark [data-seller-dashboard] .text-slate-600,
+  .dark [data-seller-dashboard] .text-slate-500,
+  .dark [data-seller-dashboard] .text-gray-500,
+  .dark [data-seller-dashboard] .text-gray-400,
+  .dark [data-seller-dashboard] .text-slate-400 {
+    color: var(--muted-foreground) !important;
+  }
+  .dark [data-seller-dashboard] .border-gray-50,
+  .dark [data-seller-dashboard] .border-gray-100,
+  .dark [data-seller-dashboard] .border-gray-200,
+  .dark [data-seller-dashboard] .border-slate-200 {
+    border-color: var(--border) !important;
+  }
+  .dark [data-seller-dashboard] .divide-gray-50 > :not(:last-child) {
+    border-color: var(--border) !important;
+  }
+  .dark [data-seller-dashboard] [class*="bg-[#F9FAFB]"] {
+    background-color: var(--background) !important;
+  }
+  .dark [data-seller-dashboard] [class*="bg-[#E6F4EA]"] {
+    background-color: color-mix(in oklab, #34a853 18%, var(--card)) !important;
+  }
+  .dark [data-seller-dashboard] [class*="bg-[#E8F0FE]"] {
+    background-color: color-mix(in oklab, #4285f4 18%, var(--card)) !important;
+  }
+  .dark [data-seller-dashboard] [class*="bg-[#f7f7f8]"],
+  .dark [data-seller-dashboard] [class*="bg-[#fafafa]"] {
+    background-color: var(--background) !important;
+  }
+  .dark [data-seller-dashboard] [class*="bg-[#f4f4f5]"],
+  .dark [data-seller-dashboard] [class*="bg-[#f5f5f6]"],
+  .dark [data-seller-dashboard] [class*="bg-[#f0f0f0]"] {
+    background-color: var(--muted) !important;
+  }
+  .dark [data-seller-dashboard] [class*="text-[#27282b]"],
+  .dark [data-seller-dashboard] [class*="text-[#25272a]"],
+  .dark [data-seller-dashboard] [class*="text-[#34383d]"] {
+    color: var(--foreground) !important;
+  }
+  .dark [data-seller-dashboard] [class*="text-[#777f89]"],
+  .dark [data-seller-dashboard] [class*="text-[#75808c]"],
+  .dark [data-seller-dashboard] [class*="text-[#737b84]"],
+  .dark [data-seller-dashboard] [class*="text-[#858c95]"],
+  .dark [data-seller-dashboard] [class*="text-[#66707a]"],
+  .dark [data-seller-dashboard] [class*="text-[#69727c]"],
+  .dark [data-seller-dashboard] [class*="text-[#75808a]"],
+  .dark [data-seller-dashboard] [class*="text-[#757d87]"],
+  .dark [data-seller-dashboard] [class*="text-[#7b858e]"] {
+    color: var(--muted-foreground) !important;
+  }
+  .dark [data-seller-dashboard] [class*="border-[#eceef0]"],
+  .dark [data-seller-dashboard] [class*="border-[#e1e3e6]"],
+  .dark [data-seller-dashboard] [class*="border-[#e4e5e7]"],
+  .dark [data-seller-dashboard] [class*="border-[#dfe2e5]"],
+  .dark [data-seller-dashboard] [class*="border-[#c7ccd1]"] {
+    border-color: var(--border) !important;
+  }
+  .dark [data-seller-dashboard] input,
+  .dark [data-seller-dashboard] textarea,
+  .dark [data-seller-dashboard] select {
+    color: var(--foreground);
   }
 }

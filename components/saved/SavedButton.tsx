@@ -6,7 +6,12 @@ import { cn } from "@/lib/utils";
 import { getAccessToken, redirectToLogin } from "@/lib/api";
 
 type Props = {
+<<<<<<< HEAD
   listingId: string | number;
+=======
+  listingId: number | string;
+  /** Whether the item is already saved (pass from parent/server) */
+>>>>>>> origin/main
   initialSaved?: boolean;
   className?: string;
 };

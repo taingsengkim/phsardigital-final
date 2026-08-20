@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, ArrowRight } from "lucide-react";
+import { ChevronsUpDown, ArrowUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Slide = {
@@ -169,7 +169,7 @@ export default function HeroBanner() {
               className="group inline-flex items-center gap-2.5 rounded-2xl bg-white px-7 py-3.5 text-sm font-bold text-[#6C4CD8] shadow-[0_8px_30px_rgba(0,0,0,0.25)] transition-all hover:scale-105 hover:shadow-[0_12px_40px_rgba(0,0,0,0.3)]"
             >
               {slide.ctaLabel}
-              <ArrowRight
+              <ArrowUpDown
                 size={16}
                 className="transition-transform duration-200 group-hover:translate-x-1"
               />
@@ -281,14 +281,14 @@ export default function HeroBanner() {
         aria-label="Previous"
         className="absolute left-4 top-1/2 z-20 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur-sm transition hover:bg-white/30 hover:scale-110"
       >
-        <ChevronLeft size={20} />
+        <ChevronsUpDown size={20} />
       </button>
       <button
         onClick={() => goTo(current + 1, "next")}
         aria-label="Next"
         className="absolute right-4 top-1/2 z-20 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur-sm transition hover:bg-white/30 hover:scale-110"
       >
-        <ChevronRight size={20} />
+        <ChevronsUpDown size={20} />
       </button>
 
       {/* progress bar keyframes */}

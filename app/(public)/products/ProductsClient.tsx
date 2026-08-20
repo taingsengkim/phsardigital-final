@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { LayoutGrid, List, ChevronDown, Heart, Star } from "lucide-react";
+import { LayoutGrid, List, ChevronsUpDown, Heart, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MOCK_PRODUCTS } from "@/lib/mock-products";
 
@@ -77,20 +77,33 @@ export default function ProductsClient() {
             <option value="priceDesc">Price: High to Low</option>
             <option value="newest">Newest</option>
           </select>
+<<<<<<< HEAD
           <ChevronDown size={13} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#8B85A0]" />
+=======
+          <ChevronsUpDown
+            size={12}
+            className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8B85A0]"
+          />
+>>>>>>> origin/main
         </div>
       </div>
 
       {/* ── grid ── */}
       {view === "grid" ? (
+<<<<<<< HEAD
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
           {paginated.map((p) => {
+=======
+        <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-5">
+          {MOCK_PRODUCTS.map((p) => {
+>>>>>>> origin/main
             const isSaved = saved.has(p.id);
             return (
               <article
                 key={p.id}
-                className="group overflow-hidden rounded-2xl bg-white shadow-[0_2px_12px_rgba(36,31,53,0.08)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_32px_rgba(108,76,216,0.18)]"
+                className="group relative overflow-hidden rounded-2xl bg-white shadow-[0_2px_12px_rgba(36,31,53,0.08)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_32px_rgba(108,76,216,0.18)]"
               >
+<<<<<<< HEAD
                 <div className="relative aspect-square w-full overflow-hidden bg-[#F5F3FA]">
                   <Image
                     src={p.image}
@@ -135,6 +148,66 @@ export default function ProductsClient() {
                   </div>
                   <p className="mt-1 text-[13px] text-[#8B85A0]">{p.storeName}</p>
                 </div>
+=======
+                <Link href={`/products/${p.slug}`} className="block">
+                  {/* image */}
+                  <div className="relative aspect-square w-full overflow-hidden bg-[#F5F3FA]">
+                    <Image
+                      src={p.image}
+                      alt={p.title}
+                      fill
+                      sizes="(max-width:640px) 50vw, 25vw"
+                      className="object-cover object-center transition-transform duration-500 group-hover:scale-[1.06]"
+                      unoptimized={p.image.startsWith("http")}
+                    />
+                    {/* discount badge */}
+                    {p.discountPercent && (
+                      <span className="absolute left-3 top-3 rounded-lg bg-[#6C4CD8] px-2.5 py-1 text-[13px] font-bold text-white shadow-sm">
+                        -{p.discountPercent}%
+                      </span>
+                    )}
+                  </div>
+
+                  {/* info */}
+                  <div className="p-4">
+                    <h3 className="line-clamp-2 text-[15px] font-semibold leading-snug text-[#241F35] transition-colors group-hover:text-[#6C4CD8]">
+                      {p.title}
+                    </h3>
+
+                    {/* stars */}
+                    <div className="mt-2 flex items-center gap-1">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star key={i} size={12} fill="#F5B301" color="#F5B301" />
+                      ))}
+                      <span className="ml-1 text-[13px] text-[#8B85A0]">({p.reviewCount})</span>
+                    </div>
+
+                    {/* prices */}
+                    <div className="mt-2 flex items-baseline gap-2">
+                      <span className="text-[18px] font-extrabold text-[#6C4CD8]">{usd(p.price)}</span>
+                      <span className="text-[13px] text-[#B3ADC4] line-through">{usd(p.originalPrice)}</span>
+                    </div>
+
+                    <p className="mt-1 text-[13px] text-[#8B85A0]">{p.storeName}</p>
+                  </div>
+                </Link>
+
+                {/* save button */}
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    toggleSave(p.id);
+                  }}
+                  aria-label={isSaved ? "Remove from saved" : "Save"}
+                  className={cn(
+                    "absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full shadow-md transition-all",
+                    isSaved ? "bg-[#6C4CD8]" : "bg-white/95 hover:bg-[#F1EFFA]"
+                  )}
+                >
+                  <Heart size={16} color={isSaved ? "#fff" : "#6C4CD8"} fill={isSaved ? "#fff" : "none"} />
+                </button>
+>>>>>>> origin/main
               </article>
             );
           })}
@@ -147,6 +220,7 @@ export default function ProductsClient() {
             return (
               <div
                 key={p.id}
+<<<<<<< HEAD
                 className="flex gap-4 overflow-hidden rounded-2xl bg-white shadow-[0_1px_6px_rgba(36,31,53,0.08)]"
               >
                 <div className="relative h-32 w-32 flex-shrink-0 overflow-hidden bg-[#F5F3FA]">
@@ -182,10 +256,61 @@ export default function ProductsClient() {
                   </div>
                   <p className="mt-0.5 text-[13px] text-[#8B85A0]">{p.storeName}</p>
                 </div>
+=======
+                className="group relative flex gap-3 overflow-hidden rounded-xl bg-white shadow-[0_1px_4px_rgba(36,31,53,0.08)] transition hover:shadow-md"
+              >
+                <Link href={`/products/${p.slug}`} className="flex flex-1 gap-3">
+                  <div className="relative h-28 w-28 flex-shrink-0 overflow-hidden bg-[#F5F3FA]">
+                    <Image
+                      src={p.image}
+                      alt={p.title}
+                      fill
+                      className="object-cover object-center transition-transform duration-300 group-hover:scale-105"
+                      unoptimized={p.image.startsWith("http")}
+                    />
+                    {p.discountPercent && (
+                      <span className="absolute left-1.5 top-1.5 rounded bg-[#6C4CD8] px-1.5 py-0.5 text-[9px] font-bold text-white">
+                        -{p.discountPercent}%
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-1 flex-col justify-center py-3 pr-3">
+                    <h3 className="text-sm font-semibold text-[#241F35] transition-colors group-hover:text-[#6C4CD8]">
+                      {p.title}
+                    </h3>
+                    <div className="mt-1 flex items-baseline gap-1.5">
+                      <span className="text-xs text-[#B3ADC4] line-through">
+                        {usd(p.originalPrice)}
+                      </span>
+                      <span className="text-base font-bold text-[#6C4CD8]">
+                        {usd(p.price)}
+                      </span>
+                    </div>
+                    <div className="mt-1 flex items-center gap-0.5">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star key={i} size={10} fill="#F5B301" color="#F5B301" />
+                      ))}
+                      <span className="ml-1 text-xs text-[#8B85A0]">
+                        ({p.reviewCount})
+                      </span>
+                    </div>
+                    <p className="mt-0.5 text-xs text-[#8B85A0]">{p.storeName}</p>
+                  </div>
+                </Link>
+
+>>>>>>> origin/main
                 <button
-                  onClick={() => toggleSave(p.id)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    toggleSave(p.id);
+                  }}
                   aria-label={isSaved ? "Remove from saved" : "Save"}
+<<<<<<< HEAD
                   className="mr-4 self-center flex h-9 w-9 items-center justify-center rounded-full border border-[#E2DFEC] bg-white transition hover:border-[#6C4CD8]"
+=======
+                  className="mr-3 self-center z-10 flex h-8 w-8 items-center justify-center rounded-full border border-[#E2DFEC] bg-white transition hover:border-[#6C4CD8]"
+>>>>>>> origin/main
                 >
                   <Heart size={15} color="#6C4CD8" fill={isSaved ? "#6C4CD8" : "none"} />
                 </button>

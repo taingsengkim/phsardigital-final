@@ -61,6 +61,7 @@ export default function CartItemRow({ item, sellerId, onUpdate }: Props) {
   return (
     <div className="flex gap-4 overflow-hidden rounded-2xl bg-white p-4 shadow-[0_2px_12px_rgba(36,31,53,0.07)] transition-all hover:shadow-[0_4px_20px_rgba(108,76,216,0.10)]">
 
+<<<<<<< HEAD
       {/* image */}
       <div className="relative h-[110px] w-[110px] flex-shrink-0 overflow-hidden rounded-xl border-2 border-[#E2DFEC]">
         <Image
@@ -73,6 +74,43 @@ export default function CartItemRow({ item, sellerId, onUpdate }: Props) {
         {discountPct && (
           <span className="absolute left-2 top-2 rounded-lg bg-[#6C4CD8] px-2 py-0.5 text-[12px] font-bold text-white">
             -{discountPct}%
+=======
+      {/* details */}
+      <div className="flex-1 min-w-0">
+        {listing && (
+          <>
+            <Link
+              href={`/products/${listing.slug}`}
+              className="text-sm font-medium line-clamp-2 hover:underline"
+            >
+              {listing.title}
+            </Link>
+            {listing.store_name && (
+              <span className="mt-0.5 inline-block text-[11px] font-bold text-[#6C4CD8]">
+                Sold by {listing.store_name}
+              </span>
+            )}
+          </>
+        )}
+        <p className="mt-1 text-sm text-muted-foreground">
+          ${listing?.price.toFixed(2)} each
+        </p>
+
+        {/* quantity controls */}
+        <div className="mt-2 flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-7 w-7"
+            onClick={() => changeQty(-1)}
+            disabled={loading}
+            aria-label="Decrease quantity"
+          >
+            <MinusIcon size={12} />
+          </Button>
+          <span className="w-6 text-center text-sm font-medium">
+            {item.quantity}
+>>>>>>> origin/main
           </span>
         )}
       </div>

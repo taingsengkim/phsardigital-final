@@ -29,7 +29,11 @@ export default function ProductGrid({ listings, className }: Props) {
   return (
     <div
       className={cn(
+<<<<<<< HEAD
         "grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4",
+=======
+        "grid grid-cols-2 gap-3.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-5",
+>>>>>>> origin/main
         className
       )}
     >

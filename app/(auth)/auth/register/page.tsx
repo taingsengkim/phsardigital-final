@@ -2,15 +2,62 @@
 
 import { useState } from "react";
 import Link from "next/link";
+<<<<<<< HEAD
 import { useRouter } from "next/navigation";
 import { Info, User, Mail, Lock, Eye, EyeOff, Phone, AtSign, ArrowRight, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AuthLeftPanel from "@/components/auth/AuthLeftPanel";
 import { registerUser } from "@/app/api/auth";
+=======
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Info, User, Mail, Lock, Eye, EyeOff, ArrowUpDown, CheckCircle2 } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { cn } from "@/lib/utils";
+import AuthLeftPanel from "@/components/auth/AuthLeftPanel";
+import { useRegisterMutation } from "@/lib/api/authApi";
+import { AuthToast, type ToastState } from "@/components/auth/AuthToast";
+
+function generateUsername(firstName: string, lastName: string): string {
+  const cleanFirst = firstName.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+  const cleanLast = lastName.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+  let username = `${cleanFirst}${cleanLast}`;
+  if (username.length < 3) {
+    username = `${username}user`;
+  }
+  if (username.length < 3) {
+    username = "user123";
+  }
+  return username.slice(0, 50);
+}
+
+const registerSchema = z
+  .object({
+    firstName: z.string().trim().min(1, "First name is required."),
+    lastName: z.string().trim().min(1, "Last name is required."),
+    email: z.string().trim().email("Enter a valid email address."),
+    phoneNumber: z
+      .string()
+      .trim()
+      .regex(/^[0-9]{9,11}$/, "Phone number must be 9 to 11 digits."),
+    password: z.string().min(8, "Password must be at least 8 characters."),
+    confirmPassword: z.string().min(1, "Please confirm your password."),
+    agreed: z.boolean().refine((value) => value, {
+      message: "Please accept the Terms of Service.",
+    }),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match.",
+    path: ["confirmPassword"],
+  });
+
+type RegisterFormValues = z.infer<typeof registerSchema>;
+>>>>>>> origin/main
 
 export default function RegisterPage() {
   const router = useRouter();
 
+<<<<<<< HEAD
   const [firstName,    setFirstName]    = useState("");
   const [lastName,     setLastName]     = useState("");
   const [username,     setUsername]     = useState("");
@@ -52,6 +99,92 @@ export default function RegisterPage() {
       setError(err instanceof Error ? err.message : "Registration failed. Please try again.");
     } finally {
       setSubmitting(false);
+=======
+  const [registerUser, { isLoading: isRegistering }] = useRegisterMutation();
+
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setError,
+    clearErrors,
+    formState: { errors, isSubmitting },
+  } = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      email: "",
+      phoneNumber: "",
+      password: "",
+      confirmPassword: "",
+      agreed: false,
+    },
+  });
+
+  const password = watch("password") ?? "";
+  const confirmPassword = watch("confirmPassword") ?? "";
+  const agreed = watch("agreed") ?? false;
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 3200);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+
+  async function onSubmit(values: RegisterFormValues) {
+    clearErrors("root");
+    setToast(null);
+
+    const generatedUsername = generateUsername(
+      values.firstName,
+      values.lastName,
+    );
+
+    try {
+      await registerUser({
+        username: generatedUsername,
+        password: values.password,
+        confirmPassword: values.confirmPassword,
+        email: values.email.trim(),
+        firstName: values.firstName.trim(),
+        lastName: values.lastName.trim(),
+        phoneNumber: values.phoneNumber.trim(),
+      }).unwrap();
+
+      setSuccess(true);
+      setToast({
+        type: "success",
+        message: "Account created successfully. You can sign in now.",
+      });
+    } catch (err: any) {
+      let msg = "Something went wrong. Please try again.";
+      if (err && typeof err === "object") {
+        const errorData = err.data;
+        if (errorData && typeof errorData === "object") {
+          if (
+            Array.isArray(errorData.errorDetails) &&
+            errorData.errorDetails.length > 0
+          ) {
+            msg = errorData.errorDetails
+              .map((d: any) => d.fieldMessage || d.message || d.field)
+              .filter(Boolean)
+              .join(", ");
+          } else {
+            msg =
+              errorData.message ||
+              errorData.error ||
+              errorData.detail ||
+              msg;
+          }
+        } else if (err.message) {
+          msg = err.message;
+        }
+      }
+
+      setError("root", { message: msg });
+      setToast({ type: "error", message: msg });
+>>>>>>> origin/main
     }
   }
 
@@ -126,7 +259,7 @@ export default function RegisterPage() {
                 href="/auth/login"
                 className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#6C4CD8] px-7 py-3 text-[14px] font-semibold text-white hover:bg-[#5C3DC8]"
               >
-                Go to Sign In <ArrowRight size={15} />
+                Go to Sign In <ArrowUpDown size={15} />
               </Link>
             </div>
           ) : (
@@ -155,11 +288,116 @@ export default function RegisterPage() {
 
               <form onSubmit={handleSubmit} noValidate className="space-y-4">
 
+<<<<<<< HEAD
                 {/* first + last name */}
                 <div className="grid grid-cols-2 gap-3">
                   <Field label="First Name" htmlFor="firstName">
                     <InputBox id="firstName" icon={<User size={15} className="text-[#B0A8C8]" />}
                       value={firstName} onChange={setFirstName} placeholder="John" autoComplete="given-name" />
+=======
+                <Field
+                  label="Last Name"
+                  htmlFor="lastName"
+                  error={errors.lastName?.message}
+                >
+                  <InputBox
+                    id="lastName"
+                    icon={<User size={15} className="text-[#B0A8C8]" />}
+                    inputProps={register("lastName")}
+                    placeholder="Doe"
+                    autoComplete="family-name"
+                    error={errors.lastName?.message}
+                  />
+                </Field>
+
+
+
+                <Field
+                  label="Email Address"
+                  htmlFor="email"
+                  error={errors.email?.message}
+                >
+                  <InputBox
+                    id="email"
+                    icon={<Mail size={15} className="text-[#B0A8C8]" />}
+                    type="email"
+                    inputProps={register("email")}
+                    placeholder="john@example.com"
+                    autoComplete="email"
+                    error={errors.email?.message}
+                  />
+                </Field>
+
+                <Field
+                  label="Phone Number"
+                  htmlFor="phoneNumber"
+                  error={errors.phoneNumber?.message}
+                >
+                  <InputBox
+                    id="phoneNumber"
+                    icon={<User size={15} className="text-[#B0A8C8]" />}
+                    inputProps={register("phoneNumber")}
+                    placeholder="012345678"
+                    autoComplete="tel"
+                    error={errors.phoneNumber?.message}
+                  />
+                </Field>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field
+                    label="Password"
+                    htmlFor="password"
+                    error={errors.password?.message}
+                  >
+                    <div className="relative">
+                      <Lock
+                        size={15}
+                        className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#B0A8C8]"
+                      />
+                      <input
+                        id="password"
+                        type={showPw ? "text" : "password"}
+                        placeholder="Min. 8 characters"
+                        autoComplete="new-password"
+                        className={cn(
+                          "w-full rounded-xl border bg-[#FAFAFE] py-3 pl-10 pr-11 text-[14px] text-[#1A1330] placeholder:text-[#C0B8D0] focus:outline-none focus:ring-2",
+                          errors.password
+                            ? "border-red-300 focus:border-red-400 focus:ring-red-200"
+                            : "border-[#E4DFEF] focus:border-[#6C4CD8] focus:ring-[#6C4CD8]/15",
+                        )}
+                        {...register("password")}
+                      />
+                      <EyeBtn
+                        show={showPw}
+                        onToggle={() => setShowPw((s) => !s)}
+                      />
+                    </div>
+                    {password.length > 0 && (
+                      <div className="mt-2 flex items-center gap-2">
+                        <div className="flex flex-1 gap-1">
+                          {[1, 2, 3].map((n) => (
+                            <div
+                              key={n}
+                              className={cn(
+                                "h-1 flex-1 rounded-full transition-all",
+                                pwStrength >= n
+                                  ? pwColors[pwStrength]
+                                  : "bg-[#EAE7F3]",
+                              )}
+                            />
+                          ))}
+                        </div>
+                        <span
+                          className={cn(
+                            "text-[11px] font-semibold",
+                            pwTexts[pwStrength],
+                          )}
+                        >
+                          {pwLabels[pwStrength]}
+                        </span>
+                      </div>
+                    )}
+>>>>>>> origin/main
                   </Field>
                   <Field label="Last Name" htmlFor="lastName">
                     <InputBox id="lastName" icon={<User size={15} className="text-[#B0A8C8]" />}
@@ -277,21 +515,38 @@ export default function RegisterPage() {
                 {/* submit */}
                 <button
                   type="submit"
+<<<<<<< HEAD
                   disabled={!agreed || submitting}
                   className={cn(
                     "flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-[14px] font-semibold text-white transition-all",
                     !agreed || submitting
+=======
+                  disabled={!agreed || isSubmitting || isRegistering}
+                  className={cn(
+                    "flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-[14px] font-semibold text-white transition-all shadow-[0_10px_24px_rgba(108,76,216,0.2)]",
+                    !agreed || isSubmitting || isRegistering
+>>>>>>> origin/main
                       ? "cursor-not-allowed bg-[#C7C2D6]"
                       : "bg-[#6C4CD8] hover:bg-[#5C3DC8] active:scale-[0.98]"
                   )}
                 >
+<<<<<<< HEAD
                   {submitting ? (
+=======
+                  {isSubmitting || isRegistering ? (
+>>>>>>> origin/main
                     <span className="flex items-center gap-2">
                       <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                       Creating account…
                     </span>
                   ) : (
+<<<<<<< HEAD
                     <>Create Account <ArrowRight size={16} /></>
+=======
+                    <>
+                      Create Account <ArrowUpDown size={16} />
+                    </>
+>>>>>>> origin/main
                   )}
                 </button>
               </form>
@@ -305,7 +560,7 @@ export default function RegisterPage() {
                   href="/auth/login"
                   className="inline-flex items-center gap-1.5 rounded-lg bg-[#EDE9FB] px-6 py-2.5 text-[13px] font-semibold text-[#6C4CD8] transition hover:bg-[#6C4CD8] hover:text-white"
                 >
-                  Sign in instead <ArrowRight size={14} />
+                  Sign in instead <ArrowUpDown size={14} />
                 </Link>
               </div>
 

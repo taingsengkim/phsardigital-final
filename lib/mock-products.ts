@@ -70,16 +70,23 @@ const STORES = [
 ];
 
 export const MOCK_PRODUCTS: MockProduct[] = Array.from({ length: 10 }).map(
-  (_, i) => ({
-    id: i + 1,
-    slug: `product-${i + 1}`,
-    title: TITLES[i],
-    image: IMAGES[i % IMAGES.length],
-    price: PRICES[i],
-    originalPrice: ORIGINAL_PRICES[i],
-    discountPercent: Math.round((1 - PRICES[i] / ORIGINAL_PRICES[i]) * 100),
-    rating: [4.8, 4.5, 4.2, 4.9, 4.1, 4.6, 4.3, 4.7, 4.4, 4.0][i],
-    reviewCount: [248, 87, 312, 56, 194, 73, 421, 139, 65, 28][i],
-    storeName: STORES[i],
-  })
+  (_, i) => {
+    const slug = TITLES[i]
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+
+    return {
+      id: i + 1,
+      slug,
+      title: TITLES[i],
+      image: IMAGES[i % IMAGES.length],
+      price: PRICES[i],
+      originalPrice: ORIGINAL_PRICES[i],
+      discountPercent: Math.round((1 - PRICES[i] / ORIGINAL_PRICES[i]) * 100),
+      rating: [4.8, 4.5, 4.2, 4.9, 4.1, 4.6, 4.3, 4.7, 4.4, 4.0][i],
+      reviewCount: [248, 87, 312, 56, 194, 73, 421, 139, 65, 28][i],
+      storeName: STORES[i],
+    };
+  }
 );

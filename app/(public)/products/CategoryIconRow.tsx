@@ -1,8 +1,5 @@
 import Link from "next/link";
-import {
-  LayoutGrid, Monitor, Smartphone,
-  Sofa, Shirt, Laptop, UtensilsCrossed, ShoppingBag as BagIcon, Car,
-} from "lucide-react";
+import { LayoutGrid, Monitor, Smartphone, Sofa, Shirt, Laptop, UtensilsCrossed, ShoppingBag as BagIcon, Car } from "lucide-react";
 
 const CATEGORIES = [
   { name: "Recommend",              slug: "",                         icon: LayoutGrid,      bg: "#EDEBF3", dark: false, active: true  },

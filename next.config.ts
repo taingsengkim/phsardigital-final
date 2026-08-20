@@ -14,6 +14,7 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
+<<<<<<< HEAD
         // Phsar Digital API
         protocol: "https",
         hostname: "phsardigital.quizzy.it.com",
@@ -28,6 +29,14 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "images.unsplash.com",
+=======
+        protocol: "http",
+        hostname: "**",
+      },
+      {
+        protocol: "https",
+        hostname: "**",
+>>>>>>> origin/main
       },
     ],
   },
