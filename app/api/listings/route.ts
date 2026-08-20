@@ -52,10 +52,16 @@ export async function GET(request: NextRequest) {
   const url = `${BASE_URL}/api/v1/listings?${upstream.toString()}`;
 
   try {
+    const authHeader = await getAuthHeader(request);
+    const headers: Record<string, string> = {
+      Accept: "application/json",
+    };
+    if (authHeader) {
+      headers["Authorization"] = authHeader;
+    }
+
     const res = await fetch(url, {
-      headers: {
-        Accept: "application/json",
-      },
+      headers,
       cache: "no-store",
     });
 

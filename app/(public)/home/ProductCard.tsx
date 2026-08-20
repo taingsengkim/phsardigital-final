@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -11,7 +11,7 @@ import {
   getPrices,
   formatPrice,
 } from "./listing-helpers";
-import { addFavorite } from "@/app/api/favorites";
+import { addFavorite, removeFavorites } from "@/app/api/favorites";
 
 type ProductCardProps = {
   listing: any;
@@ -21,7 +21,17 @@ type ProductCardProps = {
 };
 
 export function ProductCard({ listing, sellerName, isSavedPage, onRemove }: ProductCardProps) {
-  const [isSaved, setIsSaved] = useState(false);
+  const initialFav = Boolean(
+    listing?.isFavorite ?? listing?.is_favorite ?? listing?.isFav ?? false
+  );
+  const [isSaved, setIsSaved] = useState(initialFav);
+
+  useEffect(() => {
+    const fav = listing?.isFavorite ?? listing?.is_favorite ?? listing?.isFav;
+    if (typeof fav === "boolean") {
+      setIsSaved(fav);
+    }
+  }, [listing?.isFavorite, listing?.is_favorite, listing?.isFav]);
 
   const image = getPrimaryImage(listing);
   const rating = getAverageRating(listing);
@@ -89,9 +99,14 @@ export function ProductCard({ listing, sellerName, isSavedPage, onRemove }: Prod
                 e.preventDefault();
                 e.stopPropagation();
                 const targetUuid = listing.uuid || listing.slug || listing.id;
-                setIsSaved((prev) => !prev);
+                const nextSaved = !isSaved;
+                setIsSaved(nextSaved);
                 if (targetUuid) {
-                  await addFavorite(String(targetUuid));
+                  if (nextSaved) {
+                    await addFavorite(String(targetUuid));
+                  } else {
+                    await removeFavorites([String(targetUuid)]);
+                  }
                 }
               }}
               aria-label="Save item"

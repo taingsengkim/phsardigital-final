@@ -71,6 +71,8 @@ export type Listing = {
   stock?: number;
   stockQty?: number;
   isFeatured?: boolean;
+  isFavorite?: boolean;
+  is_favorite?: boolean;
   thumbnailObjectName?: string;
   store_id?: number;
   store_name?: string;
