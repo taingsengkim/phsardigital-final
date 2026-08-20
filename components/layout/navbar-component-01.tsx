@@ -16,6 +16,7 @@ import {
   Store,
   Clock,
   LogOut,
+  MessageSquare,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -208,6 +209,16 @@ export default function Navbar() {
               )}
 
               <Link
+                href="/messages"
+                aria-label="Messages"
+                title="Messages"
+                className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9 transition hover:scale-105"
+                style={{ background: "#F1EFFA" }}
+              >
+                <MessageSquare size={15} color={BRAND} />
+              </Link>
+
+              <Link
                 href="/orders"
                 aria-label="Orders"
                 className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9 transition hover:scale-105"
@@ -257,6 +268,13 @@ export default function Navbar() {
                         <Link href="/account" className="flex items-center gap-2 py-2">
                           <User size={16} className="text-[#6C4CD8]" />
                           <span>Account Details</span>
+                        </Link>
+                      </DropdownMenuItem>
+
+                      <DropdownMenuItem asChild className="rounded-xl cursor-pointer">
+                        <Link href="/messages" className="flex items-center gap-2 py-2">
+                          <MessageSquare size={16} className="text-[#6C4CD8]" />
+                          <span>Messages</span>
                         </Link>
                       </DropdownMenuItem>
 

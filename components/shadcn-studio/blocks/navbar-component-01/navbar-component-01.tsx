@@ -18,6 +18,7 @@ import {
   Store,
   Clock,
   BadgeCheck,
+  MessageSquare,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -142,7 +143,7 @@ export default function Navbar() {
 
           <div className="flex-1" />
 
-          {/* Saved â€” only when logged in */}
+          {/* Saved — only when logged in */}
           {isLoggedIn && (
             <Link
               href="/saved"
@@ -153,6 +154,22 @@ export default function Navbar() {
               {savedCount > 0 && (
                 <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#6C4CD8] text-[10px] font-bold text-white shadow-sm animate-in zoom-in">
                   {savedCount}
+                </span>
+              )}
+            </Link>
+          )}
+
+          {/* Messages — route to /messages */}
+          {isLoggedIn && (
+            <Link
+              href="/messages"
+              aria-label="Messages"
+              className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F1EFFA] transition-all hover:bg-[#E5E0F5] hover:scale-105 active:scale-95 group"
+            >
+              <MessageSquare size={18} className="text-[#6C4CD8] transition-transform group-hover:scale-110" />
+              {messageCount > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#6C4CD8] text-[10px] font-bold text-white shadow-sm animate-in zoom-in">
+                  {messageCount}
                 </span>
               )}
             </Link>
@@ -231,6 +248,13 @@ export default function Navbar() {
                     <Link href="/orders" className="flex items-center gap-2.5 cursor-pointer py-2 transition-colors hover:text-[#6C4CD8]">
                       <Package size={16} className="text-[#8D86A8]" />
                       <span className="text-sm font-medium">My Orders</span>
+                    </Link>
+                  </DropdownMenuItem>
+
+                  <DropdownMenuItem asChild>
+                    <Link href="/messages" className="flex items-center gap-2.5 cursor-pointer py-2 transition-colors hover:text-[#6C4CD8]">
+                      <MessageSquare size={16} className="text-[#8D86A8]" />
+                      <span className="text-sm font-medium">Messages</span>
                     </Link>
                   </DropdownMenuItem>
 
