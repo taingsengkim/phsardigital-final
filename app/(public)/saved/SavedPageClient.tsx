@@ -17,74 +17,7 @@ export default function SavedPageClient() {
     setLoading(true);
     try {
       const data = await getFavorites();
-      if (data && data.length > 0) {
-        setListings(data);
-      } else {
-        // Fallback sample data matching backend schema
-        setListings([
-          {
-            uuid: "3cd9eca1-520a-4314-afba-7d238cff1301",
-            sellerProfile: {
-              sellerId: "f6b81134-6785-42c0-bf54-d04fcf35ffae",
-              businessName: "Tinh Ey",
-              logoUri: "http://51.79.146.203:9000/phsardigital/d1ce4f34-d59c-4abc-bd90-c6c46eeb7567-FB_IMG_1739463967982.jpg",
-            },
-            category: { name: "Electronics", slug: "electronics" },
-            title: "Cats",
-            slug: "cats",
-            description: "this is car",
-            fullPrice: 12,
-            discountPrice: null,
-            stockQty: 10,
-            status: "ACTIVE",
-            thumbnailUri: {
-              uri: "http://51.79.146.203:9000/phsardigital/bcfe3bf3-3994-42f7-9a64-449e567b7559-FB_IMG_1744861544967.jpg",
-            },
-            averageRating: null,
-            reviewCount: 0,
-          },
-          {
-            uuid: "ac364012-6788-4df9-baf9-a7815753d9c1",
-            sellerProfile: {
-              sellerId: "6e443fad-e712-49f4-8e63-ad6c5e50f399",
-              businessName: "SOMA Coffee & Roastery",
-              logoUri: "http://51.79.146.203:9000/phsardigital/44ab3e99-17f1-4772-9536-af3a02ba94cd-image_4.png",
-            },
-            category: { name: "Electronics", slug: "electronics" },
-            title: "Wireless Mechanical Keyboard",
-            slug: "wireless-mechanical-keyboard",
-            fullPrice: 89.99,
-            discountPrice: null,
-            stockQty: 50,
-            status: "ACTIVE",
-            thumbnailUri: {
-              uri: "http://51.79.146.203:9000/phsardigital/991a0995-06c2-434d-9c1a-c7ef7fc63530-Screenshot_2026-05-06_142117.png",
-            },
-            averageRating: null,
-            reviewCount: 0,
-          },
-          {
-            uuid: "a99cbb20-21a9-4349-ab9f-30e1b6aff5c4",
-            sellerProfile: {
-              sellerId: "6e443fad-e712-49f4-8e63-ad6c5e50f399",
-              businessName: "SOMA Coffee & Roastery",
-              logoUri: "http://51.79.146.203:9000/phsardigital/44ab3e99-17f1-4772-9536-af3a02ba94cd-image_4.png",
-            },
-            category: { name: "Electronics", slug: "electronics" },
-            title: "ISTAD Friends Hoodie",
-            slug: "istad-friends-hoodie",
-            fullPrice: 25,
-            discountPrice: null,
-            stockQty: 100,
-            status: "ACTIVE",
-            thumbnailUri: {
-              uri: "http://51.79.146.203:9000/phsardigital/67a58950-ba22-4a79-a9a5-31865c44506b-ITE-FRIENDS.jpg",
-            },
-            averageRating: null,
-            reviewCount: 0,
-          },
-        ]);
-      }
+      setListings(Array.isArray(data) ? data : []);
     } catch {
       setListings([]);
     } finally {
