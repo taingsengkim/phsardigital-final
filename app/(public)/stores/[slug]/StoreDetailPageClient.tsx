@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { MOCK_STORES, DEFAULT_STORE_DETAILS } from "../mockStores";
 import type { StoreDetails, StoreProduct } from "../types";
+import { ProductCard } from "@/app/(public)/home/ProductCard";
 
 export default function StoreDetailPageClient({ slug }: { slug?: string }) {
   const safeSlug = slug || "storee-corner";
@@ -251,80 +252,17 @@ export default function StoreDetailPageClient({ slug }: { slug?: string }) {
 
           {/* Product Grid */}
           {displayProducts.length > 0 ? (
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4">
-              {displayProducts.map((product) => {
-                const isAdded = addedCartIds.includes(product.id);
-                return (
-                  <motion.div
-                    key={product.id}
-                    whileHover={{ y: -6, scale: 1.02, boxShadow: "0 20px 40px -12px rgba(108, 76, 216, 0.22)" }}
-                    className="group relative flex flex-col overflow-hidden rounded-3xl border border-[#EDEBF3] bg-white p-4.5 shadow-sm transition-colors hover:border-[#6C4CD8]/40"
-                  >
-                    <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-[#F8F7FB]">
-                      <Image
-                        src={product.image}
-                        alt={product.title}
-                        fill
-                        className="object-cover transition-transform duration-500 group-hover:scale-110"
-                      />
-                      {product.discountPercent && (
-                        <span className="absolute left-3 top-3 rounded-lg bg-[#FF385C] px-2.5 py-1 text-xs sm:text-sm font-extrabold text-white shadow-md">
-                          -{product.discountPercent}%
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="mt-4 flex flex-1 flex-col justify-between space-y-3">
-                      <div className="space-y-1.5">
-                        <span className="text-xs font-bold text-[#6C4CD8]">{store.name}</span>
-                        <Link href={`/products/${product.slug}`} className="block">
-                          <h3 className="line-clamp-2 text-base sm:text-lg font-extrabold text-[#1A1330] leading-snug transition-colors hover:text-[#6C4CD8]">
-                            {product.title}
-                          </h3>
-                        </Link>
-                      </div>
-
-                      <div className="pt-3 border-t border-[#EDEBF3]/70 space-y-3">
-                        <div className="flex items-center gap-1.5 text-xs sm:text-sm">
-                          <Star size={15} className="fill-amber-400 text-amber-400" />
-                          <span className="font-extrabold text-[#1A1330]">{product.rating}</span>
-                          <span className="text-xs sm:text-sm text-[#7C7596]">({product.reviewCount})</span>
-                        </div>
-
-                        <div className="flex items-baseline gap-2 flex-wrap">
-                          <span className="text-xl sm:text-2xl font-black text-[#6C4CD8]">
-                            ${product.price.toFixed(2)}
-                          </span>
-                          {product.originalPrice && (
-                            <span className="text-sm font-semibold text-[#9B94B4] line-through">
-                              ${product.originalPrice.toFixed(2)}
-                            </span>
-                          )}
-                        </div>
-
-                        <motion.button
-                          whileHover={{ scale: 1.03 }}
-                          whileTap={{ scale: 0.94 }}
-                          onClick={() => handleAddToCart(product)}
-                          className={`w-full flex items-center justify-center gap-2 rounded-2xl py-3 px-4 text-sm sm:text-base font-extrabold transition-all shadow-md ${
-                            isAdded ? "bg-emerald-600 text-white" : "bg-[#6C4CD8] text-white hover:bg-[#5B3EC4]"
-                          }`}
-                        >
-                          {isAdded ? (
-                            <>
-                              <Check size={17} /> Added
-                            </>
-                          ) : (
-                            <>
-                              <ShoppingCart size={17} /> Add to Cart
-                            </>
-                          )}
-                        </motion.button>
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
+            <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 font-sans">
+              {displayProducts.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  listing={{
+                    ...product,
+                    sellerProfile: { businessName: store.name },
+                  }}
+                  sellerName={store.name}
+                />
+              ))}
             </div>
           ) : (
             <div className="py-16 text-center rounded-3xl bg-white border border-[#EDEBF3] p-8">

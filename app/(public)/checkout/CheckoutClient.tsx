@@ -27,6 +27,9 @@ import {
   Clock,
   ArrowLeft,
   Search,
+  Camera,
+  Link2,
+  Eye,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getListingBySlug } from "@/app/api/listings";
@@ -50,8 +53,19 @@ type SavedAddress = {
   isDefault?: boolean;
   fullName: string;
   phone: string;
-  city: string;
-  address: string;
+  locationType?: "city" | "province";
+  khan?: string;
+  sangkat?: string;
+  village?: string;
+  streetNo?: string;
+  province?: string;
+  district?: string;
+  commune?: string;
+  googleMapLink?: string;
+  photo?: string | null;
+  photos?: string[];
+  city?: string;
+  address?: string;
 };
 
 type ChatMessage = {
@@ -78,6 +92,12 @@ const INITIAL_SAVED_ADDRESSES: SavedAddress[] = [
     isDefault: true,
     fullName: "Vanneth Sok",
     phone: "096 888 7777",
+    locationType: "city",
+    khan: "Ruessei Kaev",
+    sangkat: "Tuol Sangkae 2",
+    village: "Phum 1",
+    streetNo: "House #42B, Street 271",
+    googleMapLink: "https://maps.google.com",
     city: "Phnom Penh",
     address: "House #42B, Street 271, Tuol Sangkae 2, Ruessei Kaev",
   },
@@ -86,6 +106,12 @@ const INITIAL_SAVED_ADDRESSES: SavedAddress[] = [
     label: "Office / Work",
     fullName: "Vanneth Sok",
     phone: "012 345 6789",
+    locationType: "city",
+    khan: "Daun Penh",
+    sangkat: "Wat Phnom",
+    village: "Phum 4",
+    streetNo: "Canadia Tower, 18th Floor, Monivong Blvd",
+    googleMapLink: "https://maps.google.com",
     city: "Phnom Penh",
     address: "Canadia Tower, 18th Floor, Monivong Blvd, Wat Phnom, Daun Penh",
   },
@@ -94,6 +120,12 @@ const INITIAL_SAVED_ADDRESSES: SavedAddress[] = [
     label: "Siem Reap House",
     fullName: "Vanneth Sok",
     phone: "096 888 7777",
+    locationType: "province",
+    province: "Siem Reap",
+    district: "Svay Dangkum",
+    commune: "Sala Kamreuk",
+    village: "House #12, National Road 06",
+    googleMapLink: "https://maps.google.com",
     city: "Siem Reap",
     address: "House #12, National Road 06, Svay Dangkum",
   },
@@ -229,11 +261,28 @@ export default function CheckoutClient() {
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>(INITIAL_SAVED_ADDRESSES);
   const [selectedAddressId, setSelectedAddressId] = useState<string>("home");
 
-  // Form Input State
+  // Form Input State (City vs Province)
+  const [locationType, setLocationType] = useState<"city" | "province">("city");
+  const [locationTitle, setLocationTitle] = useState("Home (Phnom Penh)");
   const [fullName, setFullName] = useState("Vanneth Sok");
-  const [phone, setPhone] = useState("096 888 7777");
-  const [city, setCity] = useState("Phnom Penh");
-  const [address, setAddress] = useState("House #42B, Street 271, Tuol Sangkae 2, Ruessei Kaev");
+  const [phone, setPhone] = useState("012 345 6789");
+
+  // City User Fields (Phnom Penh)
+  const [khan, setKhan] = useState("Daun Penh");
+  const [sangkat, setSangkat] = useState("Wat Phnom");
+  const [village, setVillage] = useState("Phum 1");
+  const [streetNo, setStreetNo] = useState("Canadia Tower, 18th Floor, Monivong Blvd");
+
+  // Province User Fields
+  const [province, setProvince] = useState("Siem Reap");
+  const [district, setDistrict] = useState("Svay Dangkum");
+  const [commune, setCommune] = useState("Sala Kamreuk");
+
+  // Shared Optional Fields
+  const [googleMapLink, setGoogleMapLink] = useState("");
+  const [housePhotos, setHousePhotos] = useState<string[]>([]);
+  const [viewPhotoUrl, setViewPhotoUrl] = useState<string | null>(null);
+
   const [paymentMethod, setPaymentMethod] = useState<"pay_now_shop" | "cod">("pay_now_shop");
 
   // New location options
@@ -428,22 +477,51 @@ export default function CheckoutClient() {
     loadCheckoutData();
   }, [slugParam, qtyParam]);
 
+  // Formatted summary address string for invoice & order creation
+  const fullAddressString =
+    locationType === "city"
+      ? `${streetNo ? `Street ${streetNo}, ` : ""}${village ? `Phum ${village}, ` : ""}${sangkat ? `Sangkat ${sangkat}, ` : ""}${khan ? `Khan ${khan}, ` : ""}Phnom Penh`
+      : `${village ? `Phum ${village}, ` : ""}${commune ? `Khum/Commune ${commune}, ` : ""}${district ? `Srok/District ${district}, ` : ""}${province || "Province"}`;
+
   // Handle choosing a saved address
   function handleSelectSavedAddress(addr: SavedAddress) {
     setSelectedAddressId(addr.id);
+    setLocationTitle(addr.label || "Saved Location");
     setFullName(addr.fullName);
     setPhone(addr.phone);
-    setCity(addr.city);
-    setAddress(addr.address);
+    const type = addr.locationType || (addr.city === "Phnom Penh" ? "city" : "province");
+    setLocationType(type);
+    if (type === "city") {
+      setKhan(addr.khan || "Daun Penh");
+      setSangkat(addr.sangkat || "Wat Phnom");
+      setVillage(addr.village || "Phum 1");
+      setStreetNo(addr.streetNo || addr.address || "");
+    } else {
+      setProvince(addr.province || addr.city || "Siem Reap");
+      setDistrict(addr.district || "Svay Dangkum");
+      setCommune(addr.commune || "Sala Kamreuk");
+      setVillage(addr.village || addr.address || "");
+    }
+    setGoogleMapLink(addr.googleMapLink || "");
+    setHousePhotos(addr.photos || (addr.photo ? [addr.photo] : []));
   }
 
   // Handle clicking + Add New Location
   function handleAddNewAddressClick() {
     setSelectedAddressId("new");
+    setLocationTitle("");
     setFullName("Vanneth Sok");
-    setPhone("096 888 7777");
-    setCity("Phnom Penh");
-    setAddress("");
+    setPhone("012 345 6789");
+    setLocationType("city");
+    setKhan("");
+    setSangkat("");
+    setVillage("");
+    setStreetNo("");
+    setProvince("Siem Reap");
+    setDistrict("");
+    setCommune("");
+    setGoogleMapLink("");
+    setHousePhotos([]);
     setNewLabel("New Location");
   }
 
@@ -462,8 +540,16 @@ export default function CheckoutClient() {
   // Step 1: Open Confirmation Popup Modal
   function handleInitiateCheckout(e: React.FormEvent) {
     e.preventDefault();
-    if (!address.trim() || !phone.trim() || !fullName.trim()) {
-      setError("Please fill in all required shipping details.");
+    if (!phone.trim() || !fullName.trim()) {
+      setError("Please fill in your full name and phone number.");
+      return;
+    }
+    if (locationType === "city" && (!khan.trim() || !sangkat.trim() || !streetNo.trim())) {
+      setError("Please fill in your Khan, Sangkat, and Street No.");
+      return;
+    }
+    if (locationType === "province" && (!province.trim() || !district.trim() || !commune.trim())) {
+      setError("Please fill in your Province, District, and Commune.");
       return;
     }
     if (!selectedStore) {
@@ -480,14 +566,24 @@ export default function CheckoutClient() {
     setSubmitting(true);
 
     // Save new location if requested
-    if (selectedAddressId === "new" && saveNewAddress && address.trim()) {
+    if (selectedAddressId === "new" && saveNewAddress) {
       const createdAddr: SavedAddress = {
         id: `addr_${Date.now()}`,
-        label: newLabel.trim() || "Saved Location",
+        label: locationTitle.trim() || newLabel.trim() || "Saved Location",
         fullName: fullName.trim(),
         phone: phone.trim(),
-        city,
-        address: address.trim(),
+        locationType,
+        khan,
+        sangkat,
+        village,
+        streetNo,
+        province,
+        district,
+        commune,
+        googleMapLink,
+        photos: housePhotos,
+        city: locationType === "city" ? "Phnom Penh" : province,
+        address: fullAddressString,
       };
       setSavedAddresses((prev) => [...prev, createdAddr]);
       setSelectedAddressId(createdAddr.id);
@@ -495,7 +591,7 @@ export default function CheckoutClient() {
 
     try {
       const order = await createOrder({
-        shipping_address: `${fullName} (${phone}) - ${address}, ${city}`,
+        shipping_address: `${fullName} (${phone}) - ${fullAddressString}`,
         payment_method: paymentMethod,
         items: activeItems.map((i) => ({
           listing_id: typeof i.id === "number" ? i.id : parseInt(String(i.id), 10) || 101,
@@ -684,7 +780,7 @@ export default function CheckoutClient() {
             </div>
             <div className="flex justify-between text-[#8B85A0]">
               <span>Delivery Address</span>
-              <span className="font-medium text-right text-[#1A1330] max-w-[220px] truncate">{address}, {city}</span>
+              <span className="font-medium text-right text-[#1A1330] max-w-[220px] truncate">{fullAddressString}</span>
             </div>
           </div>
 
@@ -868,7 +964,7 @@ export default function CheckoutClient() {
 
                       <div className="border-t border-[#F0EDFB] pt-3 text-[12.5px] text-[#8B85A0] space-y-1">
                         <p><strong>Deliver To:</strong> {fullName} ({phone})</p>
-                        <p><strong>Address:</strong> {address}, {city}</p>
+                        <p><strong>Address:</strong> {fullAddressString}</p>
                         <p><strong>Payment Option:</strong> {paymentMethod === "pay_now_shop" ? "Pay Now (KHQR)" : "Cash on Delivery"}</p>
                       </div>
 
@@ -1084,21 +1180,60 @@ export default function CheckoutClient() {
 
               {/* ── ADDRESS FORM FIELDS ── */}
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 pt-4 border-t border-[#F0EDFB]">
-                {selectedAddressId === "new" && (
-                  <div className="sm:col-span-2">
-                    <label htmlFor="newLabel" className="mb-1.5 block text-[13px] font-bold text-[#1A1330]">
-                      Location Label (e.g. Condo, Parents' House) *
-                    </label>
-                    <input
-                      id="newLabel"
-                      type="text"
-                      value={newLabel}
-                      onChange={(e) => setNewLabel(e.target.value)}
-                      placeholder="Enter label name"
-                      className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
-                    />
+                {/* Location Type Selector */}
+                <div className="sm:col-span-2">
+                  <label className="mb-2 block text-[13px] font-extrabold text-[#1A1330] uppercase tracking-wide">
+                    Location Type *
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setLocationType("city")}
+                      className={cn(
+                        "flex-1 rounded-xl py-3 px-4 text-sm font-extrabold border-2 transition-all flex items-center justify-center gap-2 cursor-pointer",
+                        locationType === "city"
+                          ? "border-[#6C4CD8] bg-[#F8F7FC] text-[#6C4CD8] shadow-xs"
+                          : "border-[#EDEBF3] bg-white text-[#7C7596] hover:bg-[#F8F7FC]"
+                      )}
+                    >
+                      <Building size={16} />
+                      City User (Phnom Penh)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLocationType("province")}
+                      className={cn(
+                        "flex-1 rounded-xl py-3 px-4 text-sm font-extrabold border-2 transition-all flex items-center justify-center gap-2 cursor-pointer",
+                        locationType === "province"
+                          ? "border-[#6C4CD8] bg-[#F8F7FC] text-[#6C4CD8] shadow-xs"
+                          : "border-[#EDEBF3] bg-white text-[#7C7596] hover:bg-[#F8F7FC]"
+                      )}
+                    >
+                      <MapPin size={16} />
+                      Province User
+                    </button>
                   </div>
-                )}
+                </div>
+
+                {/* Location Title / Name */}
+                <div className="sm:col-span-2">
+                  <label htmlFor="locationTitle" className="mb-1.5 flex items-center justify-between text-[13px] font-bold text-[#1A1330]">
+                    <span className="flex items-center gap-1.5">
+                      <Building size={15} className="text-[#6C4CD8]" />
+                      Location Title / Name *
+                    </span>
+                    <span className="text-[12px] font-normal text-[#8B85A0]">e.g. Home, Office, Condo, Parents' House</span>
+                  </label>
+                  <input
+                    id="locationTitle"
+                    type="text"
+                    value={locationTitle}
+                    onChange={(e) => setLocationTitle(e.target.value)}
+                    required
+                    placeholder="e.g. Home (Phnom Penh), Work Office, Siem Reap Villa, Condo"
+                    className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
+                  />
+                </div>
 
                 <div>
                   <label htmlFor="fullName" className="mb-1.5 block text-[13px] font-bold text-[#1A1330]">
@@ -1125,42 +1260,235 @@ export default function CheckoutClient() {
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     required
-                    placeholder="096 123 4567"
+                    placeholder="012 345 6789"
                     className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
                   />
                 </div>
 
+                {/* ── CITY USER FIELDS (Phnom Penh) ── */}
+                {locationType === "city" && (
+                  <>
+                    <div>
+                      <label htmlFor="khan" className="mb-1.5 block text-[13px] font-bold text-[#1A1330]">
+                        Khan *
+                      </label>
+                      <input
+                        id="khan"
+                        type="text"
+                        value={khan}
+                        onChange={(e) => setKhan(e.target.value)}
+                        required
+                        placeholder="e.g. Daun Penh, Tuol Kork, Ruessei Kaev"
+                        className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="sangkat" className="mb-1.5 block text-[13px] font-bold text-[#1A1330]">
+                        Sangkat *
+                      </label>
+                      <input
+                        id="sangkat"
+                        type="text"
+                        value={sangkat}
+                        onChange={(e) => setSangkat(e.target.value)}
+                        required
+                        placeholder="e.g. Wat Phnom, Tuol Sangkae 2"
+                        className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="village" className="mb-1.5 block text-[13px] font-bold text-[#1A1330]">
+                        Village *
+                      </label>
+                      <input
+                        id="village"
+                        type="text"
+                        value={village}
+                        onChange={(e) => setVillage(e.target.value)}
+                        required
+                        placeholder="e.g. Phum 1, Phum 4"
+                        className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="streetNo" className="mb-1.5 block text-[13px] font-bold text-[#1A1330]">
+                        Street No. *
+                      </label>
+                      <input
+                        id="streetNo"
+                        type="text"
+                        value={streetNo}
+                        onChange={(e) => setStreetNo(e.target.value)}
+                        required
+                        placeholder="e.g. Street 271, House #42B"
+                        className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {/* ── PROVINCE USER FIELDS ── */}
+                {locationType === "province" && (
+                  <>
+                    <div>
+                      <label htmlFor="province" className="mb-1.5 block text-[13px] font-bold text-[#1A1330]">
+                        Province *
+                      </label>
+                      <select
+                        id="province"
+                        value={province}
+                        onChange={(e) => setProvince(e.target.value)}
+                        className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition cursor-pointer"
+                      >
+                        <option value="Siem Reap">Siem Reap (សៀមរាប)</option>
+                        <option value="Battambang">Battambang (បាត់ដំបង)</option>
+                        <option value="Kampong Cham">Kampong Cham (កំពង់ចាម)</option>
+                        <option value="Sihanoukville">Sihanoukville (ព្រះសីហនុ)</option>
+                        <option value="Kampot">Kampot (កំពត)</option>
+                        <option value="Kandal">Kandal (កណ្តាល)</option>
+                        <option value="Takeo">Takeo (តាកែវ)</option>
+                        <option value="Prey Veng">Prey Veng (ព្រៃវែង)</option>
+                        <option value="Svay Rieng">Svay Rieng (ស្វាយរៀង)</option>
+                        <option value="Kratie">Kratie (ក្រចេះ)</option>
+                        <option value="Ratanakiri">Ratanakiri (រតនគិរី)</option>
+                        <option value="Mondulkiri">Mondulkiri (មណ្ឌលគិរី)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label htmlFor="district" className="mb-1.5 block text-[13px] font-bold text-[#1A1330]">
+                        District (Srok) *
+                      </label>
+                      <input
+                        id="district"
+                        type="text"
+                        value={district}
+                        onChange={(e) => setDistrict(e.target.value)}
+                        required
+                        placeholder="e.g. Svay Dangkum, Prasat Bakong"
+                        className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="commune" className="mb-1.5 block text-[13px] font-bold text-[#1A1330]">
+                        Commune (Khum) *
+                      </label>
+                      <input
+                        id="commune"
+                        type="text"
+                        value={commune}
+                        onChange={(e) => setCommune(e.target.value)}
+                        required
+                        placeholder="e.g. Sala Kamreuk, Svay Dangkum"
+                        className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="villageProvince" className="mb-1.5 block text-[13px] font-bold text-[#1A1330]">
+                        Village *
+                      </label>
+                      <input
+                        id="villageProvince"
+                        type="text"
+                        value={village}
+                        onChange={(e) => setVillage(e.target.value)}
+                        required
+                        placeholder="e.g. Phum Wat Bo, Phum Mondul 1"
+                        className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {/* ── GOOGLE MAP LINK (OPTIONAL) ── */}
                 <div className="sm:col-span-2">
-                  <label htmlFor="city" className="mb-1.5 block text-[13px] font-bold text-[#1A1330]">
-                    City / Province *
+                  <label htmlFor="googleMapLink" className="mb-1.5 flex items-center justify-between text-[13px] font-bold text-[#1A1330]">
+                    <span className="flex items-center gap-1.5">
+                      <Link2 size={15} className="text-[#6C4CD8]" />
+                      GoogleMap (Link)
+                    </span>
+                    <span className="text-[12px] font-normal text-[#8B85A0]">Optional</span>
                   </label>
-                  <select
-                    id="city"
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
+                  <input
+                    id="googleMapLink"
+                    type="url"
+                    value={googleMapLink}
+                    onChange={(e) => setGoogleMapLink(e.target.value)}
+                    placeholder="https://maps.google.com/?q=11.5564,104.9282"
                     className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
-                  >
-                    <option value="Phnom Penh">Phnom Penh (ភ្នំពេញ)</option>
-                    <option value="Siem Reap">Siem Reap (សៀមរាប)</option>
-                    <option value="Battambang">Battambang (បាត់ដំបង)</option>
-                    <option value="Kampong Cham">Kampong Cham (កំពង់ចាម)</option>
-                    <option value="Sihanoukville">Sihanoukville (ព្រះសីហនុ)</option>
-                  </select>
+                  />
                 </div>
 
+                {/* ── HOUSE OR OFFICE PHOTOS (OPTIONAL MULTIPLE UPLOADS & LIGHTBOX VIEW) ── */}
                 <div className="sm:col-span-2">
-                  <label htmlFor="address" className="mb-1.5 block text-[13px] font-bold text-[#1A1330]">
-                    Street Address / House No. *
+                  <label className="mb-1.5 flex items-center justify-between text-[13px] font-bold text-[#1A1330]">
+                    <span className="flex items-center gap-1.5">
+                      <Camera size={15} className="text-[#6C4CD8]" />
+                      House or Office Photos
+                    </span>
+                    <span className="text-[12px] font-normal text-[#8B85A0]">Optional (Multiple)</span>
                   </label>
-                  <textarea
-                    id="address"
-                    rows={3}
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    required
-                    placeholder="House number, street name, Sangkat, Khan"
-                    className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition resize-none"
-                  />
+
+                  <div className="space-y-3">
+                    <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-sm font-semibold text-[#6C4CD8] transition hover:border-[#6C4CD8] hover:bg-[#F8F7FC]">
+                      <Camera size={18} />
+                      <span>{housePhotos.length > 0 ? `+ Add More Photos (${housePhotos.length} uploaded)` : "Upload House or Office Photos"}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files || []);
+                          files.forEach((file) => {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              if (reader.result) {
+                                setHousePhotos((prev) => [...prev, reader.result as string]);
+                              }
+                            };
+                            reader.readAsDataURL(file);
+                          });
+                          e.target.value = "";
+                        }}
+                      />
+                    </label>
+
+                    {/* Uploaded Photos Gallery Preview */}
+                    {housePhotos.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-3 pt-1">
+                        {housePhotos.map((photo, idx) => (
+                          <div
+                            key={idx}
+                            className="group relative h-16 w-16 cursor-pointer overflow-hidden rounded-2xl border-2 border-[#EDEBF3] shadow-xs transition-transform hover:scale-105 hover:border-[#6C4CD8]"
+                            onClick={() => setViewPhotoUrl(photo)}
+                            title="Click to view full image"
+                          >
+                            <img src={photo} alt={`House photo ${idx + 1}`} className="h-full w-full object-cover" />
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Eye size={16} className="text-white drop-shadow-md" />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setHousePhotos((prev) => prev.filter((_, i) => i !== idx));
+                              }}
+                              className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-white shadow-md hover:bg-rose-600 transition"
+                              title="Delete photo"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {selectedAddressId === "new" && (
@@ -1387,7 +1715,7 @@ export default function CheckoutClient() {
               </div>
               <div className="flex justify-between text-[#8B85A0]">
                 <span>Delivery Location</span>
-                <span className="font-semibold text-right text-[#1A1330] max-w-[200px] truncate">{address}, {city}</span>
+                <span className="font-semibold text-right text-[#1A1330] max-w-[200px] truncate">{fullAddressString}</span>
               </div>
               <div className="flex justify-between text-[#8B85A0]">
                 <span>Payment Option</span>
@@ -1421,6 +1749,33 @@ export default function CheckoutClient() {
                 Confirm &amp; Send Invoice
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── FULL-SIZE PHOTO PREVIEW LIGHTBOX MODAL ── */}
+      {viewPhotoUrl && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-xs animate-in fade-in"
+          onClick={() => setViewPhotoUrl(null)}
+        >
+          <div
+            className="relative max-h-[90vh] max-w-4xl overflow-hidden rounded-3xl bg-white p-2 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setViewPhotoUrl(null)}
+              className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-black/60 text-white transition hover:bg-black cursor-pointer"
+              title="Close full view"
+            >
+              <X size={20} />
+            </button>
+            <img
+              src={viewPhotoUrl}
+              alt="House Photo Full View"
+              className="max-h-[85vh] w-auto max-w-full rounded-2xl object-contain"
+            />
           </div>
         </div>
       )}

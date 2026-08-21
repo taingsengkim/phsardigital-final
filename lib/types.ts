@@ -71,6 +71,8 @@ export type Listing = {
   stock?: number;
   stockQty?: number;
   isFeatured?: boolean;
+  isFavorite?: boolean;
+  is_favorite?: boolean;
   thumbnailObjectName?: string;
   store_id?: number;
   store_name?: string;
@@ -137,11 +139,17 @@ export type ListingsQuery = {
 };
 
 export type PaginatedListings = {
-  data: Listing[];
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
+  data?: Listing[];
+  content?: any[];
+  total?: number;
+  page?: {
+    size?: number;
+    number?: number;
+    totalElements?: number;
+    totalPages?: number;
+  } | number;
+  pageSize?: number;
+  totalPages?: number;
 };
 
 /* ────────────────────────────────────────────────────────────────────────────

@@ -16,6 +16,7 @@ import {
   Store,
   Clock,
   LogOut,
+  MessageSquare,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -31,6 +32,7 @@ import { useGetMeQuery } from "@/lib/api/authApi";
 import { useGetSellerApplicationQuery, useGetSellerProfileQuery } from "@/lib/api/sellerApi";
 import { useGetCategoriesQuery } from "@/lib/api/homeApi";
 import LoginButton from "@/components/auth/LoginButton";
+import RegisterButton from "@/components/auth/RegisterButton";
 
 const BRAND = "#6C4CD8";
 const NAV_LINKS = ["Home", "Offers", "Brands", "Stores", "All Products"];
@@ -73,7 +75,7 @@ export default function Navbar() {
   const userAvatar =
     profile?.avatarUrl || sellerProfile?.logoUri || sellerApp?.logoUri || session?.user?.image || "";
   const storeName =
-    sellerProfile?.businessName || sellerApp?.storeDisplayName || sellerApp?.businessName;
+    sellerProfile?.businessName || sellerApp?.businessName;
 
   const categoriesList =
     apiCategories && apiCategories.length > 0
@@ -208,6 +210,16 @@ export default function Navbar() {
               )}
 
               <Link
+                href="/messages"
+                aria-label="Messages"
+                title="Messages"
+                className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9 transition hover:scale-105"
+                style={{ background: "#F1EFFA" }}
+              >
+                <MessageSquare size={15} color={BRAND} />
+              </Link>
+
+              <Link
                 href="/orders"
                 aria-label="Orders"
                 className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9 transition hover:scale-105"
@@ -260,6 +272,13 @@ export default function Navbar() {
                         </Link>
                       </DropdownMenuItem>
 
+                      <DropdownMenuItem asChild className="rounded-xl cursor-pointer">
+                        <Link href="/messages" className="flex items-center gap-2 py-2">
+                          <MessageSquare size={16} className="text-[#6C4CD8]" />
+                          <span>Messages</span>
+                        </Link>
+                      </DropdownMenuItem>
+
                       {isSeller && (
                         <DropdownMenuItem asChild className="rounded-xl cursor-pointer">
                           <Link href="/seller-dashboard/home" className="flex items-center gap-2 py-2 text-[#6C4CD8] font-bold">
@@ -280,7 +299,11 @@ export default function Navbar() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <LoginButton />
+                <div className="flex flex-shrink-0 items-center gap-2">
+                  {/* the drawer carries these on small screens */}
+                  <RegisterButton className="hidden sm:inline-flex" />
+                  <LoginButton />
+                </div>
               )}
 
               <Link
@@ -423,6 +446,16 @@ export default function Navbar() {
                 >
                   {isLoggedIn ? "My Account" : "Sign In"}
                 </Link>
+
+                {!isLoggedIn && (
+                  <Link
+                    href="/auth/register"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex-1 rounded-lg border border-white/60 py-1.5 text-center text-xs font-bold text-white"
+                  >
+                    Register
+                  </Link>
+                )}
                 {isSeller && (
                   <Link
                     href="/seller-dashboard/home"

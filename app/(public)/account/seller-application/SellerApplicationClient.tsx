@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   Store,
   FileText,
@@ -21,13 +20,11 @@ import {
   RotateCcw,
   Sparkles,
   ShoppingBag,
-  Info,
   ExternalLink,
   Clock,
   Briefcase,
   IdCard,
   Building,
-  Check,
 } from "lucide-react";
 import { useSession } from "@/lib/auth-client";
 import { useGetMeQuery } from "@/lib/api/authApi";
@@ -43,8 +40,15 @@ import {
 import { AuthToast, type ToastState } from "@/components/auth/AuthToast";
 import { cn } from "@/lib/utils";
 
+function hasRequiredVerificationDocuments(application: SellerApplication) {
+  const documents = application.documents || [];
+  const hasDocument = (docType: DocumentType) =>
+    documents.some((document) => document.docType === docType);
+
+  return hasDocument("BUSINESS_LICENSE") && hasDocument("ID_CARD");
+}
+
 export default function SellerApplicationClient() {
-  const router = useRouter();
   const { data: session, isPending: sessionPending } = useSession();
   const { data: profile, isLoading: profileLoading } = useGetMeQuery(undefined, {
     skip: !session?.user,
@@ -61,16 +65,17 @@ export default function SellerApplicationClient() {
   const [createApplication, { isLoading: isCreating }] =
     useCreateSellerApplicationMutation();
   const [uploadLogoFile, { isLoading: isUploadingLogo }] = useUploadLogoFileMutation();
-  const [uploadDocumentFile, { isLoading: isUploadingDoc }] = useUploadDocumentFileMutation();
+  const [uploadDocumentFile] = useUploadDocumentFileMutation();
   const [attachDocument] = useAttachDocumentMutation();
 
   // Wizard Step: 1 = Business Details, 2 = Document Upload, 3 = Waiting for Approval
   const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [hasSubmittedBusinessInfo, setHasSubmittedBusinessInfo] = useState(false);
+  const [isRefreshingApplication, setIsRefreshingApplication] = useState(false);
   const [reapplying, setReapplying] = useState(false);
 
   // Form State - Step 1: Business Information
   const [businessName, setBusinessName] = useState("");
-  const [storeDisplayName, setStoreDisplayName] = useState("");
   const [businessType, setBusinessType] = useState<
     "INDIVIDUAL" | "SOLE_PROPRIETORSHIP" | "PARTNERSHIP" | "COMPANY"
   >("INDIVIDUAL");
@@ -82,7 +87,7 @@ export default function SellerApplicationClient() {
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
   const [province, setProvince] = useState("");
-  const [googleMapsUrl, setGoogleMapsUrl] = useState("");
+  const [googleMapUrl, setGoogleMapUrl] = useState("");
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
 
@@ -114,20 +119,20 @@ export default function SellerApplicationClient() {
   useEffect(() => {
     if (sellerApp && sellerApp.status !== "NOT_FOUND" && !reapplying) {
       setBusinessName((prev) => prev || sellerApp.businessName || "");
-      setStoreDisplayName((prev) => prev || sellerApp.storeDisplayName || sellerApp.businessName || "");
       setBusinessType((prev) => prev || sellerApp.businessType || "INDIVIDUAL");
       setDescription((prev) => prev || sellerApp.description || "");
       setLogoUri((prev) => prev || sellerApp.logoUri || "");
       setAddress((prev) => prev || sellerApp.address || "");
       setCity((prev) => prev || sellerApp.city || "");
       setProvince((prev) => prev || sellerApp.province || "");
-      setGoogleMapsUrl((prev) => prev || sellerApp.googleMapsUrl || "");
+      setGoogleMapUrl((prev) => prev || sellerApp.googleMapUrl || "");
       setLatitude((prev) => prev || (sellerApp.latitude !== undefined ? String(sellerApp.latitude) : ""));
       setLongitude((prev) => prev || (sellerApp.longitude !== undefined ? String(sellerApp.longitude) : ""));
 
-      // Only auto-jump to Step 3 on INITIAL page load if application is already pending
+      // Resume at the first incomplete step. A PENDING application alone does not
+      // mean the required verification documents have been attached.
       if (!initialSynced && sellerApp.status === "PENDING") {
-        setStep(3);
+        setStep(hasRequiredVerificationDocuments(sellerApp) ? 3 : 2);
         setInitialSynced(true);
       }
     }
@@ -140,20 +145,16 @@ export default function SellerApplicationClient() {
 
     if (!businessName.trim()) {
       errors.businessName = "Shop / Business name is required.";
-    } else if (businessName.trim().length > 100) {
-      errors.businessName = "Business name cannot exceed 100 characters.";
+    } else if (businessName.trim().length > 255) {
+      errors.businessName = "Business name cannot exceed 255 characters.";
     }
 
-    if (storeDisplayName && storeDisplayName.trim().length > 100) {
-      errors.storeDisplayName = "Store display name cannot exceed 100 characters.";
+    if (description && description.length > 2000) {
+      errors.description = "Description cannot exceed 2000 characters.";
     }
 
-    if (description && description.length > 500) {
-      errors.description = "Description cannot exceed 500 characters.";
-    }
-
-    if (address && address.length > 200) {
-      errors.address = "Address cannot exceed 200 characters.";
+    if (address && address.length > 2000) {
+      errors.address = "Address cannot exceed 2000 characters.";
     }
 
     if (city && city.length > 100) {
@@ -164,10 +165,10 @@ export default function SellerApplicationClient() {
       errors.province = "Province cannot exceed 100 characters.";
     }
 
-    if (googleMapsUrl && googleMapsUrl.trim()) {
-      const url = googleMapsUrl.trim();
+    if (googleMapUrl && googleMapUrl.trim()) {
+      const url = googleMapUrl.trim();
       if (!url.startsWith("http://") && !url.startsWith("https://")) {
-        errors.googleMapsUrl = "Google Maps URL must start with http:// or https://";
+        errors.googleMapUrl = "Google Maps URL must start with http:// or https://";
       }
     }
 
@@ -248,9 +249,9 @@ export default function SellerApplicationClient() {
 
   // Auto extract lat/long on Google Maps URL input change
   async function handleGoogleMapsUrlChange(urlValue: string) {
-    setGoogleMapsUrl(urlValue);
-    if (fieldErrors.googleMapsUrl) {
-      setFieldErrors((prev) => ({ ...prev, googleMapsUrl: "" }));
+    setGoogleMapUrl(urlValue);
+    if (fieldErrors.googleMapUrl) {
+      setFieldErrors((prev) => ({ ...prev, googleMapUrl: "" }));
     }
 
     if (!urlValue.trim()) return;
@@ -308,8 +309,8 @@ export default function SellerApplicationClient() {
         const lng = pos.coords.longitude.toFixed(6);
         setLatitude(lat);
         setLongitude(lng);
-        if (!googleMapsUrl) {
-          setGoogleMapsUrl(`https://www.google.com/maps/@${lat},${lng},17z`);
+        if (!googleMapUrl) {
+          setGoogleMapUrl(`https://www.google.com/maps/@${lat},${lng},17z`);
         }
         setToast({
           type: "success",
@@ -361,8 +362,8 @@ export default function SellerApplicationClient() {
       if (res?.objectName) {
         setLogoObjectName(res.objectName);
       }
-      if (res?.uri || res?.url) {
-        setLogoUri(res.uri || res.url || "");
+      if (res?.uri) {
+        setLogoUri(res.uri);
       }
       setToast({
         type: "success",
@@ -394,8 +395,8 @@ export default function SellerApplicationClient() {
       let finalLat = latitude.trim() ? parseFloat(latitude) : undefined;
       let finalLng = longitude.trim() ? parseFloat(longitude) : undefined;
 
-      if ((finalLat === undefined || isNaN(finalLat) || finalLng === undefined || isNaN(finalLng)) && googleMapsUrl.trim()) {
-        const parsed = parseGoogleMapsUrl(googleMapsUrl.trim());
+      if ((finalLat === undefined || isNaN(finalLat) || finalLng === undefined || isNaN(finalLng)) && googleMapUrl.trim()) {
+        const parsed = parseGoogleMapsUrl(googleMapUrl.trim());
         if (parsed) {
           finalLat = parsed.lat;
           finalLng = parsed.lng;
@@ -406,28 +407,30 @@ export default function SellerApplicationClient() {
 
       const payload = {
         businessName: businessName.trim(),
-        storeDisplayName: storeDisplayName.trim() || businessName.trim(),
         businessType,
         description: description.trim() || undefined,
         logoObjectName: logoObjectName || undefined,
-        logoUri: logoUri || undefined,
         address: address.trim() || undefined,
         city: city.trim() || undefined,
         province: province.trim() || undefined,
-        googleMapsUrl: googleMapsUrl.trim() || undefined,
+        googleMapUrl: googleMapUrl.trim() || undefined,
         latitude: finalLat !== undefined && !isNaN(finalLat) ? finalLat : undefined,
         longitude: finalLng !== undefined && !isNaN(finalLng) ? finalLng : undefined,
       };
 
       await createApplication(payload).unwrap();
+      const refreshedApplication = await refetchApp().unwrap();
+      if (!refreshedApplication?.businessName) {
+        throw new Error("The server did not return the saved seller application.");
+      }
       setToast({
         type: "success",
         message: "Business information saved! Proceed to document upload.",
       });
       setReapplying(false);
+      setHasSubmittedBusinessInfo(true);
       setInitialSynced(true);
       setStep(2);
-      refetchApp();
     } catch (err: any) {
       console.error("Step 1 submit error:", err);
       const serverMessage = err?.data?.message || err?.message || "Failed to submit business details.";
@@ -485,7 +488,7 @@ export default function SellerApplicationClient() {
       }
 
       // 2. Attach document metadata JSON with exact docType and objectName properties to /seller-applications/me/documents
-      await attachDocument({
+      const attachedDocument = await attachDocument({
         docType,
         objectName,
       }).unwrap();
@@ -495,15 +498,16 @@ export default function SellerApplicationClient() {
         ...prev,
         [docType]: {
           fileName: file.name,
-          uri: fileRes?.uri || fileRes?.url || "",
+          uri: attachedDocument.uri || fileRes?.uri || "",
         },
       }));
+
+      await refetchApp().unwrap();
 
       setToast({
         type: "success",
         message: `${docType.replace("_", " ")} uploaded and attached successfully!`,
       });
-      refetchApp();
     } catch (err: any) {
       console.error("Document upload error details:", err);
       const serverMsg =
@@ -543,32 +547,96 @@ export default function SellerApplicationClient() {
   const currentApp = sellerApp && sellerApp.status !== "NOT_FOUND" && !reapplying ? sellerApp : null;
   const appStatus = currentApp?.status;
   const attachedDocs = currentApp?.documents || [];
+  const hasSavedBusinessInfo =
+    hasSubmittedBusinessInfo || Boolean(currentApp?.businessName?.trim());
 
   const licenseDoc =
-    attachedDocs.find(
-      (d) => d.type === "BUSINESS_LICENSE" || (d as any).docType === "BUSINESS_LICENSE"
-    ) || localDocs["BUSINESS_LICENSE"];
+    attachedDocs.find((document) => document.docType === "BUSINESS_LICENSE") ||
+    localDocs["BUSINESS_LICENSE"];
 
   const idCardDoc =
-    attachedDocs.find(
-      (d) => d.type === "ID_CARD" || (d as any).docType === "ID_CARD"
-    ) || localDocs["ID_CARD"];
+    attachedDocs.find((document) => document.docType === "ID_CARD") ||
+    localDocs["ID_CARD"];
 
   const otherDocs = [
-    ...attachedDocs.filter(
-      (d) => d.type === "OTHER" || (d as any).docType === "OTHER"
-    ),
+    ...attachedDocs
+      .filter((document) => document.docType === "OTHER")
+      .map((document) => ({
+        key: document.uuid,
+        fileName: document.objectName,
+        uri: document.uri,
+      })),
     ...(localDocs["OTHER"]
       ? [
           {
-            id: "local-other",
-            type: "OTHER" as DocumentType,
+            key: "local-other",
             fileName: localDocs["OTHER"].fileName,
             uri: localDocs["OTHER"].uri || "",
           },
         ]
       : []),
   ];
+
+  const hasRequiredDocuments = Boolean(licenseDoc && idCardDoc);
+
+  async function handleStepNavigation(targetStep: 1 | 2 | 3) {
+    if (targetStep === 1) {
+      setStep(1);
+      return;
+    }
+
+    if (!hasSavedBusinessInfo) {
+      setStep(1);
+      setToast({
+        type: "error",
+        message: "Complete and save your business information before continuing.",
+      });
+      return;
+    }
+
+    if (targetStep === 3 && !hasRequiredDocuments) {
+      const missingDocuments = [
+        !licenseDoc ? "Business License / Patent" : null,
+        !idCardDoc ? "National ID Card / Passport" : null,
+      ].filter(Boolean);
+      const message = `Upload the required document${missingDocuments.length > 1 ? "s" : ""} before submitting: ${missingDocuments.join(" and ")}.`;
+
+      setStep(2);
+      setNonFieldError(message);
+      setToast({ type: "error", message });
+      return;
+    }
+
+    if (targetStep === 3) {
+      setIsRefreshingApplication(true);
+      try {
+        const refreshedApplication = await refetchApp().unwrap();
+        if (
+          !refreshedApplication ||
+          !hasRequiredVerificationDocuments(refreshedApplication)
+        ) {
+          const message =
+            "The server has not confirmed both required documents yet. Please upload them again or retry.";
+          setStep(2);
+          setNonFieldError(message);
+          setToast({ type: "error", message });
+          return;
+        }
+      } catch (error) {
+        console.error("Seller application refresh error:", error);
+        const message =
+          "Could not confirm the application with the server. Please try again.";
+        setNonFieldError(message);
+        setToast({ type: "error", message });
+        return;
+      } finally {
+        setIsRefreshingApplication(false);
+      }
+    }
+
+    setNonFieldError(null);
+    setStep(targetStep);
+  }
 
   return (
     <div className="min-h-screen bg-[#F8F7FB] pb-20 font-sans">
@@ -729,6 +797,7 @@ export default function SellerApplicationClient() {
                   type="button"
                   onClick={() => {
                     setReapplying(true);
+                    setHasSubmittedBusinessInfo(false);
                     setStep(1);
                   }}
                   className="mt-5 inline-flex items-center gap-2 rounded-xl bg-rose-600 px-6 py-3 text-sm font-bold text-white shadow-md transition hover:bg-rose-700"
@@ -746,8 +815,9 @@ export default function SellerApplicationClient() {
             {/* ── Figma Step Progress Header ── */}
             <div className="grid grid-cols-3 gap-2 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5 sm:gap-4">
               {/* Step 1 Indicator */}
-              <div
-                onClick={() => setStep(1)}
+              <button
+                type="button"
+                onClick={() => handleStepNavigation(1)}
                 className={cn(
                   "flex flex-col items-center justify-center gap-1 rounded-xl p-3 text-center transition cursor-pointer hover:bg-[#F8F7FB]",
                   step === 1 ? "bg-[#EDE9FB] text-[#6C4CD8]" : "bg-transparent text-[#8D86A8]"
@@ -763,13 +833,15 @@ export default function SellerApplicationClient() {
                   1
                 </div>
                 <span className="text-xs font-bold">Business Information</span>
-              </div>
+              </button>
 
               {/* Step 2 Indicator */}
-              <div
-                onClick={() => setStep(2)}
+              <button
+                type="button"
+                onClick={() => handleStepNavigation(2)}
+                disabled={!hasSavedBusinessInfo}
                 className={cn(
-                  "flex flex-col items-center justify-center gap-1 rounded-xl p-3 text-center transition cursor-pointer hover:bg-[#F8F7FB]",
+                  "flex flex-col items-center justify-center gap-1 rounded-xl p-3 text-center transition hover:bg-[#F8F7FB] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent",
                   step === 2 ? "bg-[#EDE9FB] text-[#6C4CD8]" : "bg-transparent text-[#8D86A8]"
                 )}
                 title="View Step 2: Document Upload"
@@ -783,13 +855,19 @@ export default function SellerApplicationClient() {
                   2
                 </div>
                 <span className="text-xs font-bold">Document Upload</span>
-              </div>
+              </button>
 
               {/* Step 3 Indicator */}
-              <div
-                onClick={() => setStep(3)}
+              <button
+                type="button"
+                onClick={() => handleStepNavigation(3)}
+                disabled={
+                  !hasSavedBusinessInfo ||
+                  !hasRequiredDocuments ||
+                  isRefreshingApplication
+                }
                 className={cn(
-                  "flex flex-col items-center justify-center gap-1 rounded-xl p-3 text-center transition cursor-pointer hover:bg-[#F8F7FB]",
+                  "flex flex-col items-center justify-center gap-1 rounded-xl p-3 text-center transition hover:bg-[#F8F7FB] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent",
                   step === 3 ? "bg-[#EDE9FB] text-[#6C4CD8]" : "bg-transparent text-[#8D86A8]"
                 )}
                 title="View Step 3: Waiting Approval Status"
@@ -803,7 +881,7 @@ export default function SellerApplicationClient() {
                   3
                 </div>
                 <span className="text-xs font-bold">Waiting Approval</span>
-              </div>
+              </button>
             </div>
 
             {/* Non-field error banner */}
@@ -869,8 +947,8 @@ export default function SellerApplicationClient() {
                 </div>
 
                 <form onSubmit={handleStep1Submit} className="mt-8 space-y-6">
-                  {/* Shop Name & Store Display Name */}
-                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                  {/* Shop / Business Name */}
+                  <div>
                     <div>
                       <label htmlFor="businessName" className="mb-2 block text-sm font-semibold text-[#1A1330]">
                         Shop Name / Business Legal Name <span className="text-rose-500">*</span>
@@ -884,7 +962,7 @@ export default function SellerApplicationClient() {
                           if (fieldErrors.businessName) setFieldErrors((prev) => ({ ...prev, businessName: "" }));
                         }}
                         placeholder="e.g. Phsar Digital Electronics"
-                        maxLength={100}
+                        maxLength={255}
                         className={cn(
                           "w-full rounded-xl border bg-[#F8F7FB] px-4 py-3 text-sm text-[#1A1330] placeholder:text-[#B5B0CA] focus:bg-white focus:outline-none focus:ring-2",
                           fieldErrors.businessName
@@ -895,21 +973,6 @@ export default function SellerApplicationClient() {
                       {fieldErrors.businessName && (
                         <p className="mt-1 text-xs font-semibold text-rose-600">{fieldErrors.businessName}</p>
                       )}
-                    </div>
-
-                    <div>
-                      <label htmlFor="storeDisplayName" className="mb-2 block text-sm font-semibold text-[#1A1330]">
-                        Store Display Name (Public)
-                      </label>
-                      <input
-                        id="storeDisplayName"
-                        type="text"
-                        value={storeDisplayName}
-                        onChange={(e) => setStoreDisplayName(e.target.value)}
-                        placeholder="e.g. Phsar Tech Official Store"
-                        maxLength={100}
-                        className="w-full rounded-xl border border-[#E2DFEC] bg-[#F8F7FB] px-4 py-3 text-sm text-[#1A1330] placeholder:text-[#B5B0CA] focus:border-[#6C4CD8] focus:bg-white focus:outline-none"
-                      />
                     </div>
                   </div>
 
@@ -958,10 +1021,10 @@ export default function SellerApplicationClient() {
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
                       placeholder="Tell buyers what your store sells..."
-                      maxLength={500}
+                      maxLength={2000}
                       className="w-full rounded-xl border border-[#E2DFEC] bg-[#F8F7FB] p-4 text-sm text-[#1A1330] placeholder:text-[#B5B0CA] focus:border-[#6C4CD8] focus:bg-white focus:outline-none"
                     />
-                    <p className="mt-1 text-right text-xs text-[#8D86A8]">{description.length}/500</p>
+                    <p className="mt-1 text-right text-xs text-[#8D86A8]">{description.length}/2000</p>
                   </div>
 
                   {/* Business Address & Coordinates */}
@@ -991,7 +1054,7 @@ export default function SellerApplicationClient() {
                           value={address}
                           onChange={(e) => setAddress(e.target.value)}
                           placeholder="Street 271, House #12"
-                          maxLength={200}
+                          maxLength={2000}
                           className="w-full rounded-xl border border-[#E2DFEC] bg-[#F8F7FB] px-4 py-3 text-sm text-[#1A1330] focus:border-[#6C4CD8] focus:bg-white focus:outline-none"
                         />
                       </div>
@@ -1029,22 +1092,23 @@ export default function SellerApplicationClient() {
 
                     <div className="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-3">
                       <div>
-                        <label htmlFor="googleMapsUrl" className="mb-2 block text-xs font-semibold text-[#1A1330]">
+                        <label htmlFor="googleMapUrl" className="mb-2 block text-xs font-semibold text-[#1A1330]">
                           Google Maps Link (Auto-extracts Lat/Long)
                         </label>
                         <input
-                          id="googleMapsUrl"
+                          id="googleMapUrl"
                           type="url"
-                          value={googleMapsUrl}
+                          value={googleMapUrl}
                           onChange={(e) => handleGoogleMapsUrlChange(e.target.value)}
                           placeholder="Paste https://maps.google.com/@11.55,104.92..."
+                          maxLength={2000}
                           className={cn(
                             "w-full rounded-xl border bg-[#F8F7FB] px-4 py-3 text-sm text-[#1A1330] focus:bg-white focus:outline-none",
-                            fieldErrors.googleMapsUrl ? "border-rose-400" : "border-[#E2DFEC] focus:border-[#6C4CD8]"
+                            fieldErrors.googleMapUrl ? "border-rose-400" : "border-[#E2DFEC] focus:border-[#6C4CD8]"
                           )}
                         />
-                        {fieldErrors.googleMapsUrl && (
-                          <p className="mt-1 text-xs font-semibold text-rose-600">{fieldErrors.googleMapsUrl}</p>
+                        {fieldErrors.googleMapUrl && (
+                          <p className="mt-1 text-xs font-semibold text-rose-600">{fieldErrors.googleMapUrl}</p>
                         )}
                         <p className="mt-1 text-[11px] text-[#8D86A8]">
                           Paste a Google Maps link to auto-fill Latitude & Longitude below.
@@ -1144,7 +1208,11 @@ export default function SellerApplicationClient() {
                         <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-emerald-800 flex items-center justify-between">
                           <div className="flex items-center gap-2 min-w-0">
                             <CheckCircle2 size={18} className="text-emerald-600 shrink-0" />
-                            <span className="truncate text-xs font-bold">{licenseDoc.fileName || "License Attached"}</span>
+                            <span className="truncate text-xs font-bold">
+                              {("objectName" in licenseDoc
+                                ? licenseDoc.objectName
+                                : licenseDoc.fileName) || "License Attached"}
+                            </span>
                           </div>
                           {licenseDoc.uri && (
                             <a
@@ -1207,7 +1275,11 @@ export default function SellerApplicationClient() {
                         <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-emerald-800 flex items-center justify-between">
                           <div className="flex items-center gap-2 min-w-0">
                             <CheckCircle2 size={18} className="text-emerald-600 shrink-0" />
-                            <span className="truncate text-xs font-bold">{idCardDoc.fileName || "ID Attached"}</span>
+                            <span className="truncate text-xs font-bold">
+                              {("objectName" in idCardDoc
+                                ? idCardDoc.objectName
+                                : idCardDoc.fileName) || "ID Attached"}
+                            </span>
                           </div>
                           {idCardDoc.uri && (
                             <a
@@ -1289,7 +1361,7 @@ export default function SellerApplicationClient() {
                   {otherDocs.length > 0 && (
                     <div className="mt-3 flex flex-wrap gap-2">
                       {otherDocs.map((doc) => (
-                        <span key={doc.id || doc.uri} className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1 text-xs font-medium text-[#1A1330] border border-[#E2DFEC]">
+                        <span key={doc.key} className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1 text-xs font-medium text-[#1A1330] border border-[#E2DFEC]">
                           <FileCheck size={14} className="text-emerald-600" />
                           {doc.fileName || "Other Doc"}
                         </span>
@@ -1297,6 +1369,15 @@ export default function SellerApplicationClient() {
                     </div>
                   )}
                 </div>
+
+                {!hasRequiredDocuments && (
+                  <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-800">
+                    <AlertTriangle size={18} className="mt-0.5 shrink-0" />
+                    <p className="text-xs font-semibold">
+                      Upload both required verification documents before you can submit the application for admin review.
+                    </p>
+                  </div>
+                )}
 
                 {/* Submit & Step Navigation */}
                 <div className="flex items-center justify-between border-t border-[#EAE7F3] pt-6">
@@ -1310,10 +1391,24 @@ export default function SellerApplicationClient() {
 
                   <button
                     type="button"
-                    onClick={() => setStep(3)}
-                    className="inline-flex items-center gap-2 rounded-xl bg-[#6C4CD8] px-8 py-3 text-sm font-bold text-white shadow-md shadow-[#6C4CD8]/20 hover:bg-[#5C3DC8]"
+                    onClick={() => handleStepNavigation(3)}
+                    disabled={
+                      !hasRequiredDocuments ||
+                      uploadingDocType !== null ||
+                      isRefreshingApplication
+                    }
+                    className="inline-flex items-center gap-2 rounded-xl bg-[#6C4CD8] px-8 py-3 text-sm font-bold text-white shadow-md shadow-[#6C4CD8]/20 hover:bg-[#5C3DC8] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#6C4CD8]"
                   >
-                    Submit for Approval <ArrowRight size={16} />
+                    {isRefreshingApplication ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" />
+                        Confirming with server...
+                      </>
+                    ) : (
+                      <>
+                        Submit for Approval <ArrowRight size={16} />
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
