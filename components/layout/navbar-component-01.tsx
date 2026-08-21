@@ -189,44 +189,63 @@ export default function Navbar() {
                 </Link>
               )}
 
-              {/* Favorite / Saved link — only when logged in */}
+              {/* Action Icons — only when logged in */}
               {isLoggedIn && (
-                <Link
-                  href="/saved"
-                  aria-label="Saved"
-                  className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9 transition hover:scale-105"
-                  style={{ background: "#F1EFFA" }}
-                >
-                  <Heart size={15} color={BRAND} />
-                  {savedCount > 0 && (
-                    <span
-                      className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white"
-                      style={{ background: BRAND }}
-                    >
-                      {savedCount}
-                    </span>
-                  )}
-                </Link>
+                <>
+                  <Link
+                    href="/saved"
+                    aria-label="Saved"
+                    className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9 transition hover:scale-105"
+                    style={{ background: "#F1EFFA" }}
+                  >
+                    <Heart size={15} color={BRAND} />
+                    {savedCount > 0 && (
+                      <span
+                        className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white"
+                        style={{ background: BRAND }}
+                      >
+                        {savedCount}
+                      </span>
+                    )}
+                  </Link>
+
+                  <Link
+                    href="/messages"
+                    aria-label="Messages"
+                    title="Messages"
+                    className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9 transition hover:scale-105"
+                    style={{ background: "#F1EFFA" }}
+                  >
+                    <MessageSquare size={15} color={BRAND} />
+                  </Link>
+
+                  <Link
+                    href="/orders"
+                    aria-label="Orders"
+                    className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9 transition hover:scale-105"
+                    style={{ background: "#F1EFFA" }}
+                  >
+                    <ShoppingBag size={15} color={BRAND} />
+                  </Link>
+
+                  <Link
+                    href="/cart"
+                    aria-label="Cart"
+                    className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9 transition hover:scale-105"
+                    style={{ background: "#F1EFFA" }}
+                  >
+                    <ShoppingCart size={15} color={BRAND} />
+                    {cartCount > 0 && (
+                      <span
+                        className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white"
+                        style={{ background: BRAND }}
+                      >
+                        {cartCount}
+                      </span>
+                    )}
+                  </Link>
+                </>
               )}
-
-              <Link
-                href="/messages"
-                aria-label="Messages"
-                title="Messages"
-                className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9 transition hover:scale-105"
-                style={{ background: "#F1EFFA" }}
-              >
-                <MessageSquare size={15} color={BRAND} />
-              </Link>
-
-              <Link
-                href="/orders"
-                aria-label="Orders"
-                className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9 transition hover:scale-105"
-                style={{ background: "#F1EFFA" }}
-              >
-                <ShoppingBag size={15} color={BRAND} />
-              </Link>
 
               {/* Account / Login Dropdown */}
               {isLoggedIn ? (
@@ -305,23 +324,6 @@ export default function Navbar() {
                   <LoginButton />
                 </div>
               )}
-
-              <Link
-                href="/cart"
-                aria-label="Cart"
-                className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9 transition hover:scale-105"
-                style={{ background: "#F1EFFA" }}
-              >
-                <ShoppingCart size={15} color={BRAND} />
-                {cartCount > 0 && (
-                  <span
-                    className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white"
-                    style={{ background: BRAND }}
-                  >
-                    {cartCount}
-                  </span>
-                )}
-              </Link>
             </div>
           </div>
 
