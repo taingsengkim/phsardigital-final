@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronRight,
   Truck,
@@ -262,7 +263,15 @@ export default function CheckoutClient() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showEditCartModal, setShowEditCartModal] = useState(false);
   const [showDeleteCartConfirmModal, setShowDeleteCartConfirmModal] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [orderCompleted, setOrderCompleted] = useState<{ id: number; total: number; storeName: string } | null>(null);
+
+  function triggerToast(msg: string) {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 4000);
+  }
 
   // Saved Addresses State
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>(INITIAL_SAVED_ADDRESSES);
@@ -574,6 +583,9 @@ export default function CheckoutClient() {
     // Optimistic UI update: filter out all items belonging to this store
     const remainingItems = items.filter((i) => i.storeName !== storeToDelete);
     setItems(remainingItems);
+
+    // Trigger success toast notification banner
+    triggerToast(`Successfully removed all items from ${storeToDelete}!`);
 
     // Auto-switch to next available store if available
     const remainingStores = Array.from(new Set(remainingItems.map((i) => i.storeName)));
@@ -2040,6 +2052,31 @@ export default function CheckoutClient() {
           </div>
         </div>
       )}
+
+      {/* ── SUCCESS TOAST NOTIFICATION ── */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            className="fixed top-24 right-6 z-50 flex items-center gap-3.5 rounded-3xl bg-[#00875A] p-4 pr-6 text-white shadow-2xl border border-emerald-400/30 max-w-md w-full"
+          >
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/20 text-white">
+              <CheckCircle2 size={24} />
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <p className="text-[15px] font-black text-white leading-snug">
+                Cart Cleared Successfully!
+              </p>
+              <p className="text-[13px] font-medium text-emerald-100 truncate mt-0.5">
+                {toastMessage}
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
