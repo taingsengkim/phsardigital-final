@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { HeartIcon } from "lucide-react";
+import { authClient, useSession } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { saveListings, unsaveListing } from "@/app/api/savedListings";
@@ -18,10 +19,20 @@ export default function SavedButton({
   initialSaved = false,
   className,
 }: Props) {
+  const { data: session } = useSession();
+  const isLoggedIn = Boolean(session?.user);
+
   const [saved, setSaved] = useState(initialSaved);
   const [loading, setLoading] = useState(false);
 
   async function toggle() {
+    if (!isLoggedIn) {
+      await authClient.signIn.oauth2({
+        providerId: "keycloak",
+        callbackURL: typeof window !== "undefined" ? window.location.href : "/",
+      });
+      return;
+    }
     setLoading(true);
     try {
       if (saved) {
