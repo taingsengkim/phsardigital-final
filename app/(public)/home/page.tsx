@@ -4,7 +4,6 @@
 
 import { FindWhatYouNeed } from "./feature/FindWhatYouNeed";
 import { HeroBanner } from "./feature/HeroBanner";  
-import { NewsletterSignup } from "./feature/NewsletterSignup";
 import { RecommendedSection } from "./feature/RecommendedSection";
 import { TopRatedSection } from "./feature/TopRatedSection";
 import { TopSellersSection } from "./feature/TopSellersSection";
@@ -24,7 +23,6 @@ export default function HomePage() {
       <RecommendedSection />
       <TopRatedSection />
       <WearableSection />
-      <NewsletterSignup />
 
       {/* <Footer /> */}
     </main>
