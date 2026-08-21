@@ -224,3 +224,57 @@ export async function removeCartItem(itemId: number): Promise<void> {
 
   mockCartItems = mockCartItems.filter((i) => i.id !== itemId && i.listing_id !== itemId);
 }
+
+export async function updateCartItemQty(
+  sellerId: string,
+  itemUuid: string,
+  quantity: number
+): Promise<any> {
+  try {
+    const res = await fetch(
+      `/api/carts/${encodeURIComponent(sellerId)}/items/${encodeURIComponent(itemUuid)}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quantity }),
+      }
+    );
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (err) {
+    console.warn("Failed to update cart item quantity via route handler:", err);
+  }
+}
+
+export async function deleteCartItem(
+  sellerId: string,
+  itemUuid: string
+): Promise<any> {
+  try {
+    const res = await fetch(
+      `/api/carts/${encodeURIComponent(sellerId)}/items/${encodeURIComponent(itemUuid)}`,
+      {
+        method: "DELETE",
+      }
+    );
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (err) {
+    console.warn("Failed to delete cart item via route handler:", err);
+  }
+}
+
+export async function deleteSellerCart(sellerId: string): Promise<any> {
+  try {
+    const res = await fetch(`/api/carts/${encodeURIComponent(sellerId)}`, {
+      method: "DELETE",
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (err) {
+    console.warn("Failed to delete seller cart via route handler:", err);
+  }
+}

@@ -36,7 +36,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getListingBySlug } from "@/app/api/listings";
-import { getCart, getCarts } from "@/app/api/cart";
+import { getCart, getCarts, updateCartItemQty, deleteCartItem, deleteSellerCart } from "@/app/api/cart";
 import { createOrder } from "@/app/api/orders";
 import type { Listing } from "@/lib/types";
 
@@ -48,6 +48,8 @@ type CheckoutItem = {
   image: string;
   slug?: string;
   storeName: string;
+  sellerId?: string;
+  itemUuid?: string;
 };
 
 type SavedAddress = {
@@ -259,6 +261,7 @@ export default function CheckoutClient() {
   const [stage, setStage] = useState<"form" | "invoice_success" | "full_chat_page">("form");
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showEditCartModal, setShowEditCartModal] = useState(false);
+  const [showDeleteCartConfirmModal, setShowDeleteCartConfirmModal] = useState(false);
   const [orderCompleted, setOrderCompleted] = useState<{ id: number; total: number; storeName: string } | null>(null);
 
   // Saved Addresses State
@@ -309,6 +312,7 @@ export default function CheckoutClient() {
 
         if (vendorCarts && Array.isArray(vendorCarts) && vendorCarts.length > 0) {
           vendorCarts.forEach((cart, cartIdx) => {
+            const sellerId = cart.sellerId || cart.sellerProfile?.sellerId || "";
             const storeName = cart.sellerProfile?.businessName?.trim()
               || (cart.sellerId
                 ? cart.sellerId.length > 20
@@ -346,6 +350,8 @@ export default function CheckoutClient() {
                   image: img,
                   slug: item.listingUuid,
                   storeName,
+                  sellerId,
+                  itemUuid: item.uuid,
                 });
               });
             }
@@ -536,13 +542,56 @@ export default function CheckoutClient() {
   const activeItems = items.filter((i) => i.storeName === (selectedStore || allStores[0]));
 
   // Quantity management handlers for Order Summary
-  function handleUpdateQuantity(itemId: string | number, newQty: number) {
+  async function handleUpdateQuantity(itemId: string | number, newQty: number) {
+    const targetItem = items.find((i) => String(i.id) === String(itemId));
+
+    // Optimistic UI state update
     if (newQty <= 0) {
       setItems((prev) => prev.filter((i) => String(i.id) !== String(itemId)));
     } else {
       setItems((prev) =>
         prev.map((i) => (String(i.id) === String(itemId) ? { ...i, quantity: newQty } : i))
       );
+    }
+
+    // Proxy request to backend API via Route Handler
+    if (targetItem?.sellerId && targetItem?.itemUuid) {
+      if (newQty <= 0) {
+        await deleteCartItem(targetItem.sellerId, targetItem.itemUuid);
+      } else {
+        await updateCartItemQty(targetItem.sellerId, targetItem.itemUuid, newQty);
+      }
+    }
+  }
+
+  // Delete entire cart for selected store
+  async function handleDeleteSellerCart() {
+    if (!selectedStore || activeItems.length === 0) return;
+
+    const storeToDelete = selectedStore;
+    const sellerId = activeItems[0]?.sellerId;
+
+    // Optimistic UI update: filter out all items belonging to this store
+    const remainingItems = items.filter((i) => i.storeName !== storeToDelete);
+    setItems(remainingItems);
+
+    // Auto-switch to next available store if available
+    const remainingStores = Array.from(new Set(remainingItems.map((i) => i.storeName)));
+    if (remainingStores.length > 0) {
+      setSelectedStore(remainingStores[0]);
+    } else {
+      setSelectedStore("");
+    }
+
+    // Call backend API via route handler proxy
+    if (sellerId) {
+      await deleteSellerCart(sellerId);
+    } else {
+      for (const item of activeItems) {
+        if (item.sellerId && item.itemUuid) {
+          await deleteCartItem(item.sellerId, item.itemUuid);
+        }
+      }
     }
   }
 
@@ -1606,15 +1655,27 @@ export default function CheckoutClient() {
                   </h2>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setShowEditCartModal(true)}
-                  title="Edit item quantities"
-                  aria-label="Edit item quantities"
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-[#E2DFEC] bg-[#F8F7FB] text-[#6C4CD8] transition hover:bg-[#6C4CD8] hover:text-white cursor-pointer shadow-xs shrink-0"
-                >
-                  <Edit2 size={18} />
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setShowEditCartModal(true)}
+                    title="Edit item quantities"
+                    aria-label="Edit item quantities"
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-[#EDEBF3] bg-[#FAF9FD] text-[#6C4CD8] transition hover:border-[#6C4CD8]/40 hover:bg-[#6C4CD8] hover:text-white cursor-pointer shadow-2xs"
+                  >
+                    <Edit2 size={18} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteCartConfirmModal(true)}
+                    title="Delete entire cart for this store"
+                    aria-label="Delete entire cart for this store"
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-rose-600 transition hover:bg-rose-600 hover:text-white cursor-pointer shadow-xs"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
               </div>
 
               {/* Items List for Selected Vendor */}
@@ -1898,6 +1959,55 @@ export default function CheckoutClient() {
                 className="rounded-2xl bg-[#6C4CD8] px-8 py-3.5 text-sm font-extrabold text-white shadow-lg transition hover:bg-[#5B3DC0] cursor-pointer"
               >
                 Done Editing
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── DELETE STORE CART CONFIRMATION MODAL ── */}
+      {showDeleteCartConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in">
+          <div className="w-full max-w-lg overflow-hidden rounded-3xl bg-white p-7 sm:p-8 shadow-2xl space-y-6 border border-[#EDEBF3]">
+            <div className="flex items-center gap-4 border-b border-[#F0EDFB] pb-4">
+              <div className="flex h-13 w-13 shrink-0 items-center justify-center rounded-2xl bg-rose-50 border border-rose-100 text-rose-600">
+                <AlertTriangle size={26} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 text-[#6C4CD8]">
+                  <Store size={15} />
+                  <span className="text-[12px] font-extrabold uppercase tracking-wider truncate">
+                    {selectedStore}
+                  </span>
+                </div>
+                <h3 className="text-[22px] font-black text-[#1A1330] mt-0.5">
+                  Clear Store Cart?
+                </h3>
+              </div>
+            </div>
+
+            <p className="text-[15px] sm:text-[16px] text-[#5A5470] leading-relaxed font-medium">
+              Are you sure you want to remove all <span className="font-black text-[#1A1330]">{activeItems.length} items</span> from <span className="font-extrabold text-[#6C4CD8]">{selectedStore}</span>? This action will delete the entire cart for this store.
+            </p>
+
+            <div className="flex items-center gap-3.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowDeleteCartConfirmModal(false)}
+                className="flex-1 rounded-2xl border border-[#EDEBF3] bg-[#F6F5FA] py-3.5 text-[14px] font-extrabold text-[#5A5470] transition hover:bg-[#EDEBF3] hover:text-[#1A1330] cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  setShowDeleteCartConfirmModal(false);
+                  await handleDeleteSellerCart();
+                }}
+                className="flex-1 rounded-2xl bg-rose-600 py-3.5 text-[14px] font-extrabold text-white shadow-md transition hover:bg-rose-700 cursor-pointer flex items-center justify-center gap-2"
+              >
+                <Trash2 size={17} />
+                <span>Yes, Clear Cart</span>
               </button>
             </div>
           </div>
