@@ -47,7 +47,6 @@ export function NavTopbar() {
       ? `${profile.firstName} ${profile?.lastName || ""}`.trim()
       : "") ||
     sellerProfile?.businessName ||
-    sellerApp?.storeDisplayName ||
     sellerApp?.businessName ||
     session?.user?.name ||
     "Seller Account";

@@ -86,7 +86,7 @@ export default function Navbar() {
   const isPendingSeller = sellerApp?.status === "PENDING";
 
   const userAvatar = profile?.avatarUrl || sellerApp?.logoUri || user?.image || "";
-  const storeName = sellerApp?.storeDisplayName || sellerApp?.businessName;
+  const storeName = sellerApp?.businessName;
 
   const categoriesList =
     apiCategories && apiCategories.length > 0

@@ -32,6 +32,7 @@ import { useGetMeQuery } from "@/lib/api/authApi";
 import { useGetSellerApplicationQuery, useGetSellerProfileQuery } from "@/lib/api/sellerApi";
 import { useGetCategoriesQuery } from "@/lib/api/homeApi";
 import LoginButton from "@/components/auth/LoginButton";
+import RegisterButton from "@/components/auth/RegisterButton";
 
 const BRAND = "#6C4CD8";
 const NAV_LINKS = ["Home", "Offers", "Brands", "Stores", "All Products"];
@@ -74,7 +75,7 @@ export default function Navbar() {
   const userAvatar =
     profile?.avatarUrl || sellerProfile?.logoUri || sellerApp?.logoUri || session?.user?.image || "";
   const storeName =
-    sellerProfile?.businessName || sellerApp?.storeDisplayName || sellerApp?.businessName;
+    sellerProfile?.businessName || sellerApp?.businessName;
 
   const categoriesList =
     apiCategories && apiCategories.length > 0
@@ -298,7 +299,11 @@ export default function Navbar() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <LoginButton />
+                <div className="flex flex-shrink-0 items-center gap-2">
+                  {/* the drawer carries these on small screens */}
+                  <RegisterButton className="hidden sm:inline-flex" />
+                  <LoginButton />
+                </div>
               )}
 
               <Link
@@ -441,6 +446,16 @@ export default function Navbar() {
                 >
                   {isLoggedIn ? "My Account" : "Sign In"}
                 </Link>
+
+                {!isLoggedIn && (
+                  <Link
+                    href="/auth/register"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex-1 rounded-lg border border-white/60 py-1.5 text-center text-xs font-bold text-white"
+                  >
+                    Register
+                  </Link>
+                )}
                 {isSeller && (
                   <Link
                     href="/seller-dashboard/home"

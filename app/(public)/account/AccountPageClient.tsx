@@ -139,7 +139,7 @@ export default function AccountPageClient() {
   const isPendingSeller = sellerApp?.status === "PENDING";
   const isRejectedSeller = sellerApp?.status === "REJECTED";
 
-  const storeName = sellerApp?.storeDisplayName || sellerApp?.businessName || `${userFullName}'s Store`;
+  const storeName = sellerApp?.businessName || `${userFullName}'s Store`;
   const storeLogo = sellerApp?.logoUri || userAvatarUrl;
 
   function getInitials() {
