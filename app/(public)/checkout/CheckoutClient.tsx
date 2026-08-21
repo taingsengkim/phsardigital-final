@@ -30,6 +30,9 @@ import {
   Camera,
   Link2,
   Eye,
+  Minus,
+  Edit2,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getListingBySlug } from "@/app/api/listings";
@@ -255,6 +258,7 @@ export default function CheckoutClient() {
   // Workflow Stage Control: "form" | "invoice_success" | "full_chat_page"
   const [stage, setStage] = useState<"form" | "invoice_success" | "full_chat_page">("form");
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showEditCartModal, setShowEditCartModal] = useState(false);
   const [orderCompleted, setOrderCompleted] = useState<{ id: number; total: number; storeName: string } | null>(null);
 
   // Saved Addresses State
@@ -530,6 +534,17 @@ export default function CheckoutClient() {
 
   // Filter items for currently selected store
   const activeItems = items.filter((i) => i.storeName === (selectedStore || allStores[0]));
+
+  // Quantity management handlers for Order Summary
+  function handleUpdateQuantity(itemId: string | number, newQty: number) {
+    if (newQty <= 0) {
+      setItems((prev) => prev.filter((i) => String(i.id) !== String(itemId)));
+    } else {
+      setItems((prev) =>
+        prev.map((i) => (String(i.id) === String(itemId) ? { ...i, quantity: newQty } : i))
+      );
+    }
+  }
 
   // Price calculations for active store
   const subtotal = activeItems.reduce((sum, i) => sum + (typeof i.price === "number" && !isNaN(i.price) ? i.price : 0) * (i.quantity || 1), 0);
@@ -1578,16 +1593,28 @@ export default function CheckoutClient() {
           {/* ── RIGHT COLUMN: Order Summary (Selected Vendor Only) ── */}
           <div>
             <div className="sticky top-24 rounded-3xl border border-[#EDEBF3] bg-white p-7 shadow-[0_4px_24px_rgba(108,76,216,0.08)] space-y-6">
-              <div className="border-b border-[#F0EDFB] pb-4">
-                <div className="flex items-center gap-2 text-[#6C4CD8]">
-                  <Store size={18} />
-                  <span className="text-[13px] font-extrabold uppercase tracking-wide">
-                    {selectedStore || "Vendor Order"}
-                  </span>
+              <div className="border-b border-[#F0EDFB] pb-4 flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2 text-[#6C4CD8]">
+                    <Store size={18} />
+                    <span className="text-[13px] font-extrabold uppercase tracking-wide">
+                      {selectedStore || "Vendor Order"}
+                    </span>
+                  </div>
+                  <h2 className="text-[20px] font-extrabold text-[#1A1330] mt-1">
+                    Order Summary
+                  </h2>
                 </div>
-                <h2 className="text-[20px] font-extrabold text-[#1A1330] mt-1">
-                  Order Summary
-                </h2>
+
+                <button
+                  type="button"
+                  onClick={() => setShowEditCartModal(true)}
+                  title="Edit item quantities"
+                  aria-label="Edit item quantities"
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-[#E2DFEC] bg-[#F8F7FB] text-[#6C4CD8] transition hover:bg-[#6C4CD8] hover:text-white cursor-pointer shadow-xs shrink-0"
+                >
+                  <Edit2 size={18} />
+                </button>
               </div>
 
               {/* Items List for Selected Vendor */}
@@ -1747,6 +1774,130 @@ export default function CheckoutClient() {
                 className="flex-1 rounded-xl bg-[#6C4CD8] py-3.5 text-[15px] font-bold text-white shadow-md hover:bg-[#5B3DC0]"
               >
                 Confirm &amp; Send Invoice
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── SCROLLABLE EDIT QUANTITY POPUP MODAL ── */}
+      {showEditCartModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 sm:p-6 backdrop-blur-xs animate-in fade-in">
+          <div className="w-full max-w-2xl sm:max-w-3xl overflow-hidden rounded-3xl bg-white p-6 sm:p-8 shadow-2xl space-y-6">
+            <div className="flex items-center justify-between border-b border-[#F0EDFB] pb-4">
+              <div>
+                <div className="flex items-center gap-2 text-[#6C4CD8]">
+                  <Store size={18} />
+                  <span className="text-xs font-extrabold uppercase tracking-wide">{selectedStore}</span>
+                </div>
+                <h3 className="text-[22px] font-extrabold text-[#1A1330] mt-1">
+                  Edit Item Quantities ({activeItems.length})
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowEditCartModal(false)}
+                className="flex h-10 w-10 items-center justify-center rounded-xl p-1 text-[#8B85A0] hover:bg-[#F6F5FA] cursor-pointer transition"
+                title="Close modal"
+              >
+                <X size={22} />
+              </button>
+            </div>
+
+            {/* Scrollable list of items to edit quantity */}
+            <div className="space-y-4 max-h-[55vh] overflow-y-auto pr-2 scrollbar-thin">
+              {activeItems.length === 0 ? (
+                <div className="py-12 text-center text-[#8B85A0]">
+                  <p className="text-base font-semibold">No items left in cart for this store.</p>
+                </div>
+              ) : (
+                activeItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-[#EDEBF3] bg-[#FAF9FD] p-4 sm:p-5 transition hover:border-[#6C4CD8]/40 hover:bg-white shadow-xs"
+                  >
+                    <div className="flex items-center gap-4 min-w-0 flex-1">
+                      <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-white border border-[#EDEBF3]">
+                        {item.image && item.image.length > 5 ? (
+                          <Image
+                            src={item.image}
+                            alt={item.title}
+                            fill
+                            className="object-cover"
+                            unoptimized={item.image.startsWith("http")}
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-[#6C4CD8]">
+                            <ShoppingBag size={26} />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[16px] font-extrabold text-[#1A1330] truncate">{item.title}</p>
+                        <p className="text-[13px] text-[#8B85A0] mt-0.5">
+                          Sold by <span className="font-semibold text-[#6C4CD8]">{item.storeName}</span>
+                        </p>
+                        <p className="text-[14px] font-extrabold text-[#6C4CD8] mt-1">
+                          ${(typeof item.price === "number" && !isNaN(item.price) ? item.price : 0).toFixed(2)} / unit
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Quantity Stepper & Line Total */}
+                    <div className="flex items-center justify-between sm:justify-end gap-6 pt-2 sm:pt-0 border-t sm:border-t-0 border-[#EDEBF3]">
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
+                          className="flex h-10 w-10 items-center justify-center rounded-xl bg-white border border-[#E2DFEC] text-[#6C4CD8] font-bold hover:bg-[#6C4CD8] hover:text-white transition cursor-pointer shadow-2xs"
+                        >
+                          <Minus size={16} />
+                        </button>
+                        <span className="w-10 text-center text-[16px] font-black text-[#1A1330]">
+                          {item.quantity}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
+                          className="flex h-10 w-10 items-center justify-center rounded-xl bg-white border border-[#E2DFEC] text-[#6C4CD8] font-bold hover:bg-[#6C4CD8] hover:text-white transition cursor-pointer shadow-2xs"
+                        >
+                          <Plus size={16} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateQuantity(item.id, 0)}
+                          title="Remove item"
+                          className="ml-2 flex h-10 w-10 items-center justify-center rounded-xl text-rose-500 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition cursor-pointer"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+
+                      <div className="text-right min-w-[90px]">
+                        <p className="text-[11px] font-semibold text-[#8B85A0] uppercase">Total</p>
+                        <p className="text-[17px] font-black text-[#6C4CD8]">
+                          ${((typeof item.price === "number" && !isNaN(item.price) ? item.price : 0) * (item.quantity || 1)).toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="border-t border-[#F0EDFB] pt-5 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase text-[#8B85A0] tracking-wider">Order Total</p>
+                <p className="text-[24px] font-black text-[#6C4CD8]">${grandTotal.toFixed(2)}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowEditCartModal(false)}
+                className="rounded-2xl bg-[#6C4CD8] px-8 py-3.5 text-sm font-extrabold text-white shadow-lg transition hover:bg-[#5B3DC0] cursor-pointer"
+              >
+                Done Editing
               </button>
             </div>
           </div>
