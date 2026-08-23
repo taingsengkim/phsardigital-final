@@ -73,7 +73,7 @@ export default function ProductCard({ listing, className }: Props) {
       <div className="flex flex-1 flex-col gap-1.5 p-3">
         <Link
           href={`/products/${listing.slug}`}
-          className="line-clamp-2 text-[14px] font-semibold leading-snug text-[#241F35] hover:text-[#6C4CD8] transition-colors"
+          className="line-clamp-2 text-[16px] sm:text-[17px] font-bold leading-snug text-[#241F35] hover:text-[#6C4CD8] transition-colors"
         >
           {listing.title}
         </Link>

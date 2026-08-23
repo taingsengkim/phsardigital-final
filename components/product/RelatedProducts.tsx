@@ -74,7 +74,7 @@ export default async function RelatedProducts({ categorySlug, excludeUuid }: Pro
 
   try {
     const result = await getListings({ pageSize: 8 });
-    listings = result.data
+    listings = (result?.data || [])
       .filter((l) => l.uuid !== excludeUuid)
       .slice(0, 4);
   } catch {

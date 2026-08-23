@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
         Accept: "application/json",
       },
       cache: "no-store",
+      signal: AbortSignal.timeout(4000),
     });
 
     const data = await res.json();

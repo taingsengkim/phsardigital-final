@@ -174,6 +174,7 @@ export type ApiListingAttribute = {
 };
 
 export type ApiCategorySummary = {
+  id?: number | string;
   uuid?: string;
   name?: string | null;
   slug?: string | null;
@@ -189,6 +190,7 @@ export type ApiSellerSummary = {
 };
 
 export type ApiListing = {
+  id?: number | string;
   uuid: string;
   sellerProfile?: ApiSellerSummary | null;
   category?: ApiCategorySummary | null;
@@ -201,6 +203,7 @@ export type ApiListing = {
   stockQty?: number | null;
   status?: string | null;
   isFeatured?: boolean | null;
+  isFavorite?: boolean | null;
   thumbnailUri?: ApiImage | null;
   sold?: number | null;
   images?: ApiImage[] | null;

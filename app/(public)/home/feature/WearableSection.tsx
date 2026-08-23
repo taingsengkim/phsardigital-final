@@ -1,122 +1,181 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
+import * as React from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
+import { ChevronRight, ArrowRight, Loader2 } from "lucide-react";
 import { ProductCard } from "../ProductCard";
-import { SectionHeader } from "../SectionHeader";
 import { useGetListingsByCategoryQuery } from "@/lib/api/homeApi";
 
-const FALLBACK_WEARABLE_LISTINGS = [
+const CATEGORY_TABS = [
+  { id: "womens-fashion", label: "Women's Dresses", slug: "womens-fashion" },
+  { id: "health-beauty", label: "Health & Beauty", slug: "health-beauty" },
+  { id: "mens-fashion", label: "Men's Wear", slug: "mens-fashion" },
+  { id: "electronics", label: "Electronics", slug: "electronics" },
+  { id: "groceries-essentials", label: "Coffee & Food", slug: "groceries-essentials" },
+];
+
+const DRESS_PRODUCTS = [
   {
-    uuid: "w-1",
-    title: "Women's Floral Summer Dress",
-    slug: "womens-floral-summer-dress",
-    fullPrice: 45,
-    discountPrice: null,
-    sellerProfile: { businessName: "Fashion By Srey" },
-    category: { name: "Women's Fashion", slug: "womens-fashion" },
-    thumbnailUri: { uri: "/picture/pic3.jpg" },
-    averageRating: null,
-    reviewCount: 0,
-    isFavorite: false,
-  },
-  {
-    uuid: "w-2",
-    title: "Floral Midi Wrap Dress",
-    slug: "floral-midi-wrap-dress",
-    fullPrice: 168,
-    discountPrice: null,
-    sellerProfile: { businessName: "SOMA Coffee & Roastery" },
-    category: { name: "Women's Fashion", slug: "womens-fashion" },
-    thumbnailUri: { uri: "/picture/pic4.jpg" },
-    averageRating: null,
-    reviewCount: 0,
+    uuid: "dress-1",
+    title: "Vintage Floral Cottagecore Corset Lace-Up Mini Dress",
+    slug: "vintage-floral-cottagecore-corset-mini-dress",
+    fullPrice: 65,
+    discountPrice: 45,
+    sellerProfile: { businessName: "Dance skirts" },
+    category: { name: "Women's Dresses", slug: "womens-fashion" },
+    thumbnailUri: { uri: "/picture/product_dress_blue_floral.jpg" },
+    averageRating: 4.9,
+    reviewCount: 48,
     isFavorite: true,
   },
   {
-    uuid: "w-3",
-    title: "Rose Gold Square Watch & Bracelet Set",
+    uuid: "dress-2",
+    title: "Beige Floral Sweetheart Neckline Midi Dress with High Slit",
+    slug: "beige-floral-slit-sweetheart-midi-dress",
+    fullPrice: 85,
+    discountPrice: 58,
+    sellerProfile: { businessName: "Fashion By Srey" },
+    category: { name: "Women's Dresses", slug: "womens-fashion" },
+    thumbnailUri: { uri: "/picture/product_dress_beige_slit.jpg" },
+    averageRating: 4.8,
+    reviewCount: 29,
+    isFavorite: false,
+  },
+  {
+    uuid: "dress-3",
+    title: "French Toile De Jouy Blue Porcelain Vintage Mini Dress",
+    slug: "french-toile-blue-porcelain-vintage-mini-dress",
+    fullPrice: 72,
+    discountPrice: 52,
+    sellerProfile: { businessName: "Dance skirts" },
+    category: { name: "Women's Dresses", slug: "womens-fashion" },
+    thumbnailUri: { uri: "/picture/product_dress_toile_blue.jpg" },
+    averageRating: 4.9,
+    reviewCount: 32,
+    isFavorite: false,
+  },
+  {
+    uuid: "dress-4",
+    title: "Rose Gold Square Watch & Elegant Bracelet Set",
     slug: "rose-gold-square-watch-bracelet-set",
     fullPrice: 129,
-    discountPrice: null,
+    discountPrice: 89,
     sellerProfile: { businessName: "Jewel & Co." },
     category: { name: "Women's Fashion", slug: "womens-fashion" },
     thumbnailUri: { uri: "/picture/pic5.jpg" },
-    averageRating: null,
-    reviewCount: 0,
-    isFavorite: false,
-  },
-  {
-    uuid: "w-4",
-    title: "Men's Classic White Sneakers",
-    slug: "mens-classic-white-sneakers",
-    fullPrice: 79,
-    discountPrice: null,
-    sellerProfile: { businessName: "Sneaker World" },
-    category: { name: "Men's Fashion", slug: "mens-fashion" },
-    thumbnailUri: { uri: "/picture/pic6.jpg" },
-    averageRating: null,
-    reviewCount: 0,
-    isFavorite: false,
-  },
-  {
-    uuid: "w-5",
-    title: "Premium Leather Tote Bag",
-    slug: "premium-leather-tote-bag",
-    fullPrice: 89,
-    discountPrice: null,
-    sellerProfile: { businessName: "Leather Craft Co." },
-    category: { name: "Women's Fashion", slug: "womens-fashion" },
-    thumbnailUri: { uri: "/picture/pic2.jpg" },
-    averageRating: null,
-    reviewCount: 0,
+    averageRating: 4.8,
+    reviewCount: 15,
     isFavorite: false,
   },
 ];
 
-type Props = {
-  categorySlug?: string;
-  title?: string;
-};
+export function WearableSection() {
+  const [activeTab, setActiveTab] = React.useState(CATEGORY_TABS[0].slug);
 
-export function WearableSection({
-  categorySlug = "womens-fashion",
-  title = "Wearable",
-}: Props) {
-  const { data: womensResponse, isLoading: loadingWomens } =
-    useGetListingsByCategoryQuery(categorySlug);
+  const { data: categoryResponse, isLoading } = useGetListingsByCategoryQuery(activeTab);
 
-  const { data: mensResponse, isLoading: loadingMens } =
-    useGetListingsByCategoryQuery("mens-fashion");
+  const apiListings =
+    categoryResponse?.data || (categoryResponse as any)?.content || [];
 
-  const womensListings =
-    womensResponse?.data || (womensResponse as unknown as { content?: unknown[] })?.content || [];
-
-  const mensListings =
-    mensResponse?.data || (mensResponse as unknown as { content?: unknown[] })?.content || [];
-
-  const combinedApiListings = [...womensListings, ...mensListings];
-  const listings = combinedApiListings.length > 0 ? combinedApiListings : FALLBACK_WEARABLE_LISTINGS;
-  const isLoading = loadingWomens && loadingMens;
+  const listings =
+    apiListings && apiListings.length > 0 ? apiListings : DRESS_PRODUCTS;
 
   return (
-    <section className="mx-auto max-w-[1240px] px-6 py-8 font-sans">
-      <SectionHeader title={title} href="/products?category=womens-fashion" className="mb-5" />
-
-      {isLoading ? (
-        <div className="flex items-center justify-center gap-2 py-8 text-sm text-gray-500">
-          <Loader2 className="size-5 animate-spin text-[#6C4CD8]" />
-          Loading {title.toLowerCase()} items...
+    <section className="mx-auto w-full max-w-[1380px] px-4 sm:px-6 py-6 font-sans">
+      {/* Header & Tabs */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-bold text-[#111827] dark:text-white tracking-tight">
+            Popular Categories &amp; Trends
+          </h2>
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-zinc-400 mt-0.5">
+            Explore bestselling apparel, beauty, and lifestyle essentials
+          </p>
         </div>
-      ) : (
-        <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-5">
-          {listings.map((listing: any, index: number) => (
-            <ProductCard
-              key={listing.uuid || listing.id || index}
-              listing={listing}
-            />
+
+        {/* Tab Buttons */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+          {CATEGORY_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.slug)}
+              className={`rounded-full px-4 py-1.5 text-xs font-semibold whitespace-nowrap transition-all ${
+                activeTab === tab.slug
+                  ? "bg-[#6C4CD8] text-white shadow-xs"
+                  : "bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-zinc-300 hover:bg-gray-200 dark:hover:bg-zinc-700"
+              }`}
+            >
+              {tab.label}
+            </button>
           ))}
         </div>
-      )}
+      </div>
+
+      {/* Grid: Left Collection Banner + Right Products */}
+      <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-5 items-stretch">
+        
+        {/* Left Side Banner */}
+        <div className="relative min-h-[300px] rounded-2xl overflow-hidden bg-gradient-to-b from-[#FAF5EE] to-[#EFE7D8] dark:from-zinc-900 dark:to-zinc-800 p-6 flex flex-col justify-between border border-amber-100/60 dark:border-zinc-800 shadow-xs">
+          <Image
+            src="/picture/product_dress_toile_blue.jpg"
+            alt="Category Spotlight"
+            fill
+            className="object-cover object-top opacity-85 transition-transform duration-500 hover:scale-105"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+
+          <div className="relative z-10">
+            <span className="inline-block rounded-full bg-white/20 backdrop-blur-md px-3 py-1 text-[11px] font-bold text-white uppercase tracking-wider">
+              SPOTLIGHT
+            </span>
+          </div>
+
+          <div className="relative z-10 space-y-3">
+            <h3 className="text-2xl font-black text-white leading-tight">
+              Artisanal Fashion &amp; Dresses
+            </h3>
+            <p className="text-xs text-white/80">
+              Discover unique hand-picked styles from trusted boutique sellers.
+            </p>
+            <Link
+              href={`/products?category=${activeTab}`}
+              className="inline-flex items-center gap-1.5 rounded-full bg-white text-[#111827] px-4 py-2 text-xs font-bold transition-all hover:bg-[#6C4CD8] hover:text-white"
+            >
+              <span>View All</span>
+              <ArrowRight className="size-3.5" />
+            </Link>
+          </div>
+        </div>
+
+        {/* Right Products Grid */}
+        {isLoading && listings.length === 0 ? (
+          <div className="flex items-center justify-center py-12 text-xs text-gray-400 gap-2">
+            <Loader2 className="size-5 animate-spin text-[#6C4CD8]" />
+            Loading products...
+          </div>
+        ) : (
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3.5 sm:gap-4 items-stretch"
+            >
+              {listings.slice(0, 4).map((listing: any, index: number) => (
+                <ProductCard
+                  key={listing.uuid || listing.id || index}
+                  listing={listing}
+                />
+              ))}
+            </motion.div>
+          </AnimatePresence>
+        )}
+
+      </div>
     </section>
   );
 }
