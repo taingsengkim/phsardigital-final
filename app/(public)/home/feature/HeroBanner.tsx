@@ -79,15 +79,27 @@ export function HeroBanner() {
   const featuredListings =
     featuredResponse?.data || (featuredResponse as any)?.content || [];
 
-  // Adapt slides if featured API listings are returned
+  // Adapt slides dynamically from featured API listings
   const slides = React.useMemo(() => {
-    if (featuredListings && featuredListings.length >= 3) {
-      return DEFAULT_SLIDES.map((slide, idx) => {
-        const item = featuredListings[idx];
-        if (!item) return slide;
+    if (featuredListings && featuredListings.length > 0) {
+      return featuredListings.slice(0, 5).map((item: any, idx: number) => {
+        const primaryImage =
+          typeof item.thumbnailUri === "string"
+            ? item.thumbnailUri
+            : item.thumbnailUri?.uri ||
+              item.images?.[0]?.uri ||
+              item.images?.[0]?.url ||
+              DEFAULT_SLIDES[idx % DEFAULT_SLIDES.length].image;
+
         return {
-          ...slide,
-          link: item.slug ? `/products/${item.slug}` : slide.link,
+          id: item.uuid || item.id || `slide-${idx}`,
+          tag: item.category?.name ? item.category.name.toUpperCase() : "SPECIAL OFFER",
+          iconType: (idx % 3 === 0 ? "leaf" : idx % 3 === 1 ? "sun" : "sparkle") as "leaf" | "sun" | "sparkle",
+          title: item.title ? item.title.toUpperCase() : "SPECIAL PRODUCT OFFER",
+          description: item.description || "High quality product on Phsar Digital marketplace.",
+          buttonText: "BUY NOW →",
+          image: primaryImage,
+          link: item.slug ? `/products/${item.slug}` : `/products/${item.uuid || item.id}`,
         };
       });
     }
@@ -231,7 +243,7 @@ export function HeroBanner() {
 
           {/* Pagination Indicators (Bottom Center) */}
           <div className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
-            {slides.map((_, idx) => (
+            {slides.map((_: unknown, idx: number) => (
               <button
                 key={idx}
                 onClick={() => {

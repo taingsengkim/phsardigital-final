@@ -6,6 +6,7 @@ import { Heart, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import SavedButton from "@/components/saved/SavedButton";
 import { getListingPrice } from "@/lib/api/listing-price";
+import { getPrimaryImage } from "./listing-helpers";
 
 /* Minimal shape — works with both real API (uuid/uri) and mock data */
 type CardListing = {
@@ -37,12 +38,7 @@ type Props = {
 };
 
 export function ProductCard({ listing, className }: Props) {
-  /* Support both real API (uuid/uri/isPrimary) and legacy (id/url/is_primary) */
-  const primary =
-    listing.images?.find((img) => img.isPrimary || img.is_primary) ??
-    listing.images?.[0];
-  const imgSrc = primary?.uri ?? primary?.url ?? listing.thumbnailUri?.uri;
-
+  const imgSrc = getPrimaryImage(listing);
   const key = listing.uuid ?? String(listing.id ?? listing.slug);
   const price = getListingPrice(listing);
 
@@ -56,18 +52,18 @@ export function ProductCard({ listing, className }: Props) {
       {/* ── image ── */}
       <div className="relative aspect-square w-full overflow-hidden bg-[#F5F3FA]">
         <Link
-          href={`/products/${listing.slug}`}
+          href={`/products/${listing.slug || listing.uuid || listing.id}`}
           tabIndex={-1}
           aria-hidden="true"
         >
           {imgSrc ? (
             <Image
               src={imgSrc}
-              alt={listing.title}
+              alt={listing.title || "Product image"}
               fill
               sizes="(max-width:640px) 50vw, (max-width:1024px) 33vw, 25vw"
               className="object-cover transition-transform duration-500 group-hover:scale-[1.06]"
-              unoptimized={imgSrc.startsWith("http://51.79")}
+              unoptimized={Boolean(imgSrc.startsWith("http"))}
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-[#C4B5FD]">

@@ -25,8 +25,7 @@ export function RecommendedSection() {
   const apiListings =
     listingsResponse?.data || (listingsResponse as any)?.content || [];
 
-  const rawListings =
-    apiListings && apiListings.length >= 4 ? apiListings : CURATED_PRODUCTS;
+  const rawListings = apiListings || [];
 
   // Filter listings based on active tab
   const filteredListings = React.useMemo(() => {

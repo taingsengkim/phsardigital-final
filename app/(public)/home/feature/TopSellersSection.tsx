@@ -81,7 +81,7 @@ const item = {
 export function TopSellersSection() {
   const { data: apiSellers = [], isLoading } = useGetTopSellersQuery();
 
-  const sellers = apiSellers && apiSellers.length > 0 ? apiSellers : FALLBACK_TOP_SELLERS;
+  const sellers = apiSellers || [];
 
   return (
     <section className="bg-[#F1EFFA]/60 dark:bg-zinc-950/40 py-10 font-sans">

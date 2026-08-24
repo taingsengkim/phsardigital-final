@@ -191,20 +191,8 @@ export async function GET(request: NextRequest) {
     console.warn("Could not fetch upstream live listings:", err);
   }
 
-  // 2. Combine live Swagger listings + Curated marketplace catalog
+  // Return only live Swagger listings from API
   const combined = [...liveItems];
-  for (const curated of CURATED_PRODUCTS) {
-    // Avoid duplicate titles or UUIDs
-    const exists = combined.some(
-      (c) =>
-        c.title.toLowerCase() === curated.title.toLowerCase() ||
-        c.uuid === curated.uuid ||
-        c.slug === curated.slug
-    );
-    if (!exists) {
-      combined.push(curated);
-    }
-  }
 
   let filtered = combined;
 
@@ -333,9 +321,20 @@ export async function GET(request: NextRequest) {
       return false;
     };
 
-    filtered = filtered.filter((p) =>
-      matchesCategory(p.category?.slug || "", p.category?.name || "")
-    );
+  }
+
+  const sellerIdParam = searchParams.get("sellerId");
+  if (sellerIdParam) {
+    const sIdClean = sellerIdParam.toLowerCase().trim();
+    filtered = filtered.filter((p: any) => {
+      const pSellerId = p.sellerProfile?.id || p.sellerProfile?.uuid || p.sellerId || p.seller?.id || p.seller?.uuid;
+      const pSellerSlug = p.sellerProfile?.slug || p.sellerProfile?.businessName;
+      if (!pSellerId && !pSellerSlug) return true;
+      return (
+        String(pSellerId).toLowerCase() === sIdClean ||
+        String(pSellerSlug).toLowerCase() === sIdClean
+      );
+    });
   }
 
 

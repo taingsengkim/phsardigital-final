@@ -5,6 +5,7 @@ import Link from "next/link";
 import { getFileUrl } from "@/lib/utils";
 import type { Listing } from "@/lib/types";
 import { getListingPrice } from "@/lib/api/listing-price";
+import { getPrimaryImage } from "@/app/(public)/home/listing-helpers";
 
 interface ProductCardProps {
   listing: Listing;
@@ -26,9 +27,7 @@ export function ProductCard({
   categoryName,
   showFeaturedBadge = false,
 }: ProductCardProps) {
-  const imageUrl = getFileUrl(
-    listing.thumbnailObjectName ?? listing.images?.[0]?.url
-  );
+  const imageUrl = getPrimaryImage(listing);
   const price = getListingPrice(listing);
 
   return (
@@ -40,10 +39,11 @@ export function ProductCard({
         {imageUrl ? (
           <Image
             src={imageUrl}
-            alt={listing.title}
+            alt={listing.title || "Product image"}
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw"
             className="object-cover transition-transform duration-300 group-hover:scale-105"
+            unoptimized={Boolean(imageUrl.startsWith("http"))}
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-[11px] text-muted-foreground">

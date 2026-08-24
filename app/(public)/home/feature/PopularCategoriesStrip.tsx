@@ -63,17 +63,12 @@ export function PopularCategoriesStrip() {
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
 
   const categories =
-    apiCategories && apiCategories.length > 0
-      ? apiCategories.map((c: any) => ({
-          id: c.uuid || String(c.id),
-          name: c.name,
-          slug: c.slug || String(c.id),
-          image_url: getCategoryPicture(c.slug || "", c.name || "", c.image_url || c.imageUrl),
-        }))
-      : FALLBACK_CATEGORIES.map((c) => ({
-          ...c,
-          image_url: getCategoryPicture(c.slug, c.name),
-        }));
+    (apiCategories || []).map((c: any) => ({
+      id: c.uuid || String(c.id),
+      name: c.name,
+      slug: c.slug || String(c.id),
+      image_url: getCategoryPicture(c.slug || "", c.name || "", c.image_url || c.imageUrl),
+    }));
 
   const scroll = (direction: "left" | "right") => {
     if (scrollContainerRef.current) {

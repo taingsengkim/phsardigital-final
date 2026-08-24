@@ -378,24 +378,26 @@ export default function Navbar() {
 
           <div className="flex-1" />
 
-          {/* Quick link to Seller Registration / Dashboard in nav rail */}
-          {isSeller ? (
-            <Link
-              href="/seller-dashboard/home"
-              className="flex flex-shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1 text-[12px] font-bold text-[#6C4CD8] bg-white transition hover:bg-white/90 shadow-xs"
-            >
-              <Store size={13} />
-              {storeName || "Seller Dashboard"}
-            </Link>
-          ) : (
-            <Link
-              href="/account/seller-application"
-              className="flex flex-shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-semibold text-white transition hover:bg-white/20"
-              style={{ background: "rgba(255,255,255,0.18)" }}
-            >
-              <Store size={13} />
-              Become a Seller
-            </Link>
+          {/* Quick link to Seller Registration / Dashboard in nav rail — only when logged in */}
+          {isLoggedIn && (
+            isSeller ? (
+              <Link
+                href="/seller-dashboard/home"
+                className="flex flex-shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1 text-[12px] font-bold text-[#6C4CD8] bg-white transition hover:bg-white/90 shadow-xs"
+              >
+                <Store size={13} />
+                {storeName || "Seller Dashboard"}
+              </Link>
+            ) : (
+              <Link
+                href="/account/seller-application"
+                className="flex flex-shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-semibold text-white transition hover:bg-white/20"
+                style={{ background: "rgba(255,255,255,0.18)" }}
+              >
+                <Store size={13} />
+                Become a Seller
+              </Link>
+            )
           )}
 
           <div

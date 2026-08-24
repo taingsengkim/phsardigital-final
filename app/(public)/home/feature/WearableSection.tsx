@@ -84,8 +84,7 @@ export function WearableSection() {
   const apiListings =
     categoryResponse?.data || (categoryResponse as any)?.content || [];
 
-  const listings =
-    apiListings && apiListings.length > 0 ? apiListings : DRESS_PRODUCTS;
+  const listings = apiListings || [];
 
   return (
     <section className="mx-auto w-full max-w-[1380px] px-4 sm:px-6 py-6 font-sans">

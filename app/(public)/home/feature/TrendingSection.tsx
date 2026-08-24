@@ -77,10 +77,7 @@ export function TrendingSection() {
   const apiListings =
     topRatedResponse?.data || (topRatedResponse as any)?.content || [];
 
-  const listings =
-    apiListings && apiListings.length >= 4
-      ? apiListings.slice(0, 4)
-      : FALLBACK_TRENDING;
+  const listings = apiListings ? apiListings.slice(0, 4) : [];
 
   return (
     <section className="mx-auto w-full max-w-[1380px] px-4 sm:px-6 py-6 font-sans">

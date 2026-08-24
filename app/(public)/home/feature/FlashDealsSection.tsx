@@ -102,6 +102,46 @@ const FLASH_ITEMS: FlashDealItem[] = [
   },
 ];
 
+function formatFlashDeal(item: any): FlashDealItem {
+  const full = item.fullPrice ?? item.price ?? 50;
+  const disc = item.discountPrice;
+  const originalPrice = Math.round(full);
+  const salePrice = Math.round(disc ?? full);
+  const discountPercent =
+    disc && originalPrice > salePrice
+      ? Math.round(((originalPrice - salePrice) / originalPrice) * 100)
+      : 20;
+
+  const primaryImage =
+    typeof item.thumbnailUri === "string"
+      ? item.thumbnailUri
+      : item.thumbnailUri?.uri ||
+        item.images?.[0]?.uri ||
+        item.images?.[0]?.url ||
+        "/picture/product_dress_blue_floral.jpg";
+
+  const thumbnails = (item.images || [])
+    .map((img: any) => img?.uri || img?.url)
+    .filter(Boolean);
+  if (thumbnails.length === 0) thumbnails.push(primaryImage);
+
+  return {
+    id: item.uuid || item.id || "flash-1",
+    slug: item.slug || item.uuid || "flash-deal",
+    title: item.title || "Flash Sale Item",
+    category: item.category?.name || "Featured",
+    storeName: item.sellerProfile?.businessName || "Phsar Store",
+    originalPrice,
+    salePrice,
+    discountPercent,
+    rating: item.averageRating ?? 4.9,
+    reviewCount: item.reviewCount ?? 18,
+    badge: item.isFeatured ? "Hot Deal" : "Flash Sale",
+    image: primaryImage,
+    thumbnails,
+  };
+}
+
 export function FlashDealsSection() {
   const [activeThumb, setActiveThumb] = React.useState(0);
   const [savedItems, setSavedItems] = React.useState<Record<string, boolean>>({});
@@ -112,7 +152,14 @@ export function FlashDealsSection() {
     seconds: "22",
   });
 
-  const { data: featuredResponse } = useGetFeaturedListingsQuery();
+  const { data: featuredResponse, isLoading } = useGetFeaturedListingsQuery();
+
+  const apiListings =
+    featuredResponse?.data || (featuredResponse as any)?.content || [];
+
+  const formattedItems = React.useMemo(() => {
+    return (apiListings || []).map(formatFlashDeal);
+  }, [apiListings]);
 
   const toggleSave = (id: string, e: React.MouseEvent) => {
     e.preventDefault();
@@ -152,10 +199,15 @@ export function FlashDealsSection() {
     return () => clearInterval(timer);
   }, []);
 
+  if (formattedItems.length === 0) return null;
+
+  const featuredDeal = formattedItems[0];
+  const flashItems = formattedItems.slice(1, 5);
+
   const featuredImg =
-    FEATURED_DEAL.thumbnails && FEATURED_DEAL.thumbnails[activeThumb]
-      ? FEATURED_DEAL.thumbnails[activeThumb]
-      : FEATURED_DEAL.image;
+    featuredDeal?.thumbnails && featuredDeal.thumbnails[activeThumb]
+      ? featuredDeal.thumbnails[activeThumb]
+      : featuredDeal?.image || "/picture/product_dress_blue_floral.jpg";
 
   return (
     <section className="mx-auto w-full max-w-[1280px] px-4 sm:px-6 py-5 font-sans">
@@ -209,94 +261,96 @@ export function FlashDealsSection() {
       <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] xl:grid-cols-[400px_1fr] gap-3.5 sm:gap-4 items-start">
         
         {/* ================= LEFT: LARGE STANDALONE FEATURED FLASH CARD ================= */}
-        <div className="relative flex flex-col justify-between rounded-2xl border border-[#EDEBF3] dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 sm:p-5 shadow-xs hover:shadow-md transition-all">
-          <div className="space-y-3.5">
-            {/* Top Badges */}
-            <div className="flex items-center justify-between">
-              <span className="rounded-full bg-[#E8F8F0] dark:bg-emerald-950/40 text-[#10B981] dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40 font-bold text-xs px-3 py-0.5">
-                {FEATURED_DEAL.badge}
-              </span>
-              <span className="rounded-full bg-[#FF3366] text-white font-extrabold text-xs px-2.5 py-0.5 shadow-xs">
-                -{FEATURED_DEAL.discountPercent}%
-              </span>
-            </div>
-
-            {/* Main Featured Image - Large and Prominent */}
-            <div className="relative aspect-[16/11] w-full overflow-hidden rounded-xl bg-slate-50 dark:bg-zinc-800">
-              <Image
-                src={featuredImg}
-                alt={FEATURED_DEAL.title}
-                fill
-                sizes="(max-width: 1024px) 100vw, 400px"
-                className="object-cover transition-transform duration-300 hover:scale-105"
-              />
-            </div>
-
-            {/* Gallery Thumbnail Row */}
-            {FEATURED_DEAL.thumbnails && (
-              <div className="flex items-center gap-2 pt-0.5">
-                {FEATURED_DEAL.thumbnails.map((thumb, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setActiveThumb(idx)}
-                    className={`relative size-12 rounded-lg overflow-hidden border-2 transition-all cursor-pointer ${
-                      activeThumb === idx
-                        ? "border-[#6C4CD8] scale-105 shadow-xs"
-                        : "border-transparent opacity-70 hover:opacity-100"
-                    }`}
-                  >
-                    <Image src={thumb} alt="thumbnail" fill className="object-cover" />
-                  </button>
-                ))}
+        {featuredDeal && (
+          <div className="relative flex flex-col justify-between rounded-2xl border border-[#EDEBF3] dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 sm:p-5 shadow-xs hover:shadow-md transition-all">
+            <div className="space-y-3.5">
+              {/* Top Badges */}
+              <div className="flex items-center justify-between">
+                <span className="rounded-full bg-[#E8F8F0] dark:bg-emerald-950/40 text-[#10B981] dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40 font-bold text-xs px-3 py-0.5">
+                  {featuredDeal.badge}
+                </span>
+                <span className="rounded-full bg-[#FF3366] text-white font-extrabold text-xs px-2.5 py-0.5 shadow-xs">
+                  -{featuredDeal.discountPercent}%
+                </span>
               </div>
-            )}
 
-            {/* Info */}
-            <div className="space-y-1.5 pt-0.5">
-              <span className="text-[11px] font-bold text-[#6C4CD8] dark:text-[#A78BFA] uppercase tracking-wider">
-                {FEATURED_DEAL.category}
-              </span>
-              <Link href={`/products/${FEATURED_DEAL.slug}`}>
-                <h3 className="text-[16px] sm:text-[17px] font-bold text-[#111827] dark:text-white line-clamp-2 hover:text-[#6C4CD8] transition-colors leading-snug">
-                  {FEATURED_DEAL.title}
-                </h3>
-              </Link>
-              
-              {/* Rating */}
-              <div className="flex items-center gap-1 text-xs pt-0.5">
-                <div className="flex items-center text-amber-400">
-                  <Star className="size-3.5 fill-[#F5B301] text-[#F5B301]" />
-                  <span className="font-bold ml-1 text-[#111827] dark:text-white">{FEATURED_DEAL.rating}</span>
+              {/* Main Featured Image - Large and Prominent */}
+              <div className="relative aspect-[16/11] w-full overflow-hidden rounded-xl bg-slate-50 dark:bg-zinc-800">
+                <Image
+                  src={featuredImg}
+                  alt={featuredDeal.title}
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 400px"
+                  className="object-cover transition-transform duration-300 hover:scale-105"
+                />
+              </div>
+
+              {/* Gallery Thumbnail Row */}
+              {featuredDeal.thumbnails && (
+                <div className="flex items-center gap-2 pt-0.5">
+                  {featuredDeal.thumbnails.map((thumb: string, idx: number) => (
+                    <button
+                      key={idx}
+                      onClick={() => setActiveThumb(idx)}
+                      className={`relative size-12 rounded-lg overflow-hidden border-2 transition-all cursor-pointer ${
+                        activeThumb === idx
+                          ? "border-[#6C4CD8] scale-105 shadow-xs"
+                          : "border-transparent opacity-70 hover:opacity-100"
+                      }`}
+                    >
+                      <Image src={thumb} alt="thumbnail" fill className="object-cover" />
+                    </button>
+                  ))}
                 </div>
-                <span className="text-gray-400 text-xs">({FEATURED_DEAL.reviewCount} Reviews)</span>
+              )}
+
+              {/* Info */}
+              <div className="space-y-1.5 pt-0.5">
+                <span className="text-[11px] font-bold text-[#6C4CD8] dark:text-[#A78BFA] uppercase tracking-wider">
+                  {featuredDeal.category}
+                </span>
+                <Link href={`/products/${featuredDeal.slug}`}>
+                  <h3 className="text-[16px] sm:text-[17px] font-bold text-[#111827] dark:text-white line-clamp-2 hover:text-[#6C4CD8] transition-colors leading-snug">
+                    {featuredDeal.title}
+                  </h3>
+                </Link>
+                
+                {/* Rating */}
+                <div className="flex items-center gap-1 text-xs pt-0.5">
+                  <div className="flex items-center text-amber-400">
+                    <Star className="size-3.5 fill-[#F5B301] text-[#F5B301]" />
+                    <span className="font-bold ml-1 text-[#111827] dark:text-white">{featuredDeal.rating}</span>
+                  </div>
+                  <span className="text-gray-400 text-xs">({featuredDeal.reviewCount} Reviews)</span>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Pricing & Add to Cart Action */}
-          <div className="flex items-center justify-between pt-3.5 mt-3.5 border-t border-gray-100 dark:border-zinc-800">
-            <div className="flex items-baseline gap-2">
-              <span className="text-xl sm:text-2xl font-black text-[#6C4CD8]">
-                ${FEATURED_DEAL.salePrice}.00
-              </span>
-              <span className="text-xs font-semibold text-gray-400 line-through">
-                ${FEATURED_DEAL.originalPrice}.00
-              </span>
+            {/* Pricing & Add to Cart Action */}
+            <div className="flex items-center justify-between pt-3.5 mt-3.5 border-t border-gray-100 dark:border-zinc-800">
+              <div className="flex items-baseline gap-2">
+                <span className="text-xl sm:text-2xl font-black text-[#6C4CD8]">
+                  ${featuredDeal.salePrice}.00
+                </span>
+                <span className="text-xs font-semibold text-gray-400 line-through">
+                  ${featuredDeal.originalPrice}.00
+                </span>
+              </div>
+
+              <Link
+                href={`/products/${featuredDeal.slug}`}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-[#111827] dark:bg-[#6C4CD8] text-white px-4 py-2 text-xs font-bold hover:bg-[#6C4CD8] transition-colors shadow-xs"
+              >
+                <ShoppingBag className="size-3.5" />
+                <span>Shop Now</span>
+              </Link>
             </div>
-
-            <Link
-              href={`/products/${FEATURED_DEAL.slug}`}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#111827] dark:bg-white text-white dark:text-[#111827] px-4 py-2 text-xs font-bold hover:bg-[#6C4CD8] dark:hover:bg-zinc-100 transition-colors shadow-xs"
-            >
-              <ShoppingBag className="size-3.5" />
-              <span>Shop Now</span>
-            </Link>
           </div>
-        </div>
+        )}
 
         {/* ================= RIGHT: 2x2 COMPACT & SMALLER REGULAR PRODUCT CARDS ================= */}
         <div className="grid grid-cols-2 gap-2.5 sm:gap-3 items-stretch">
-          {FLASH_ITEMS.map((item) => {
+          {flashItems.map((item: FlashDealItem) => {
             const isFav = Boolean(savedItems[item.id]);
             return (
               <motion.div
