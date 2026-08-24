@@ -232,15 +232,15 @@ export default function ProductDetailClient({
       <div className="rounded-2xl bg-[#F6F5FA] px-6 py-5">
         <div className="flex flex-wrap items-baseline gap-3">
           <span className="text-[36px] font-black leading-none text-[#6C4CD8]">
-            {formatUsd(price)}
+            {formatUsd(fullPrice)}
           </span>
           {hasDiscount && (
-            <span className="text-[16px] font-medium text-[#8B85A0] line-through">
-              {formatUsd(fullPrice)}
+            <span className="text-[15px] font-semibold text-emerald-600">
+              Discount price: {formatUsd(price)}
             </span>
           )}
           <span className="text-[15px] font-medium text-[#8B85A0]">
-            ≈ {formatKhr(price)}
+            ≈ {formatKhr(fullPrice)}
           </span>
         </div>
 

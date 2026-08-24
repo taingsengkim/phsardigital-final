@@ -4,6 +4,7 @@ import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
+  AlertTriangle,
   Check,
   Eye,
   Loader2,
@@ -172,7 +173,6 @@ export function Released() {
         "discountPrice",
         "stock",
         "status",
-        "views",
         "actions",
       ]),
   );
@@ -215,9 +215,11 @@ export function Released() {
       return next;
     });
   const [actionMessage, setActionMessage] = React.useState("");
+  const [pendingDelete, setPendingDelete] = React.useState<Product | null>(null);
 
-  async function deleteProduct(uuid: string, title: string) {
-    if (!window.confirm(`Delete "${title}"? This action cannot be undone.`)) return;
+  async function deleteProduct() {
+    if (!pendingDelete) return;
+    const { id: uuid } = pendingDelete;
     setActionMessage("");
     try {
       await deleteListing({ uuid }).unwrap();
@@ -228,6 +230,7 @@ export function Released() {
         return next;
       });
       setActionMessage("Product deleted successfully.");
+      setPendingDelete(null);
     } catch (error) {
       const apiError = error as { data?: { message?: string } };
       setActionMessage(apiError.data?.message ?? "Could not delete the product.");
@@ -268,7 +271,6 @@ export function Released() {
             { key: "discountPrice", label: "Discount price" },
             { key: "stock", label: "Stock" },
             { key: "status", label: "Status" },
-            { key: "views", label: "Views" },
             { key: "actions", label: "Actions" },
           ]}
           visibleColumns={visibleColumns}
@@ -294,12 +296,11 @@ export function Released() {
             <colgroup>
               <col className="w-[5%]" />
               <col className="w-[32%]" />
-              <col className="w-[10.5%]" />
-              <col className="w-[10.5%]" />
-              <col className="w-[10.5%]" />
-              <col className="w-[10.5%]" />
-              <col className="w-[10.5%]" />
-              <col className="w-[10.5%]" />
+              <col className="w-[12.6%]" />
+              <col className="w-[12.6%]" />
+              <col className="w-[12.6%]" />
+              <col className="w-[12.6%]" />
+              <col className="w-[12.6%]" />
             </colgroup>
             <TableHeader>
               <TableRow className="h-14 hover:bg-transparent">
@@ -349,14 +350,6 @@ export function Released() {
                   )}
                 >
                   Status
-                </TableHead>
-                <TableHead
-                  className={cn(
-                    "text-center text-[13px] font-bold uppercase tracking-[0.08em] text-[#596273]",
-                    !visibleColumns.has("views") && "hidden",
-                  )}
-                >
-                  Views
                 </TableHead>
                 <TableHead
                   className={cn(
@@ -437,14 +430,6 @@ export function Released() {
                     </span>
                   </TableCell>
                   <TableCell
-                    className={cn(
-                      "text-center text-base font-semibold",
-                      !visibleColumns.has("views") && "hidden",
-                    )}
-                  >
-                    {viewLabel(p.views)}
-                  </TableCell>
-                  <TableCell
                     className={cn(!visibleColumns.has("actions") && "hidden")}
                   >
                     <details className="relative mx-auto w-fit">
@@ -469,7 +454,7 @@ export function Released() {
                         <button
                           type="button"
                           disabled={isDeleting}
-                          onClick={() => deleteProduct(p.id, p.title)}
+                          onClick={() => setPendingDelete(p)}
                           className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-red-600 hover:bg-red-50 disabled:opacity-50"
                         >
                           <Trash2 className="size-4" />
@@ -524,6 +509,52 @@ export function Released() {
           onPageChange={setPage}
         />
       </div>
+      {pendingDelete && (
+        <div
+          className="fixed inset-0 z-50 grid place-items-center bg-slate-950/55 px-4 backdrop-blur-[2px]"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !isDeleting) setPendingDelete(null);
+          }}
+        >
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="delete-product-title"
+            aria-describedby="delete-product-description"
+            className="w-full max-w-md rounded-[28px] bg-white px-7 py-8 text-center shadow-[0_28px_80px_rgba(15,23,42,0.3)] sm:px-9"
+          >
+            <span className="mx-auto grid size-16 place-items-center rounded-full bg-red-50 text-red-600">
+              <AlertTriangle className="size-9" strokeWidth={2.2} />
+            </span>
+            <h2 id="delete-product-title" className="mt-5 text-2xl font-bold text-slate-900">
+              Delete product?
+            </h2>
+            <p id="delete-product-description" className="mx-auto mt-3 max-w-sm text-sm leading-6 text-slate-500">
+              You&apos;re about to permanently delete <strong className="font-semibold text-slate-800">“{pendingDelete.title}”</strong>. This action cannot be undone.
+            </p>
+            <div className="mt-7 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setPendingDelete(null)}
+                className="h-12 rounded-xl bg-slate-100 text-sm font-semibold text-slate-700 transition hover:bg-slate-200 disabled:opacity-50"
+              >
+                No, keep it
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={deleteProduct}
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isDeleting ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
+                {isDeleting ? "Deleting..." : "Yes, delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

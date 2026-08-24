@@ -30,3 +30,9 @@ export interface CommentPage {
 export interface CommentPageParams { page?: number; size?: number }
 export interface ReplyToCommentRequest { reviewUuid: string; comment: string; parentReplyUuid?: string }
 export interface CommentReply { uuid?: string; comment: string; createdAt?: string }
+
+export interface CreateProductReviewRequest {
+  listingUuid: string
+  rating: number
+  comment?: string
+}

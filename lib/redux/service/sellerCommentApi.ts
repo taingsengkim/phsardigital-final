@@ -1,5 +1,6 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react"
-import type { CommentPage, CommentPageParams, CommentReply, ReplyToCommentRequest } from "@/lib/types/seller-comment"
+import type { ApiReview } from "@/lib/types"
+import type { CommentPage, CommentPageParams, CommentReply, CreateProductReviewRequest, ReplyToCommentRequest } from "@/lib/types/seller-comment"
 
 export const sellerCommentApi = createApi({
   reducerPath: "sellerCommentApi",
@@ -18,7 +19,20 @@ export const sellerCommentApi = createApi({
       query: (reviewUuid) => ({ url: `/reviews/${encodeURIComponent(reviewUuid)}`, method: "DELETE" }),
       invalidatesTags: ["SellerComments"],
     }),
+    createProductReview: builder.mutation<ApiReview, CreateProductReviewRequest>({
+      query: ({ listingUuid, ...body }) => ({
+        url: `/reviews/listings/${encodeURIComponent(listingUuid)}`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["SellerComments"],
+    }),
   }),
 })
 
-export const { useGetSellerCommentsQuery, useReplyToCommentMutation, useDeleteCommentMutation } = sellerCommentApi
+export const {
+  useGetSellerCommentsQuery,
+  useReplyToCommentMutation,
+  useDeleteCommentMutation,
+  useCreateProductReviewMutation,
+} = sellerCommentApi

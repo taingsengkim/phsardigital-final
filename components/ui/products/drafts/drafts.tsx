@@ -189,7 +189,6 @@ export function Drafts({
         "discountPrice",
         "stock",
         "status",
-        "views",
         "actions",
       ]),
   );
@@ -305,7 +304,6 @@ export function Drafts({
             { key: "discountPrice", label: "Discount price" },
             { key: "stock", label: "Stock" },
             { key: "status", label: "Status" },
-            { key: "views", label: "Views" },
             { key: "actions", label: "Actions" },
           ]}
           visibleColumns={visibleColumns}
@@ -316,12 +314,11 @@ export function Drafts({
           <colgroup>
             <col className="w-[5%]" />
             <col className="w-[32%]" />
-            <col className="w-[10.5%]" />
-            <col className="w-[10.5%]" />
-            <col className="w-[10.5%]" />
-            <col className="w-[10.5%]" />
-            <col className="w-[10.5%]" />
-            <col className="w-[10.5%]" />
+            <col className="w-[12.6%]" />
+            <col className="w-[12.6%]" />
+            <col className="w-[12.6%]" />
+            <col className="w-[12.6%]" />
+            <col className="w-[12.6%]" />
           </colgroup>
           <TableHeader>
             <TableRow className="h-14 hover:bg-transparent">
@@ -371,14 +368,6 @@ export function Drafts({
                 )}
               >
                 Status
-              </TableHead>
-              <TableHead
-                className={cn(
-                  "text-center text-sm font-bold uppercase tracking-[0.08em] text-[#596273]",
-                  !visibleColumns.has("views") && "hidden",
-                )}
-              >
-                Views
               </TableHead>
               <TableHead
                 className={cn(
@@ -455,14 +444,6 @@ export function Drafts({
                     <span className="size-2 rounded-full bg-amber-400" />
                     Draft
                   </span>
-                </TableCell>
-                <TableCell
-                  className={cn(
-                    "text-center text-base font-semibold",
-                    !visibleColumns.has("views") && "hidden",
-                  )}
-                >
-                  {product.views}
                 </TableCell>
                 <TableCell
                   className={cn(!visibleColumns.has("view") && "hidden")}

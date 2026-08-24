@@ -40,9 +40,17 @@ export function SellerSidebar() {
   const pathname = usePathname()
   const [reportsOpen, setReportsOpen] = React.useState(pathname.includes("/products/dashboard") || pathname.includes("/products/comment"))
   const [inventoryOpen, setInventoryOpen] = React.useState(pathname.includes("/products/drafts") || pathname.includes("/products/released"))
+  const [logoutOpen, setLogoutOpen] = React.useState(false)
+  const [isLoggingOut, setIsLoggingOut] = React.useState(false)
   const active = (href: string, prefix = false) => prefix ? pathname.startsWith(href) : pathname === href
 
+  async function confirmLogout() {
+    setIsLoggingOut(true)
+    await logoutFromKeycloak("/")
+  }
+
   return (
+    <>
     <Sidebar collapsible="icon" className="border-r border-[#f0f0f0] bg-white text-[#77746f] dark:border-sidebar-border dark:bg-sidebar dark:text-sidebar-foreground">
       <SidebarHeader className="flex h-[70px] shrink-0 justify-center border-b border-[#eeeeee] bg-white px-[22px] dark:border-sidebar-border dark:bg-sidebar">
         <Link href="/seller-dashboard/home" aria-label="Phsar Digital seller dashboard" className="flex items-center gap-3">
@@ -95,11 +103,29 @@ export function SellerSidebar() {
           <Settings className="size-[21px] shrink-0" strokeWidth={1.8} />
           <span className="group-data-[collapsible=icon]:hidden">Settings</span>
         </Link>
-        <button type="button" onClick={() => logoutFromKeycloak("/")} className={cn(itemClass, "text-[#e74e58] hover:bg-red-50 hover:text-[#d93d48] dark:text-red-400 dark:hover:bg-red-500/10")}>
+        <button type="button" onClick={() => setLogoutOpen(true)} className={cn(itemClass, "text-[#e74e58] hover:bg-red-50 hover:text-[#d93d48] dark:text-red-400 dark:hover:bg-red-500/10")}>
           <LogOut className="size-[21px] shrink-0" strokeWidth={1.8} />
           <span className="group-data-[collapsible=icon]:hidden">Log Out</span>
         </button>
       </SidebarFooter>
     </Sidebar>
+    {logoutOpen && (
+      <div className="fixed inset-0 z-[100] grid place-items-center bg-slate-950/55 px-4 backdrop-blur-[2px]" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !isLoggingOut) setLogoutOpen(false) }}>
+        <div role="alertdialog" aria-modal="true" aria-labelledby="logout-title" aria-describedby="logout-description" className="w-full max-w-md rounded-[28px] bg-white px-7 py-8 text-center shadow-[0_28px_80px_rgba(15,23,42,0.3)] dark:bg-slate-900 sm:px-9">
+          <span className="mx-auto grid size-16 place-items-center rounded-full bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400">
+            <LogOut className="size-8" strokeWidth={2} />
+          </span>
+          <h2 id="logout-title" className="mt-5 text-2xl font-bold text-slate-900 dark:text-white">Logout account?</h2>
+          <p id="logout-description" className="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400">Are you sure you want to log out of your account?</p>
+          <div className="mt-7 grid grid-cols-2 gap-3">
+            <button type="button" disabled={isLoggingOut} onClick={() => setLogoutOpen(false)} className="h-12 rounded-xl bg-slate-100 text-sm font-semibold text-slate-700 transition hover:bg-slate-200 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">Cancel</button>
+            <button type="button" disabled={isLoggingOut} onClick={confirmLogout} className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60">
+              <LogOut className="size-4" /> {isLoggingOut ? "Logging out..." : "Logout"}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   )
 }

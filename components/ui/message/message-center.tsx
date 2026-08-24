@@ -5,8 +5,10 @@ import Image from "next/image"
 import { Loader2, Search, Send } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useGetConversationsQuery, useGetConversationMessagesQuery, useMarkConversationReadMutation, useSendConversationMessageMutation } from "@/lib/redux/service/sellerMessageApi"
+import { useMessageWebSocket } from "@/lib/hooks/use-message-websocket"
 
 export function MessageCenter() {
+  const connectionState = useMessageWebSocket()
   const { data: conversations = [], isLoading: conversationsLoading, isError, refetch } = useGetConversationsQuery()
   const [selectedId, setSelectedId] = React.useState("")
   const [query, setQuery] = React.useState("")
@@ -49,6 +51,7 @@ export function MessageCenter() {
         <div className="flex min-h-[600px] min-w-0 flex-col">
           <header className="flex min-h-20 items-center gap-3 border-b px-6">
             {selected && <><Image src={selected.otherUserAvatar || "/picture/lisa.PNG"} alt="" width={42} height={42} className="size-[42px] rounded-full object-cover" /><h2 className="truncate text-lg font-semibold">{selected.otherUserName || "Customer"}</h2></>}
+            <span className={cn("ml-auto inline-flex items-center gap-1.5 text-xs", connectionState === "connected" ? "text-emerald-600" : "text-amber-600")}><span className={cn("size-2 rounded-full", connectionState === "connected" ? "bg-emerald-500" : "bg-amber-500")} />{connectionState === "connected" ? "Live" : connectionState === "connecting" ? "Connecting" : "Reconnecting"}</span>
           </header>
           <div className="flex-1 overflow-y-auto px-6 py-6">
             {!activeId ? <p className="pt-24 text-center text-sm text-muted-foreground">Select a conversation.</p>
