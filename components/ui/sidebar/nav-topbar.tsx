@@ -288,11 +288,11 @@ export function NavTopbar() {
           onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
           className={iconButton}
         >
-          {resolvedTheme === "dark" ? (
-            <Sun className="size-[18px]" strokeWidth={1.8} />
-          ) : (
-            <Moon className="size-[18px]" strokeWidth={1.8} />
-          )}
+          {/* The server cannot know the theme, so branching on it here rendered
+              one icon on the server and the other after hydration. Both icons
+              are always rendered and CSS picks — identical markup either way. */}
+          <Sun className="hidden size-[18px] dark:block" strokeWidth={1.8} />
+          <Moon className="size-[18px] dark:hidden" strokeWidth={1.8} />
         </Button>
 
         <DropdownMenu>

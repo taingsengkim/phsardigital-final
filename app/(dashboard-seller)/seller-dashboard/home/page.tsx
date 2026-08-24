@@ -33,6 +33,21 @@ import {
    week of trading rather than just the most recent screenful. */
 const ORDER_SAMPLE = 200;
 
+/**
+ * This page is prerendered, so anything derived from "now" — the rolling 7-day
+ * window below — would be baked at build time and disagree with the browser on
+ * every later day. Gate that on hydration. useSyncExternalStore is the
+ * canonical read: no setState in an effect, so no cascading render.
+ */
+const neverChanges = () => () => {};
+function useHydrated(): boolean {
+  return React.useSyncExternalStore(
+    neverChanges,
+    () => true,
+    () => false,
+  );
+}
+
 type StockListing = {
   uuid?: string;
   title?: string;
@@ -517,6 +532,7 @@ export default function DashboardSeller() {
   });
 
   const isSuspended = Boolean(profile?.suspendedAt);
+  const hydrated = useHydrated();
 
   return (
     <div className="min-h-screen space-y-6 bg-background p-4 font-sans sm:p-6">
@@ -645,7 +661,18 @@ export default function DashboardSeller() {
         />
       </div>
 
-      <SalesAnalytics days={dailyMetrics} />
+      {hydrated ? (
+        <SalesAnalytics days={dailyMetrics} />
+      ) : (
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1.8fr)_minmax(300px,1fr)]">
+          <Panel className="h-[368px]" >
+            <Loader2 className="size-5 animate-spin text-primary" />
+          </Panel>
+          <Panel className="h-[368px]">
+            <Loader2 className="size-5 animate-spin text-primary" />
+          </Panel>
+        </div>
+      )}
 
       <StockOverview listings={stockListings} loading={isLoadingListings} />
 

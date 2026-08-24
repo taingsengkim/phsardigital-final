@@ -5,7 +5,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, ArrowRight, Loader2 } from "lucide-react";
-import { useGetListingsByCategoryQuery } from "@/lib/api/homeApi";
+import {
+  useGetCategoriesQuery,
+  useGetListingsByCategoryQuery,
+} from "@/lib/api/homeApi";
 import ProductCard from "../ProductCard";
 
 const CATEGORY_TABS = [
@@ -76,10 +79,41 @@ const DRESS_PRODUCTS = [
 ];
 
 export function WearableSection() {
-  const [activeTab, setActiveTab] = React.useState(CATEGORY_TABS[0].slug);
+  /* Tabs come from the live category list so their slugs cannot drift from the
+     API's. The hardcoded set had "health-beauty" and "groceries-essentials"
+     where the API uses "health-and-beauty" and "groceries-and-essentials", so
+     those tabs always queried a slug that does not exist and showed nothing. */
+  const { data: categories = [] } = useGetCategoriesQuery();
+  const tabs = React.useMemo(() => {
+    const bySlug = new Map(
+      categories
+        .filter((category) => category?.slug)
+        .map((category) => [category.slug as string, category]),
+    );
+    const preferred = CATEGORY_TABS.map((tab) => bySlug.get(tab.slug)).filter(
+      Boolean,
+    );
+    const rest = categories.filter(
+      (category) =>
+        category?.slug &&
+        !CATEGORY_TABS.some((tab) => tab.slug === category.slug),
+    );
+    const chosen = [...preferred, ...rest].slice(0, 5);
+    return chosen.length > 0
+      ? chosen.map((category) => ({
+          id: category!.slug as string,
+          slug: category!.slug as string,
+          label: category!.name ?? (category!.slug as string),
+        }))
+      : CATEGORY_TABS;
+  }, [categories]);
+
+  const [selectedTab, setSelectedTab] = React.useState("");
+  const activeTab = selectedTab || tabs[0]?.slug || CATEGORY_TABS[0].slug;
+  const setActiveTab = setSelectedTab;
 
   const { data: categoryResponse, isLoading } =
-    useGetListingsByCategoryQuery(activeTab);
+    useGetListingsByCategoryQuery(activeTab, { skip: !activeTab });
 
   const apiListings =
     categoryResponse?.data || (categoryResponse as any)?.content || [];
@@ -101,7 +135,7 @@ export function WearableSection() {
 
         {/* Tab Buttons */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-          {CATEGORY_TABS.map((tab) => (
+          {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.slug)}

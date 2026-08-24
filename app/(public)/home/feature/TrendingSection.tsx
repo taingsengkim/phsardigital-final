@@ -11,7 +11,7 @@ import {
   Plus,
 } from "lucide-react";
 import {
-  useGetTopRatedListingsQuery,
+  useGetBestSellingListingsQuery,
   useGetListingsQuery,
 } from "@/lib/api/homeApi";
 import ProductCard from "../ProductCard";
@@ -72,7 +72,7 @@ const FALLBACK_TRENDING = [
 ];
 
 export function TrendingSection() {
-  const { data: topRatedResponse } = useGetTopRatedListingsQuery();
+  const { data: topRatedResponse } = useGetBestSellingListingsQuery();
 
   const apiListings =
     topRatedResponse?.data || (topRatedResponse as any)?.content || [];

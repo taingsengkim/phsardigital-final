@@ -3,10 +3,10 @@
 import { Loader2, Star } from "lucide-react";
 import { ProductCard } from "../ProductCard";
 import { SectionHeader } from "../SectionHeader";
-import { useGetTopRatedListingsQuery } from "@/lib/api/homeApi";
+import { useGetBestSellingListingsQuery } from "@/lib/api/homeApi";
 
 export function TopRatedSection() {
-  const { data: response, isLoading } = useGetTopRatedListingsQuery();
+  const { data: response, isLoading } = useGetBestSellingListingsQuery();
   const listings = response?.data || (response as any)?.content || [];
 
   return (
