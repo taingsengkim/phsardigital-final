@@ -286,7 +286,7 @@ export default function StoreDetailPageClient({ slug }: { slug?: string }) {
               )}
             </motion.button>
 
-            <Link href="/messages">
+            <Link href={`/messages?seller=${encodeURIComponent(safeSlug)}`}>
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.94 }}
@@ -607,7 +607,10 @@ export default function StoreDetailPageClient({ slug }: { slug?: string }) {
                   Have questions about products, sizing, or bulk orders? Chat directly with {store.name}&apos;s customer service.
                 </p>
 
-                <Link href="/messages" className="block">
+                <Link
+                  href={`/messages?seller=${encodeURIComponent(safeSlug)}`}
+                  className="block"
+                >
                   <motion.button
                     whileHover={{ scale: 1.03 }}
                     whileTap={{ scale: 0.95 }}
