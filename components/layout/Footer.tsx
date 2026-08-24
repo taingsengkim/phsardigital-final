@@ -132,7 +132,7 @@ export default function Footer() {
           </form>
           {subscribed && <p role="status" className="mt-3 text-sm font-medium text-white lg:absolute lg:bottom-2 lg:right-8">Thanks for subscribing!</p>}
         </section>
-    <div>
+    
       {/* ── Main Links Section ── */}
       <div className="mx-auto max-w-7xl px-6 pt-12 pb-8 sm:px-12 lg:px-20">
         <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-[1.2fr_1fr_1.2fr_1fr] items-start">
