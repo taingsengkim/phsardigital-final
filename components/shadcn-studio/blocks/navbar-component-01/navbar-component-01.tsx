@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useState } from "react";
 import {
   Search,
@@ -29,7 +28,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import SvgComponentSvg from "@/assets/svg/phsardigitalLogo";
+import PhsarDigitalLogo from "@/assets/svg/phsardigitalLogo";
 import LoginButton from "@/components/auth/LoginButton";
 import { useSession, logoutFromKeycloak } from "@/lib/auth-client";
 import { useGetMeQuery } from "@/lib/api/authApi";
@@ -114,12 +113,9 @@ export default function Navbar() {
             className="flex shrink-0 items-center gap-2 text-decoration-none group transition-transform hover:scale-105 active:scale-95"
             aria-label="Phsar Digital home"
           >
-            <Image
-              src="/picture/logo.png"
-              alt="Phsar Digital logo"
-              width={36}
-              height={36}
-              className="h-9 w-9 object-contain rounded-xl"
+            <PhsarDigitalLogo
+              className="h-9 w-9 shrink-0"
+              aria-hidden="true"
             />
             <span className="text-xl font-bold text-[#241F35]">
               Phsar Digital

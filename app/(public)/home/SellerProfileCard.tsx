@@ -9,10 +9,14 @@ export function SellerProfileCard({ seller }: { seller: any }) {
   const sellerName =
     seller.businessName || seller.storeDisplayName || seller.name || "Phsar Seller";
 
-  const sellerSlug = seller.slug || seller.sellerId || seller.id || seller.uuid || "storee-corner";
+  const sellerSlug =
+    seller.slug || seller.sellerId || seller.id || seller.uuid || "storee-corner";
 
   const logoImage =
     seller.logoUri || seller.logoUrl || seller.avatar_url || seller.avatarUrl || "/picture/pic1.jpg";
+
+  const coverImage =
+    seller.coverUrl || seller.coverUri || seller.bannerImage || "/picture/seller_cover_electronics.jpg";
 
   const rating = seller.averageRating ?? seller.rating ?? 4.9;
   const reviewCount = seller.review_count ?? seller.reviewCount ?? 120;
@@ -20,71 +24,85 @@ export function SellerProfileCard({ seller }: { seller: any }) {
   const verified = seller.verified !== false;
 
   return (
-    <Link href={`/stores/${sellerSlug}`} className="block h-full">
+    <Link href={`/stores/${sellerSlug}`} className="group block h-full select-none">
       <motion.div
-        whileHover={{ y: -6, boxShadow: "0 18px 36px -12px rgba(108,76,216,0.18)" }}
-        transition={{ type: "spring", stiffness: 300, damping: 22 }}
-        className="group relative flex h-full flex-col justify-between rounded-2xl border border-[#EDEBF3] bg-white p-4 font-sans shadow-xs transition-all hover:border-[#6C4CD8]"
+        whileHover={{ y: -5, boxShadow: "0 12px 30px -8px rgba(108,76,216,0.14)" }}
+        transition={{ duration: 0.2, ease: "easeOut" }}
+        className="flex h-full flex-col justify-between overflow-hidden rounded-[20px] border border-[#EDEBF3] dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-sm transition-all duration-200 hover:border-[#6C4CD8]/50"
       >
         <div>
-          {/* Card Header: Store Logo Avatar & Verified Badge */}
-          <div className="flex items-start justify-between gap-3">
-            <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[#EDEBF3] bg-[#F6F5FA] shadow-xs">
+          {/* Top Banner / Cover Image */}
+          <div className="relative h-[135px] sm:h-[145px] w-full overflow-hidden bg-slate-100 dark:bg-zinc-800">
+            <Image
+              src={coverImage}
+              alt={`${sellerName} cover`}
+              fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+              unoptimized={Boolean(coverImage?.startsWith("http"))}
+              className="object-cover transition-transform duration-500 group-hover:scale-105"
+            />
+          </div>
+
+          {/* Overlapping Store Avatar */}
+          <div className="px-4 sm:px-5">
+            <div className="relative -mt-8 size-15 sm:size-16 shrink-0 rounded-full border-[3px] border-white dark:border-zinc-900 bg-white dark:bg-zinc-800 shadow-md overflow-hidden flex items-center justify-center">
               {logoImage ? (
                 <Image
                   src={logoImage}
                   alt={sellerName}
-                  width={56}
-                  height={56}
+                  width={64}
+                  height={64}
                   unoptimized={Boolean(logoImage?.startsWith("http"))}
-                  className="object-cover h-full w-full"
+                  className="size-full object-cover"
                 />
               ) : (
-                <Store size={24} className="text-[#6C4CD8]" />
+                <Store className="size-6 text-[#6C4CD8]" />
+              )}
+            </div>
+          </div>
+
+          {/* Store Info */}
+          <div className="px-4 sm:px-5 pt-2.5 space-y-1.5">
+            {/* Title & Verified Badge Row */}
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-base sm:text-[17px] font-bold text-[#111827] dark:text-white truncate group-hover:text-[#6C4CD8] transition-colors">
+                {sellerName}
+              </h3>
+
+              {verified && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#ECE8FB] dark:bg-[#6C4CD8]/20 px-2 py-0.5 text-[10px] font-bold text-[#6C4CD8] dark:text-[#A78BFA] shrink-0 tracking-wide uppercase">
+                  <CheckCircle2 className="size-3 fill-[#6C4CD8] text-white dark:text-zinc-900" />
+                  VERIFIED
+                </span>
               )}
             </div>
 
-            {verified && (
-              <span className="flex items-center gap-1 rounded-full bg-[#F1EFFA] px-2.5 py-1 text-[11px] font-extrabold text-[#6C4CD8]">
-                <CheckCircle2 size={13} className="fill-[#6C4CD8] text-white" />
-                Verified
-              </span>
-            )}
-          </div>
-
-          {/* Store Title & Description */}
-          <div className="mt-3.5 space-y-1 min-h-[52px]">
-            <h3 className="text-[15.5px] font-extrabold text-[#1A1330] line-clamp-1 group-hover:text-[#6C4CD8] transition-colors">
-              {sellerName}
-            </h3>
-            {seller.tagline ? (
-              <p className="line-clamp-2 text-[12px] font-medium text-[#8B85A0] leading-snug">
-                {seller.tagline}
-              </p>
-            ) : (
-              <p className="text-[12px] font-medium text-[#8B85A0]">Official Seller Store</p>
-            )}
+            {/* Tagline / Bio */}
+            <p className="text-xs text-[#6B7280] dark:text-zinc-400 line-clamp-2 leading-relaxed min-h-[36px]">
+              {seller.tagline || seller.bio || "Official verified store on Phsar Digital."}
+            </p>
           </div>
         </div>
 
-        <div>
-          {/* Rating & Product Count Footer */}
-          <div className="mt-4 pt-3 border-t border-[#F0EDFB] flex items-center justify-between">
-            <div className="flex items-center gap-1 text-xs font-bold text-[#1A1330]">
-              <Star size={13} className="fill-amber-400 text-amber-400" />
+        {/* Footer Stats & Button */}
+        <div className="px-4 sm:px-5 pb-4 pt-3 space-y-3">
+          {/* Rating & Product Count Row */}
+          <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center gap-1 font-bold text-[#111827] dark:text-white">
+              <Star className="size-3.5 fill-amber-400 text-amber-400" />
               <span>{rating}</span>
-              <span className="text-[11px] font-normal text-[#8B85A0]">({reviewCount})</span>
+              <span className="font-normal text-[#9CA3AF] dark:text-zinc-400">({reviewCount})</span>
             </div>
 
-            <span className="rounded-full bg-[#F6F5FA] px-2.5 py-0.5 text-[11px] font-extrabold text-[#6C4CD8]">
+            <span className="font-bold text-[#6C4CD8] dark:text-[#A78BFA]">
               {productCount} Products
             </span>
           </div>
 
           {/* Visit Store Button */}
-          <div className="mt-3 flex items-center justify-center gap-1.5 rounded-xl bg-[#F6F5FA] py-2 text-xs font-extrabold text-[#6C4CD8] transition-all group-hover:bg-[#6C4CD8] group-hover:text-white shadow-xs">
+          <div className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-[#F2F0FC] dark:bg-[#6C4CD8]/15 hover:bg-[#E8E4FA] dark:hover:bg-[#6C4CD8]/25 text-[#6C4CD8] dark:text-[#A78BFA] py-2.5 text-xs sm:text-sm font-semibold transition-colors">
             <span>Visit Store</span>
-            <ArrowRight size={13} className="transition-transform group-hover:translate-x-0.5" />
+            <ArrowRight className="size-3.5 transition-transform duration-200 group-hover:translate-x-1" />
           </div>
         </div>
       </motion.div>

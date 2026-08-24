@@ -69,9 +69,9 @@ export function ProductCard({ listing, sellerName, isSavedPage, onRemove }: Prod
             className="object-cover transition-transform duration-500 group-hover:scale-108"
           />
 
-          {/* Discount Badge on Top-Left */}
+          {/* Discount Badge on Top-Left (Picture 1 style) */}
           {discountPercent && (
-            <span className="absolute left-3 top-3 rounded-xl bg-[#6C4CD8] px-3 py-1 text-xs font-extrabold text-white shadow-md">
+            <span className="absolute left-3 top-3 z-10 rounded-md bg-[#6C4CD8] px-2.5 py-1 text-xs font-black text-white shadow-xs">
               -{discountPercent}%
             </span>
           )}
@@ -91,9 +91,9 @@ export function ProductCard({ listing, sellerName, isSavedPage, onRemove }: Prod
               }}
               aria-label="Remove from favorites"
               title="Remove from saved items"
-              className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white text-rose-500 shadow-md backdrop-blur-xs transition-all hover:bg-rose-500 hover:text-white"
+              className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white text-rose-500 shadow-md backdrop-blur-xs transition-all hover:bg-rose-500 hover:text-white"
             >
-              <Trash2 size={17} />
+              <Trash2 size={16} />
             </motion.button>
           ) : (
             <motion.button
@@ -121,12 +121,12 @@ export function ProductCard({ listing, sellerName, isSavedPage, onRemove }: Prod
                 }
               }}
               aria-label="Save item"
-              className={`absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full shadow-md transition-all ${
-                isSaved ? "bg-[#6C4CD8]" : "bg-white/95 hover:bg-[#F1EFFA]"
+              className={`absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full shadow-xs transition-all ${
+                isSaved ? "bg-[#6C4CD8]" : "bg-white/90 hover:bg-[#F1EFFA]"
               }`}
             >
               <Heart
-                size={16}
+                size={15}
                 color={isSaved ? "#fff" : "#6C4CD8"}
                 fill={isSaved ? "#fff" : "none"}
               />
@@ -134,20 +134,32 @@ export function ProductCard({ listing, sellerName, isSavedPage, onRemove }: Prod
           )}
         </div>
 
-        {/* Content Below Image */}
-        <div className="flex-1 p-4 flex flex-col justify-between space-y-2 font-sans">
-          {/* Product Title */}
-          <h3 className="line-clamp-2 text-[15px] font-extrabold text-[#1A1330] leading-snug transition-colors group-hover:text-[#6C4CD8]">
+        {/* Content Below Image (Picture 1 style: Title -> Price -> Rating -> Seller) */}
+        <div className="flex-1 p-3.5 sm:p-4 flex flex-col justify-between space-y-2 font-sans">
+          {/* 1. Product Title (Font size 16/17px) */}
+          <h3 className="line-clamp-2 text-[16px] sm:text-[17px] font-bold text-[#111827] dark:text-white leading-snug transition-colors group-hover:text-[#6C4CD8]">
             {listing.title || "Untitled Product"}
           </h3>
 
-          {/* 5-Star Rating Row + (reviewCount) */}
+          {/* 2. Price Row: Strikethrough Original Price + Current Purple Price */}
+          <div className="flex items-baseline gap-2 flex-wrap pt-0.5">
+            {originalPrice && (
+              <span className="text-xs sm:text-[13px] font-semibold text-[#9B94B4] line-through">
+                {formatPrice(originalPrice)}
+              </span>
+            )}
+            <span className="text-[16px] sm:text-[17px] font-black text-[#6C4CD8] dark:text-[#A78BFA]">
+              {formatPrice(currentPrice)}
+            </span>
+          </div>
+
+          {/* 3. 5-Star Rating Row + (reviewCount) */}
           <div className="flex items-center gap-1 text-xs">
-            <div className="flex items-center gap-0.5">
+            <div className="flex items-center gap-0.5 text-amber-400">
               {Array.from({ length: 5 }).map((_, i) => (
                 <Star
                   key={i}
-                  size={14}
+                  size={13}
                   className={
                     i < ratingVal
                       ? "fill-[#F5B301] text-[#F5B301]"
@@ -159,20 +171,8 @@ export function ProductCard({ listing, sellerName, isSavedPage, onRemove }: Prod
             <span className="ml-1 text-[12px] font-medium text-[#8B85A0]">({reviewCount})</span>
           </div>
 
-          {/* Price Row: Current Price + Strikethrough Original Price */}
-          <div className="flex items-baseline gap-2 flex-wrap pt-0.5">
-            <span className="text-xl font-black text-[#6C4CD8]">
-              {formatPrice(currentPrice)}
-            </span>
-            {originalPrice && (
-              <span className="text-xs font-semibold text-[#9B94B4] line-through">
-                {formatPrice(originalPrice)}
-              </span>
-            )}
-          </div>
-
-          {/* Seller Business Name */}
-          <p className="text-[12px] font-semibold text-[#7C7596] truncate">
+          {/* 4. Seller Business Name */}
+          <p className="text-[12px] font-medium text-[#7C7596] truncate">
             {displaySeller}
           </p>
         </div>

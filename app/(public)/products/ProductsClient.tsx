@@ -62,13 +62,21 @@ export default function ProductsClient() {
     }
   }
 
-  // Display items: use real API listings if available, else fallback to MOCK_PRODUCTS when API array is empty on initial load
+  // Display items: use real API listings if available, else fallback to MOCK_PRODUCTS filtered by category
   const displayItems =
     apiListings.length > 0
       ? apiListings
-      : !categorySlug && !isLoading
-        ? MOCK_PRODUCTS
+      : !isLoading
+        ? categorySlug
+          ? MOCK_PRODUCTS.filter((p) => {
+              const raw = categorySlug.toLowerCase();
+              const cSlug = (p.category?.slug || "").toLowerCase();
+              const cName = (p.category?.name || "").toLowerCase();
+              return cSlug.includes(raw) || raw.includes(cSlug) || cName.includes(raw);
+            })
+          : MOCK_PRODUCTS
         : [];
+
 
   const start = (page - 1) * 20 + 1;
   const end = Math.min(page * 20, Math.max(totalElements, displayItems.length));

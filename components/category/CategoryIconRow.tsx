@@ -1,72 +1,57 @@
+"use client";
+
+import Image from "next/image";
 import Link from "next/link";
-import { Monitor, Home as HomeIcon, Smartphone, Sofa, Shirt, Laptop, UtensilsCrossed, ShoppingBag as BagIcon, Car, LayoutGrid } from "lucide-react";
+import { LayoutGrid } from "lucide-react";
 
 const CATEGORIES = [
-  { name: "Recommend",                 icon: null,            bg: "#EDEBF3",  active: true },
-  { name: "Electronic & Appliances",   icon: Monitor,         bg: "#DCE3F0",  active: false },
-  { name: "House & Land",              icon: HomeIcon,        bg: "#E4EDE0",  active: false },
-  { name: "Phone & Tablets",           icon: Smartphone,      bg: "#1F2A3D",  active: false },
-  { name: "Furniture & Decor",         icon: Sofa,            bg: "#EFE0D2",  active: false },
-  { name: "Fashion & Beauty",          icon: Shirt,           bg: "#F3DEE3",  active: false },
-  { name: "Computer & Accessories",    icon: Laptop,          bg: "#D9E3EA",  active: false },
-  { name: "Home & Kitchen",            icon: UtensilsCrossed, bg: "#E8E3D8",  active: false },
-  { name: "Bag & Accessories",         icon: BagIcon,         bg: "#E2DCE8",  active: false },
-  { name: "Cars & Vehicles",           icon: Car,             bg: "#DCE3EE",  active: false },
+  { name: "All Products", href: "/products", image: "/picture/logo.png", isGrid: true },
+  { name: "Women's Fashion", href: "/products?category=womens-fashion", image: "/picture/product_dress_blue_floral.jpg" },
+  { name: "Men's Fashion", href: "/products?category=mens-fashion", image: "/picture/pic6.jpg" },
+  { name: "Health & Beauty", href: "/products?category=health-and-beauty", image: "/picture/hero_natural_care.jpg" },
+  { name: "Electronics", href: "/products?category=electronics", image: "/picture/seller_cover_electronics.jpg" },
+  { name: "Groceries & Food", href: "/products?category=groceries-and-essentials", image: "/picture/seller_cover_coffee.jpg" },
+  { name: "Home & Living", href: "/products?category=home-and-living", image: "/picture/pic2.jpg" },
+  { name: "Vehicles & Auto", href: "/products?category=vehicles", image: "/picture/seller_cover_auto.jpg" },
+  { name: "Books & Stationery", href: "/products?category=books-and-stationery", image: "/picture/category_books.jpg" },
+  { name: "Sports & Outdoors", href: "/products?category=sports-and-outdoors", image: "/picture/pic7.jpg" },
+  { name: "Toys & Baby", href: "/products?category=toys-and-baby-care", image: "/picture/pic8.jpg" },
 ];
 
 export default function CategoryIconRow() {
   return (
-    <div style={{ maxWidth: 1240, margin: "0 auto", padding: "24px 24px 10px" }}>
-      <div
-        style={{
-          display: "flex",
-          gap: 18,
-          overflowX: "auto",
-          justifyContent: "space-between",
-        }}
-        className="scrollbar-none"
-      >
-        {CATEGORIES.map((c) => {
-          const Icon = c.icon ?? LayoutGrid;
-          const isDark = c.bg === "#1F2A3D";
-
-          return (
-            <Link
-              key={c.name}
-              href={c.active ? "/products" : `/category/${c.name.toLowerCase().replace(/\s+/g, "-").replace(/[&]/g, "and")}`}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                width: 78,
-                textDecoration: "none",
-                cursor: "pointer",
-              }}
-            >
-              <div
-                style={{
-                  width: 56, height: 56,
-                  borderRadius: 999,
-                  background: c.bg,
-                  display: "flex",
-                  alignItems: "center", justifyContent: "center",
-                  marginBottom: 6,
-                }}
-              >
-                <Icon size={20} color={isDark ? "#fff" : "#3A3350"} />
-              </div>
-              <span
-                style={{
-                  fontSize: 11, fontWeight: 600, textAlign: "center",
-                  color: "#3A3350", lineHeight: 1.3,
-                }}
-              >
-                {c.name}
-              </span>
-            </Link>
-          );
-        })}
+    <div className="mx-auto w-full max-w-[1280px] px-4 sm:px-6 py-4 font-sans">
+      <div className="flex items-center gap-4 sm:gap-5 overflow-x-auto scrollbar-none pb-2 pt-1">
+        {CATEGORIES.map((c) => (
+          <Link
+            key={c.name}
+            href={c.href}
+            className="group flex flex-shrink-0 flex-col items-center gap-2.5 min-w-[100px] sm:min-w-[115px]"
+          >
+            <div className="relative size-20 sm:size-[92px] md:size-[100px] rounded-full p-1 border-2 border-gray-200/90 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs group-hover:shadow-md group-hover:border-[#6C4CD8] group-hover:ring-4 group-hover:ring-[#6C4CD8]/10 transition-all duration-300 flex items-center justify-center overflow-hidden">
+              {c.isGrid ? (
+                <div className="size-full rounded-full bg-[#111827] text-white flex items-center justify-center">
+                  <LayoutGrid size={28} />
+                </div>
+              ) : (
+                <div className="relative size-full rounded-full overflow-hidden bg-slate-100 dark:bg-zinc-800">
+                  <Image
+                    src={c.image}
+                    alt={c.name}
+                    fill
+                    sizes="100px"
+                    className="object-cover transition-transform duration-500 group-hover:scale-112"
+                  />
+                </div>
+              )}
+            </div>
+            <span className="text-center text-xs sm:text-[13px] font-bold text-[#1F1735] dark:text-zinc-300 group-hover:text-[#6C4CD8] line-clamp-1 transition-colors max-w-[110px]">
+              {c.name}
+            </span>
+          </Link>
+        ))}
       </div>
     </div>
   );
 }
+

@@ -2,171 +2,161 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Mail, Send, Phone, User, MapPinned } from "lucide-react";
+import { Mail, Send, Phone, User, MapPin, RefreshCw, Headphones, Star } from "lucide-react";
 
-/* ── data ──────────────────────────────────────────────────────────────── */
+/* ── Data Config ───────────────────────────────────────────────────────── */
 
 const FOOTER_COLS = [
   {
     title: "Company",
     links: [
-      { label: "About Us",              href: "/about"   },
-      { label: "Careers",               href: "/careers" },
-      { label: "Press & Media",         href: "/press"   },
-      { label: "Privacy Policy",        href: "/privacy" },
-      { label: "Terms & Conditions",    href: "/terms"   },
-      { label: "Acceptable Use Policy", href: "/aup"     },
+      { label: "About Us", href: "/about" },
+      { label: "Careers", href: "/careers" },
+      { label: "Press & Media", href: "/press" },
+      { label: "Privacy Policy", href: "/privacy" },
+      { label: "Terms & Conditions", href: "/terms" },
+      { label: "Acceptable Use Policy", href: "/aup" },
     ],
   },
   {
     title: "Make Money with Us",
     links: [
-      { label: "Sell product on Phsar Digital", href: "/sell"            },
-      { label: "Sell on Amazon Business",       href: "/sell-amazon"     },
-      { label: "Merchant Portal",               href: "/merchant-portal" },
-      { label: "Merchant Support",              href: "/merchant-support"},
-      { label: "Partner With Us",               href: "/partner"         },
-      { label: "Advertising",                   href: "/advertising"     },
-      { label: "Help Center",                   href: "/help"            },
-      { label: "Community",                     href: "/community"       },
+      { label: "Sell product on Phsar Digital", href: "/sell" },
+      { label: "Sell on Amazon Business", href: "/sell-amazon" },
+      { label: "Merchant Portal", href: "/merchant-portal" },
+      { label: "Merchant Support", href: "/merchant-support" },
+      { label: "Partner With Us", href: "/partner" },
+      { label: "Advertising", href: "/advertising" },
+      { label: "Help Center", href: "/help" },
+      { label: "Community", href: "/community" },
     ],
   },
   {
     title: "Let Us Help You",
     links: [
-      { label: "Brand Directory",           href: "/brands"     },
-      { label: "Customer Service",          href: "/contact-us" },
-      { label: "Your Account",              href: "/account"    },
-      { label: "Your Order",                href: "/orders"     },
-      { label: "Shipping Rates & Policies", href: "/shipping"   },
-      { label: "Returns & Replacements",    href: "/returns"    },
+      { label: "Brand Directory", href: "/brands" },
+      { label: "Customer Service", href: "/contact-us" },
+      { label: "Your Account", href: "/account" },
+      { label: "Your Order", href: "/orders" },
+      { label: "Shipping Rates & Policies", href: "/shipping" },
+      { label: "Returns & Replacements", href: "/returns" },
     ],
   },
 ];
 
 const TRUST_BADGES = [
   {
-    svg: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6C4CD8" strokeWidth="2">
-        <path d="M12 2L3 6v6c0 5.25 3.75 10.15 9 11.35C17.25 22.15 21 17.25 21 12V6L12 2z"/>
-        <path d="m9 12 2 2 4-4" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-    ),
-    label: "100% SECURE CHECKOUT",
+    icon: RefreshCw,
+    line1: "100% SECURE",
+    line2: "CHECKOUT",
   },
   {
-    svg: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6C4CD8" strokeWidth="2">
-        <path d="M3 18v-6a9 9 0 0 1 18 0v6"/>
-        <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3z"/>
-        <path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>
-      </svg>
-    ),
-    label: "24/7 DEDICATED SUPPORT",
+    icon: Headphones,
+    line1: "24/7 DEDICATED",
+    line2: "SUPPORT",
   },
   {
-    svg: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="#6C4CD8">
-        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-      </svg>
-    ),
-    label: "THOUSANDS OF GENUINE REVIEWS",
+    icon: Star,
+    line1: "THOUSANDS OF",
+    line2: "GENUINE REVIEWS",
+    fill: true,
   },
 ];
 
 const CONTACTS = [
-  { Icon: Phone,     text: "+012 ********"                  },
-  { Icon: Mail,      text: "Phsar.Digital@com.kh"           },
-  { Icon: User,      text: "Support ticket"                 },
-  { Icon: MapPinned, text: "Street 124, Toul Kork, Cambodia"},
+  { icon: Phone, text: "+012*********", href: "tel:+012000000" },
+  { icon: Mail, text: "Phsar.Digital@com.kh", href: "mailto:Phsar.Digital@com.kh" },
+  { icon: User, text: "Support ticket", href: "/support" },
+  { icon: MapPin, text: "street 124, Toul Kork, Cambodia", href: "#" },
 ];
 
-/* ── component ─────────────────────────────────────────────────────────── */
+/* ── Main Component ─────────────────────────────────────────────────────── */
 
 export default function Footer() {
   const [email, setEmail] = useState("");
 
-  return (
-    <footer className="bg-white text-[#241F35]">
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) return;
+    // Handle newsletter subscription
+    setEmail("");
+  };
 
-      {/* ── newsletter strip ── */}
-      <div className="bg-[#ECEAF7]">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-6 py-7">
+  return (
+    <footer className="w-full bg-white text-gray-900 font-sans border-t border-gray-100">
+      
+      {/* ── Top Newsletter Banner ── */}
+      <div className="bg-[#E8E5FA] px-6 py-9 sm:px-12 lg:px-20">
+        <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-6 lg:flex-row lg:items-center">
           <div>
-            <p className="text-[18px] font-bold text-[#1A1330]">
-              Sign up for Phsar Digital&apos;s News &amp; Offers
-            </p>
-            <p className="mt-0.5 text-[18px] text-[#5A5470]">
-              Be the first to know about Exclusive deals, New arrivals,
-              and Marketplace insights!
+            <h2 className="text-xl font-bold tracking-tight text-gray-900 sm:text-2xl">
+              Sign up for Phsar Digital News &amp; Offers
+            </h2>
+            <p className="mt-1 text-sm text-gray-600 sm:text-base">
+              Be the first to know about exclusive deals, new arrivals, and marketplace insights!
             </p>
           </div>
 
           <form
-            onSubmit={(e) => e.preventDefault()}
-            className="flex items-center overflow-hidden rounded-lg border border-[#C8C3E0] bg-white"
+            onSubmit={handleSubmit}
+            className="flex w-full max-w-md items-center rounded-lg bg-white p-1.5 shadow-sm ring-1 ring-black/5"
           >
-            <Mail size={16} className="ml-3 shrink-0 text-[#6C4CD8]" />
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Phsar.Digital@com.kh"
-              className="w-44 px-2.5 py-2.5 text-[18px] text-[#3F3A52] outline-none placeholder:text-[#6C4CD8] placeholder:underline sm:w-52"
-            />
+            <div className="flex flex-1 items-center gap-2.5 px-3">
+              <Mail className="h-5 w-5 shrink-0 text-[#5B3DE8]" />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Phsar.Digital@com.kh"
+                aria-label="Email address"
+                required
+                className="w-full bg-transparent text-sm text-gray-800 placeholder:text-[#5B3DE8]/80 outline-none"
+              />
+            </div>
             <button
               type="submit"
-              className="flex items-center gap-1 bg-[#6C4CD8] px-4 py-2.5 text-[18px] font-semibold text-white transition-colors hover:bg-[#5C3DC8]"
+              className="flex shrink-0 items-center gap-2 rounded-md bg-[#5B3DE8] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#4d32c9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5B3DE8]"
             >
-              <Send size={17} /> Sign up
+              <Send className="h-4 w-4" />
+              Sign up
             </button>
           </form>
         </div>
       </div>
 
-      {/* ── main columns ── */}
-      <div className="mx-auto max-w-5xl px-6 pt-9 pb-6">
-        <div className="grid grid-cols-2 gap-x-8 gap-y-8 sm:grid-cols-4">
-
-          {/* logo + brand */}
-          <div className="flex flex-col items-start gap-2">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/picture/logo.png"
-              alt="Phsar Digital"
-              width={1220}
-              height={1220}
-              className="h-16 w-16 object-contain"
-              onError={(e) => {
-                (e.currentTarget as HTMLImageElement).style.display = "none";
-                const fb = e.currentTarget.nextElementSibling as HTMLElement | null;
-                if (fb) fb.style.display = "flex";
-              }}
-            />
-            {/* fallback circle */}
-            <div
-              className="hidden h-16 w-16 items-center justify-center rounded-full bg-[#6C4CD8]"
-              aria-hidden="true"
-            >
-              <span className="text-xl font-bold text-white">P</span>
-            </div>
-            <span className="text-[18px] font-bold text-[#1A1330]">Phsar Digital</span>
+      {/* ── Main Links Section ── */}
+      <div className="mx-auto max-w-7xl px-6 pt-12 pb-8 sm:px-12 lg:px-20">
+        <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-[1.2fr_1fr_1.2fr_1fr] items-start">
+          
+          {/* Brand Identity */}
+          <div className="flex flex-col items-center justify-center text-center sm:col-span-2 lg:col-span-1 lg:items-start lg:text-left">
+            <svg width={76} height={76} viewBox="0 0 100 100" fill="none" className="shrink-0">
+              <circle cx="50" cy="50" r="34" fill="#5B3DE8" />
+              <rect x="14" y="34" width="6" height="6" rx="1" fill="#5B3DE8" />
+              <rect x="6" y="46" width="6" height="6" rx="1" fill="#5B3DE8" />
+              <rect x="14" y="58" width="6" height="6" rx="1" fill="#5B3DE8" />
+              <path d="M44 32h14a12 12 0 0 1 0 24H44V32z" fill="white" />
+              <rect x="44" y="32" width="8" height="42" rx="3" fill="white" />
+            </svg>
+            <h3 className="mt-4 text-2xl font-extrabold tracking-tight text-gray-950">
+              Phsar Digital
+            </h3>
           </div>
 
-          {/* 3 link columns */}
+          {/* Navigation Columns */}
           {FOOTER_COLS.map((col) => (
             <div key={col.title}>
-              <p className="mb-3 text-[18px] font-bold uppercase tracking-wide text-[#1A1330]">
+              <h4 className="text-sm font-bold text-gray-950 uppercase tracking-wider">
                 {col.title}
-              </p>
-              <ul className="space-y-1.5">
-                {col.links.map((l) => (
-                  <li key={l.label}>
+              </h4>
+              <ul className="mt-4 space-y-2.5">
+                {col.links.map((link) => (
+                  <li key={link.label}>
                     <Link
-                      href={l.href}
-                      className="text-[18px] text-[#5A5470] transition-colors hover:text-[#6C4CD8]"
+                      href={link.href}
+                      className="text-sm text-gray-600 transition hover:text-[#5B3DE8] hover:underline underline-offset-4"
                     >
-                      {l.label}
+                      {link.label}
                     </Link>
                   </li>
                 ))}
@@ -175,45 +165,62 @@ export default function Footer() {
           ))}
         </div>
 
-        {/* ── trust badges ── */}
-        <div className="mt-6 flex flex-wrap items-center justify-center gap-x-10 gap-y-4 border-t border-[#EDEBF3] pt-6">
-          {TRUST_BADGES.map(({ svg, label }) => (
-            <div key={label} className="flex items-center gap-2">
-              {svg}
-              <span className="text-[18px] font-bold uppercase tracking-wide text-[#3B2A85]">
-                {label}
-              </span>
-            </div>
-          ))}
+        {/* ── Solid Center Divider ── */}
+        <hr className="my-10 border-t-2 border-gray-900" />
+
+        {/* ── Trust Badges ── */}
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-3 text-center sm:text-left my-8">
+          {TRUST_BADGES.map((badge, idx) => {
+            const Icon = badge.icon;
+            return (
+              <div key={idx} className="flex items-center justify-center sm:justify-start gap-4">
+                <Icon
+                  className={`h-7 w-7 shrink-0 text-[#5B3DE8] ${badge.fill ? "fill-[#5B3DE8]" : ""}`}
+                />
+                <span className="text-xs font-black tracking-wide text-[#5B3DE8] leading-snug">
+                  {badge.line1}
+                  <br />
+                  {badge.line2}
+                </span>
+              </div>
+            );
+          })}
         </div>
 
-        {/* ── contact strip ── */}
-        <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-[#EDEBF3] pt-5">
-          <Link
-            href="/contact-us"
-            className="text-[18px] font-bold text-[#6C4CD8] hover:underline"
-          >
+        {/* ── Sub-header with Dual Lines ── */}
+        <div className="my-6 flex items-center gap-4">
+          <span className="text-sm font-bold text-[#5B3DE8] whitespace-nowrap">
             Start A Conversation
-          </Link>
-          <div className="hidden flex-1 border-t border-[#DEDAEA] sm:block" />
-          <span className="text-[18px] font-bold text-[#6C4CD8]">Address</span>
+          </span>
+          <div className="h-[1px] flex-1 bg-gray-400" />
+          <span className="text-sm font-bold text-[#5B3DE8] whitespace-nowrap">
+            Address
+          </span>
+          <div className="h-[1px] flex-1 bg-gray-400" />
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-x-8 gap-y-3">
-          {CONTACTS.map(({ Icon, text }) => (
-            <span key={text} className="flex items-center gap-1.5 text-[18px] text-[#241F35]">
-              <Icon size={16} className="shrink-0 text-[#6C4CD8]" />
-              {text}
-            </span>
-          ))}
+        {/* ── Contacts Row ── */}
+        <div className="flex flex-wrap items-center justify-between gap-y-4 gap-x-6 pt-2 text-sm font-medium text-gray-800">
+          {CONTACTS.map((item, idx) => {
+            const Icon = item.icon;
+            return (
+              <Link
+                key={idx}
+                href={item.href}
+                className="flex items-center gap-2 transition hover:text-[#5B3DE8]"
+              >
+                <Icon className="h-4 w-4 shrink-0 text-[#5B3DE8]" />
+                <span>{item.text}</span>
+              </Link>
+            );
+          })}
         </div>
 
-        {/* ── copyright ── */}
-        <p className="mt-6 border-t border-[#EDEBF3] pt-4 text-center text-[18px] text-[#9CA3AF]">
-          © {new Date().getFullYear()} Phsar Digital. All rights reserved.
-        </p>
+        {/* ── Copyright Disclaimer ── */}
+        <div className="mt-10 border-t border-gray-200 pt-6 text-center text-xs text-gray-400">
+          &copy; {new Date().getFullYear()} Phsar Digital. All rights reserved.
+        </div>
       </div>
-
     </footer>
   );
 }

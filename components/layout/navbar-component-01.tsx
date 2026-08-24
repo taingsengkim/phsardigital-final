@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useState } from "react";
+import PhsarDigitalLogo from "@/assets/svg/phsardigitalLogo";
 import {
   Search,
   Heart,
@@ -127,13 +127,7 @@ export default function Navbar() {
               className="flex flex-shrink-0 items-center gap-2 no-underline"
               aria-label="Phsar Digital home"
             >
-              <Image
-                src="/picture/logo.png"
-                alt="Phsar Digital logo"
-                width={36}
-                height={36}
-                className="h-8 w-8 object-contain sm:h-9 sm:w-9 rounded-xl"
-              />
+              <PhsarDigitalLogo className="h-8 w-8 shrink-0 sm:h-9 sm:w-9" aria-hidden="true" />
               <span
                 className="hidden text-[15px] font-bold sm:inline sm:text-[17px]"
                 style={{ color: "#241F35" }}

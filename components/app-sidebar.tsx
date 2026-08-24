@@ -2,6 +2,7 @@
 
 import * as React from "react"
 
+import Logo from "@/assets/svg/logo"
 import { NavMain } from "@/components/nav-main"
 import { NavProjects } from "@/components/nav-projects"
 import { NavUser } from "@/components/nav-user"
@@ -13,7 +14,7 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@/components/ui/sidebar"
-import { GalleryVerticalEndIcon, AudioLinesIcon, TerminalIcon, TerminalSquareIcon, BotIcon, BookOpenIcon, Settings2Icon, FrameIcon, PieChartIcon, MapIcon } from "lucide-react"
+import { AudioLinesIcon, TerminalIcon, TerminalSquareIcon, BotIcon, BookOpenIcon, Settings2Icon, FrameIcon, PieChartIcon, MapIcon } from "lucide-react"
 
 // This is sample data.
 const data = {
@@ -26,8 +27,7 @@ const data = {
     {
       name: "Acme Inc",
       logo: (
-        <GalleryVerticalEndIcon
-        />
+        <Logo className="size-4" />
       ),
       plan: "Enterprise",
     },
