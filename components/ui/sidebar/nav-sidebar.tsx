@@ -2,10 +2,13 @@
 
 import * as React from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
-import { BarChart3, ChevronDown, LayoutDashboard, LogOut, MessageCircle, PackageCheck, ShoppingBag, Store, Users } from "lucide-react"
+import { BarChart3, ChevronDown, Home, LayoutDashboard, LogOut, MessageCircle, PackageCheck, ShoppingBag, Store, Users } from "lucide-react"
 import PhsarDigitalLogo from "@/assets/svg/phsardigitalLogo"
 import { logoutFromKeycloak } from "@/lib/auth-client"
+import { useGetSellerProfileQuery } from "@/lib/api/sellerApi"
+import { useGetConversationsQuery } from "@/lib/redux/service/sellerMessageApi"
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from "@/components/ui/sidebar"
 import { cn } from "@/lib/utils"
 
@@ -40,6 +43,16 @@ function Submenu({ links }: { links: NavLink[] }) {
 
 export function SellerSidebar() {
   const pathname = usePathname()
+  const { data: sellerProfile } = useGetSellerProfileQuery()
+  const storeName = sellerProfile?.businessName ?? ""
+  const storeLogo = sellerProfile?.logoUri ?? ""
+  /* Same cache the inbox and topbar read, so opening a thread clears the badge
+     here too rather than leaving a stale count behind. */
+  const { data: conversations = [] } = useGetConversationsQuery()
+  const unreadMessages = conversations.reduce(
+    (sum, conversation) => sum + conversation.unreadCount,
+    0,
+  )
   const [reportsOpen, setReportsOpen] = React.useState(pathname.includes("/products/dashboard") || pathname.includes("/products/comment"))
   const [inventoryOpen, setInventoryOpen] = React.useState(pathname.includes("/products/") || pathname.startsWith("/seller-dashboard/orders"))
   const [logoutOpen, setLogoutOpen] = React.useState(false)
@@ -55,10 +68,15 @@ export function SellerSidebar() {
     <>
     <Sidebar collapsible="icon" className="border-r border-[#f0f0f0] bg-white text-[#77746f] dark:border-sidebar-border dark:bg-sidebar dark:text-sidebar-foreground">
       <SidebarHeader className="flex h-[70px] shrink-0 justify-center border-b border-[#eeeeee] bg-white px-[22px] dark:border-sidebar-border dark:bg-sidebar">
-        <Link href="/seller-dashboard/home" aria-label="Phsar Digital seller dashboard" className="flex items-center gap-3">
-          <PhsarDigitalLogo className="size-9 shrink-0" aria-hidden="true" />
+        {/* The workspace identity: which shop this dashboard is acting for. */}
+        <Link href="/seller-dashboard/home" aria-label="Seller dashboard" className="flex items-center gap-3">
+          {storeLogo ? (
+            <Image src={storeLogo} alt="" width={36} height={36} unoptimized className="size-9 shrink-0 rounded-xl object-cover" />
+          ) : (
+            <PhsarDigitalLogo className="size-9 shrink-0" aria-hidden="true" />
+          )}
           <div className="min-w-0 leading-tight group-data-[collapsible=icon]:hidden">
-            <p className="truncate text-[16px] font-bold text-primary">Phsar Digital</p>
+            <p className="truncate text-[16px] font-bold text-primary">{storeName || "Phsar Digital"}</p>
             <p className="mt-0.5 truncate text-[11px] font-medium text-muted-foreground">Seller Dashboard</p>
           </div>
         </Link>
@@ -98,13 +116,27 @@ export function SellerSidebar() {
           <Link href="/seller-dashboard/message" className={cn(itemClass, active("/seller-dashboard/message") && activeClass)}>
             <MessageCircle className="size-[21px] shrink-0" strokeWidth={1.8} />
             <span className="group-data-[collapsible=icon]:hidden">Messages</span>
-            <span className="ml-auto grid size-[22px] place-items-center rounded-full bg-[#fa3f50] text-[11px] font-bold text-white shadow-sm group-data-[collapsible=icon]:hidden">2</span>
+            {unreadMessages > 0 && (
+              <span
+                aria-label={`${unreadMessages} unread messages`}
+                className="ml-auto grid h-[22px] min-w-[22px] place-items-center rounded-full bg-[#fa3f50] px-1.5 text-[11px] font-bold text-white shadow-sm group-data-[collapsible=icon]:hidden"
+              >
+                {unreadMessages > 99 ? "99+" : unreadMessages}
+              </span>
+            )}
           </Link>
         </nav>
       </SidebarContent>
 
       <SidebarFooter className="bg-white px-[18px] pb-7 dark:bg-sidebar">
-        <div className="mb-5 h-px bg-[#eee6db] dark:bg-sidebar-border" />
+        <div className="mb-3 h-px bg-[#eee6db] dark:bg-sidebar-border" />
+        {/* The dashboard is otherwise a dead end — this is the way back out. */}
+        <Link href="/home" className={cn(itemClass, "mb-2")}>
+          <Home className="size-[21px] shrink-0" strokeWidth={1.8} />
+          <span className="group-data-[collapsible=icon]:hidden">
+            Back to Phsar Digital
+          </span>
+        </Link>
         <button type="button" onClick={() => setLogoutOpen(true)} className={cn(itemClass, "text-[#e74e58] hover:bg-red-50 hover:text-[#d93d48] dark:text-red-400 dark:hover:bg-red-500/10")}> 
           <LogOut className="size-[21px] shrink-0" strokeWidth={1.8} />
           <span className="group-data-[collapsible=icon]:hidden">Log Out</span>

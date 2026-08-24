@@ -129,23 +129,20 @@ export function NavTopbar() {
   );
   const unreadCount = eventUnread + messageUnread;
 
-  const userAvatar =
-    profile?.avatarUrl ||
-    sellerProfile?.logoUri ||
-    sellerApp?.logoUri ||
-    session?.user?.image ||
-    "";
+  /* This menu is "who am I signed in as" — its actions (Profile, Log out) are
+     personal, so it stays the person. The shop it manages is identified in the
+     sidebar header instead; blending the two here produced a store logo sitting
+     next to a person's name. */
+  const userAvatar = profile?.avatarUrl || session?.user?.image || "";
   const displayName =
     profile?.fullName ||
     (profile?.firstName
       ? `${profile.firstName} ${profile?.lastName || ""}`.trim()
       : "") ||
-    sellerProfile?.businessName ||
-    sellerApp?.storeDisplayName ||
-    sellerApp?.businessName ||
     session?.user?.name ||
-    "Seller";
+    "Your account";
   const firstName = displayName.split(" ")[0];
+  const storeName = sellerProfile?.businessName || sellerApp?.businessName || "";
   const userEmail = profile?.email || session?.user?.email || "";
   const fallbackInitial = (displayName[0] || "S").toUpperCase();
   const iconButton =
@@ -182,6 +179,12 @@ export function NavTopbar() {
             </>
           )}
         </h1>
+        {/* Which shop these actions apply to — the person is in the menu. */}
+        {storeName && (
+          <p className="truncate text-[12px] text-muted-foreground">
+            Managing {storeName}
+          </p>
+        )}
       </div>
 
       <div className="ml-auto flex items-center gap-2">
