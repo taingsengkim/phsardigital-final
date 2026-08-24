@@ -67,8 +67,6 @@ export type Listing = {
   /** Current API fields; `price` remains for legacy listing responses. */
   fullPrice?: number | null;
   discountPrice?: number | null;
-  fullPrice?: number;
-  discountPrice?: number;
   category_id?: number;
   categoryUuid?: string;
   stock?: number;

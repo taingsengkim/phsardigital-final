@@ -93,7 +93,13 @@ export async function GET(request: NextRequest) {
   // 1. Fetch live products from Swagger upstream API
   let liveItems: any[] = [];
   try {
-    const upstreamUrl = `${BASE_URL}/api/v1/listings?pageNumber=0&pageSize=50`;
+    const params = new URLSearchParams();
+    params.set("pageNumber", "0");
+    params.set("pageSize", "100");
+    if (categorySlug) params.set("categorySlug", categorySlug);
+    if (search) params.set("search", search);
+    if (sort) params.set("sort", sort);
+    const upstreamUrl = `${BASE_URL}/api/v1/listings?${params.toString()}`;
     const res = await fetch(upstreamUrl, {
       headers: { Accept: "application/json" },
       cache: "no-store",

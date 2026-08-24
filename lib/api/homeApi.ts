@@ -4,8 +4,8 @@ import type {
   Listing,
   ListingsQuery,
   PaginatedListings,
+  Seller,
 } from "@/lib/types";
-import type { Seller } from "@/app/(public)/home/seller-mock-types";
 
 /**
  * Public/browse endpoints (categories, listings, sellers) — no auth needed,

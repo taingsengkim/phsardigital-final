@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, Package, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGetListingsQuery } from "@/lib/api/homeApi";
+import ProductCard from "../ProductCard";
 
 import { CURATED_PRODUCTS } from "@/lib/curated-products";
 

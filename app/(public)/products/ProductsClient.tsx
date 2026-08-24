@@ -70,11 +70,11 @@ export default function ProductsClient() {
       : !isLoading
         ? categorySlug
           ? MOCK_PRODUCTS.filter((p) => {
-              const raw = categorySlug.toLowerCase();
-              const cSlug = (p.category?.slug || "").toLowerCase();
-              const cName = (p.category?.name || "").toLowerCase();
-              return cSlug.includes(raw) || raw.includes(cSlug) || cName.includes(raw);
-            })
+            const raw = categorySlug.toLowerCase();
+            const cSlug = (p.category?.slug || "").toLowerCase();
+            const cName = (p.category?.name || "").toLowerCase();
+            return cSlug.includes(raw) || raw.includes(cSlug) || cName.includes(raw);
+          })
           : MOCK_PRODUCTS
         : [];
 

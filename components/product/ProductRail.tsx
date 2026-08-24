@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
-import type { ApiListing, RelatedListing } from "@/lib/types";
+import { ArrowRight, Star, ImageOff } from "lucide-react";
+import type { ApiListing, RelatedListing, RelatedReason } from "@/lib/types";
 import { ProductCard } from "@/app/(public)/home/ProductCard";
 import Image from "next/image";
 import { getListingPrice } from "@/lib/api/listing-price";

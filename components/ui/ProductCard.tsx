@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { getFileUrl } from "@/lib/utils";
 import type { Listing } from "@/lib/types";
+import { getListingPrice } from "@/lib/api/listing-price";
 
 interface ProductCardProps {
   listing: Listing;
@@ -28,6 +29,7 @@ export function ProductCard({
   const imageUrl = getFileUrl(
     listing.thumbnailObjectName ?? listing.images?.[0]?.url
   );
+  const price = getListingPrice(listing);
 
   return (
     <Link
@@ -68,7 +70,7 @@ export function ProductCard({
         </p>
 
         <span className="text-[13px] font-bold text-primary sm:text-[14px]">
-          ${listing.price.toFixed(2)}
+          ${price.toFixed(2)}
         </span>
 
         {categoryName ? (

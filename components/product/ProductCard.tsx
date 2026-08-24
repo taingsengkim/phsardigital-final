@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Heart, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import SavedButton from "@/components/saved/SavedButton";
+import { getListingPrice } from "@/lib/api/listing-price";
 
 /* Minimal shape — works with both real API (uuid/uri) and mock data */
 type CardListing = {
@@ -12,7 +13,10 @@ type CardListing = {
   uuid?: string;
   slug: string;
   title: string;
-  price: number;
+  price?: number | null;
+  fullPrice?: number | null;
+  discountPrice?: number | null;
+  sellerProfile?: { businessName?: string | null } | null;
   images?: {
     uuid?: string;
     uri?: string;
@@ -27,9 +31,12 @@ type CardListing = {
 type Props = {
   listing: CardListing;
   className?: string;
+  isSavedPage?: boolean;
+  onRemove?: (uuid: string) => Promise<void>;
+  sellerName?: string;
 };
 
-export default function ProductCard({ listing, className }: Props) {
+export function ProductCard({ listing, className }: Props) {
   /* Support both real API (uuid/uri/isPrimary) and legacy (id/url/is_primary) */
   const primary =
     listing.images?.find((img) => img.isPrimary || img.is_primary) ??
@@ -37,6 +44,7 @@ export default function ProductCard({ listing, className }: Props) {
   const imgSrc = primary?.uri ?? primary?.url ?? listing.thumbnailUri?.uri;
 
   const key = listing.uuid ?? String(listing.id ?? listing.slug);
+  const price = getListingPrice(listing);
 
   return (
     <article
@@ -98,9 +106,12 @@ export default function ProductCard({ listing, className }: Props) {
         </div>
 
         <span className="text-[17px] font-extrabold text-[#6C4CD8]">
-          ${listing.price.toFixed(2)}
+          ${price.toFixed(2)}
         </span>
       </div>
     </article>
   );
 }
+
+export default ProductCard;
+
