@@ -6,23 +6,30 @@
   <component name="ChangeListManager">
     <list default="true" id="8cf1466c-bfd0-4bf0-ae9f-91da3abd3ed1" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/(dashboard-seller)/seller-dashboard/home/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/app/(dashboard-seller)/seller-dashboard/home/page.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/(dashboard-seller)/seller-dashboard/layout.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/app/(dashboard-seller)/seller-dashboard/layout.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/(dashboard-seller)/seller-dashboard/products/new/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/app/(dashboard-seller)/seller-dashboard/products/new/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/(dashboard-seller)/seller-dashboard/shop/sections/ShopDetailsSection.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/app/(dashboard-seller)/seller-dashboard/shop/sections/ShopDetailsSection.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/api/categories/route.ts" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/categories/route.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/(public)/home/ProductCard.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/app/(public)/home/ProductCard.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/(public)/home/listing-helpers.ts" beforeDir="false" afterPath="$PROJECT_DIR$/app/(public)/home/listing-helpers.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/(public)/products/[slug]/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/app/(public)/products/[slug]/page.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/api/listings/[uuid]/route.ts" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/listings/[uuid]/route.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/favicon.ico" beforeDir="false" afterPath="$PROJECT_DIR$/app/favicon.ico" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/api/listings/route.ts" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/listings/route.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/product/ProductDetailClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/product/ProductDetailClient.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/product/ProductRail.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/product/ProductRail.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ui/customer/customer-list/customer-list.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/ui/customer/customer-list/customer-list.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ui/message/message-center.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/ui/message/message-center.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/components/ui/product/product-dashboard-ui.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/ui/product/product-dashboard-ui.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/components/ui/product/product-table.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/ui/product/product-table.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/components/ui/products/comment/comment.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/ui/products/comment/comment.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/components/ui/products/drafts/drafts.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/ui/products/drafts/drafts.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/components/ui/products/released/released.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/ui/products/released/released.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/components/ui/seller/create-product.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/ui/seller/create-product.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/components/ui/sidebar/nav-sidebar.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/ui/sidebar/nav-sidebar.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ui/sidebar/nav-topbar.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/ui/sidebar/nav-topbar.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/lib/Store.ts" beforeDir="false" afterPath="$PROJECT_DIR$/lib/Store.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/api/sellerApi.ts" beforeDir="false" afterPath="$PROJECT_DIR$/lib/api/sellerApi.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/redux/service/sellerProductApi.ts" beforeDir="false" afterPath="$PROJECT_DIR$/lib/redux/service/sellerProductApi.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/lib/seller-drafts.ts" beforeDir="false" afterPath="$PROJECT_DIR$/lib/seller-drafts.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/types.ts" beforeDir="false" afterPath="$PROJECT_DIR$/lib/types.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/types/seller-product.ts" beforeDir="false" afterPath="$PROJECT_DIR$/lib/types/seller-product.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -30,7 +37,7 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="225" />
+    <option name="cachedIndexableFilesCount" value="276" />
     <option name="fileBasedEmbeddingIndicesEnabled" value="true" />
   </component>
   <component name="Git.Settings">
@@ -42,61 +49,61 @@
   </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.0014109210927895" />
-      <entry key="MS500" value="1.9607924744462413" />
-      <entry key="S2" value="4.759404333306386" />
-      <entry key="S5" value="5.972835113851172" />
-      <entry key="S10" value="6.461626366638286" />
-      <entry key="S30" value="6.8152064580718" />
-      <entry key="S60" value="6.944362473070306" />
-      <entry key="M2" value="7.46325298873399" />
-      <entry key="M5" value="9.882940454163313" />
-      <entry key="M10" value="12.867969849480303" />
-      <entry key="M15" value="15.53961172608387" />
-      <entry key="M30" value="32.995341500465585" />
-      <entry key="H1" value="110.11867204762629" />
-      <entry key="H2" value="283.7208968860275" />
-      <entry key="H4" value="496.653531579865" />
-      <entry key="D1" value="824.3732536057304" />
-      <entry key="W1" value="902.2406837736611" />
+      <entry key="MS100" value="1.3733442155792357" />
+      <entry key="MS500" value="3.324928346082933" />
+      <entry key="S2" value="4.480922424054971" />
+      <entry key="S5" value="4.782669365550378" />
+      <entry key="S10" value="4.8896456906077255" />
+      <entry key="S30" value="5.044354461552637" />
+      <entry key="S60" value="6.954807192167602" />
+      <entry key="M2" value="14.859577828914583" />
+      <entry key="M5" value="31.13386688595097" />
+      <entry key="M10" value="41.702364182566335" />
+      <entry key="M15" value="47.283856943503935" />
+      <entry key="M30" value="63.499631902382866" />
+      <entry key="H1" value="115.4578270166252" />
+      <entry key="H2" value="260.6308757270397" />
+      <entry key="H4" value="496.7288888854861" />
+      <entry key="D1" value="961.3005823922852" />
+      <entry key="W1" value="1087.1874620472324" />
     </decayedCancelled>
     <decayedSelected>
       <entry key="MS100" value="0.0" />
-      <entry key="MS500" value="0.0" />
-      <entry key="S2" value="0.0" />
-      <entry key="S5" value="4.522900559733295E-272" />
-      <entry key="S10" value="3.626074952912294E-136" />
-      <entry key="S30" value="1.8765176266748067E-45" />
-      <entry key="S60" value="9.529710619515368E-23" />
-      <entry key="M2" value="2.1736179583234903E-11" />
-      <entry key="M5" value="1.4253502537531993E-4" />
-      <entry key="M10" value="0.027020558937834137" />
-      <entry key="M15" value="0.1599809704225679" />
-      <entry key="M30" value="1.0516907872646015" />
-      <entry key="H1" value="3.1153677065661785" />
-      <entry key="H2" value="5.949510710353857" />
-      <entry key="H4" value="8.612862733741725" />
-      <entry key="D1" value="12.098563221387204" />
-      <entry key="W1" value="12.866145480606697" />
+      <entry key="MS500" value="3.182891610527013E-190" />
+      <entry key="S2" value="4.223820584634779E-48" />
+      <entry key="S5" value="1.122747728145546E-19" />
+      <entry key="S10" value="3.3507427954791555E-10" />
+      <entry key="S30" value="6.94566283608746E-4" />
+      <entry key="S60" value="0.02635462546895222" />
+      <entry key="M2" value="0.1623410775772793" />
+      <entry key="M5" value="0.4832494514839767" />
+      <entry key="M10" value="0.6951651450239966" />
+      <entry key="M15" value="0.7851604752862706" />
+      <entry key="M30" value="0.940001514474875" />
+      <entry key="H1" value="1.6480956997677145" />
+      <entry key="H2" value="3.8041865890316133" />
+      <entry key="H4" value="6.929381930373541" />
+      <entry key="D1" value="12.37097735488355" />
+      <entry key="W1" value="13.752693838905003" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="0.014221517945362496" />
-      <entry key="MS500" value="1.3715805227514626" />
-      <entry key="S2" value="4.556171792551716" />
-      <entry key="S5" value="5.885427714096813" />
-      <entry key="S10" value="6.416819789232824" />
-      <entry key="S30" value="6.800017195074137" />
-      <entry key="S60" value="6.936716533987831" />
-      <entry key="M2" value="7.459237718155818" />
-      <entry key="M5" value="9.881065341348913" />
-      <entry key="M10" value="12.893622087052057" />
-      <entry key="M15" value="15.69815955083558" />
-      <entry key="M30" value="34.044844450542804" />
-      <entry key="H1" value="113.23125082320982" />
-      <entry key="H2" value="289.6677228727272" />
-      <entry key="H4" value="505.26437629660535" />
-      <entry key="D1" value="836.4713194448022" />
-      <entry key="W1" value="915.1067528861481" />
+      <entry key="MS100" value="1.3332816884342187" />
+      <entry key="MS500" value="3.3033390615970144" />
+      <entry key="S2" value="4.473510334539987" />
+      <entry key="S5" value="4.7794939634042874" />
+      <entry key="S10" value="4.888020654777625" />
+      <entry key="S30" value="5.044344161937239" />
+      <entry key="S60" value="6.97831828022282" />
+      <entry key="M2" value="15.014149330745239" />
+      <entry key="M5" value="31.608055017852955" />
+      <entry key="M10" value="42.39090000772026" />
+      <entry key="M15" value="48.06386632411991" />
+      <entry key="M30" value="64.43625811058436" />
+      <entry key="H1" value="117.10318845397758" />
+      <entry key="H2" value="264.43248119903933" />
+      <entry key="H4" value="503.6561291370444" />
+      <entry key="D1" value="973.6709492207729" />
+      <entry key="W1" value="1100.9400592487657" />
     </decayedShown>
   </component>
   <component name="ProjectColorInfo">{
@@ -108,30 +115,30 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.MCP Project settings loaded": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "codeWithMe.voiceChat.enabledByDefault": "false",
-    "git-widget-placeholder": "Menghor",
-    "ignore.virus.scanning.warn.message": "true",
-    "javascript.preferred.runtime.type.id": "node",
-    "js.debugger.nextJs.config.created.client": "true",
-    "js.debugger.nextJs.config.created.server": "true",
-    "last_opened_file_path": "D:/Front-end/psardigital-ui/app",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.jshint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.jshint": "",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "ts.external.directory.path": "D:\\Front-end\\psardigital-ui\\node_modules\\typescript\\lib"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;Menghor&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;javascript.preferred.runtime.type.id&quot;: &quot;node&quot;,
+    &quot;js.debugger.nextJs.config.created.client&quot;: &quot;true&quot;,
+    &quot;js.debugger.nextJs.config.created.server&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;D:/Front-end/psardigital-ui/app&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.jshint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.jshint&quot;: &quot;&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;D:\\Front-end\\psardigital-ui\\node_modules\\typescript\\lib&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="D:\Front-end\psardigital-ui\app" />
@@ -183,7 +190,10 @@
       <workItem from="1787022159988" duration="33000" />
       <workItem from="1787022391187" duration="2281000" />
       <workItem from="1787034719513" duration="7000" />
-      <workItem from="1787128212159" duration="6118000" />
+      <workItem from="1787128212159" duration="7573000" />
+      <workItem from="1787294660137" duration="6900000" />
+      <workItem from="1787305423507" duration="372000" />
+      <workItem from="1787555883943" duration="3884000" />
     </task>
     <servers />
   </component>

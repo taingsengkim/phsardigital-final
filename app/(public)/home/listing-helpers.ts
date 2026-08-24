@@ -1,4 +1,5 @@
 import type { Listing } from "@/lib/types";
+import { getListingPrice } from "@/lib/api/listing-price";
 
 export function getPrimaryImage(listing: any): string {
   if (!listing) return "/picture/pic1.jpg";
@@ -39,7 +40,10 @@ export function getActiveDiscountPercent(listing: any): number | null {
 
 export function getDiscountedPrice(listing: any): number {
   if (!listing) return 0;
-  const price = listing.price ?? 0;
+  // New responses contain a server-calculated discountPrice. Legacy responses
+  // contain price plus a discounts collection.
+  if (typeof listing.discountPrice === "number") return listing.discountPrice;
+  const price = getListingPrice(listing);
   const pct = getActiveDiscountPercent(listing);
   if (!pct) return price;
   return Math.round(price * (1 - pct / 100) * 100) / 100;

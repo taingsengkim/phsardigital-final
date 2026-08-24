@@ -64,6 +64,9 @@ export type Listing = {
   title: string;
   description: string;
   price: number;
+  /** Current API fields; `price` remains for legacy listing responses. */
+  fullPrice?: number | null;
+  discountPrice?: number | null;
   category_id?: number;
   categoryUuid?: string;
   stock?: number;
@@ -186,6 +189,8 @@ export type ApiListing = {
   slug?: string | null;
   description?: string | null;
   price?: number | null;
+  fullPrice?: number | null;
+  discountPrice?: number | null;
   stockQty?: number | null;
   status?: string | null;
   isFeatured?: boolean | null;
@@ -265,6 +270,8 @@ export type RelatedListing = {
   title?: string | null;
   slug?: string | null;
   price?: number | null;
+  fullPrice?: number | null;
+  discountPrice?: number | null;
   stockQty?: number | null;
   sold?: number | null;
   thumbnailUri?: string | null;

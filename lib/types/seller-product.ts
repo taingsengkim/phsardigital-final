@@ -25,7 +25,8 @@ export interface CreateListingRequest {
   categoryUuid: string
   title: string
   description: string
-  price: number
+  fullPrice: number
+  discountPrice?: number
   stockQty: number
   isFeatured: boolean
   thumbnailObjectName?: string
@@ -37,4 +38,8 @@ export interface SellerListing extends CreateListingRequest {
   uuid: string
   createdAt?: string
   updatedAt?: string
+}
+
+export interface DeleteListingRequest {
+  uuid: string
 }

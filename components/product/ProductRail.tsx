@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight, ImageOff, Star } from "lucide-react";
 import type { ApiListing, RelatedListing, RelatedReason } from "@/lib/types";
+import { getListingPrice } from "@/lib/api/listing-price";
 
 /** Whatever the rail renders, reduced to the fields a card needs. */
 type RailItem = {
@@ -33,7 +34,7 @@ function fromListing(listing: ApiListing): RailItem {
     href: `/products/${listing.slug || listing.uuid}`,
     title: listing.title || "Untitled product",
     image,
-    price: typeof listing.price === "number" ? listing.price : 0,
+    price: getListingPrice(listing),
     sold: listing.sold ?? 0,
     inStock: (listing.stockQty ?? 0) > 0,
     categoryName: listing.category?.name ?? null,
@@ -55,7 +56,7 @@ function fromRelated(related: RelatedListing): RailItem {
     title: related.title || "Untitled product",
     // note: RelatedListingResponse returns thumbnailUri as a plain URL string
     image: related.thumbnailUri ?? null,
-    price: typeof related.price === "number" ? related.price : 0,
+    price: getListingPrice(related),
     sold: related.sold ?? 0,
     inStock: (related.stockQty ?? 0) > 0,
     categoryName: related.category?.name ?? null,

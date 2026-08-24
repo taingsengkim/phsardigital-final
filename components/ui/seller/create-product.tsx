@@ -37,10 +37,14 @@ const createProductSchema = z.object({
   title: z.string().trim().min(3, "Title must contain at least 3 characters.").max(120, "Title must not exceed 120 characters."),
   description: z.string().trim().min(10, "Description must contain at least 10 characters.").max(5000, "Description must not exceed 5,000 characters."),
   price: z.number({ error: "Enter a valid price." }).positive("Price must be greater than 0."),
+  discountPrice: z.number({ error: "Enter a valid discount price." }).positive("Discount price must be greater than 0.").optional(),
   stockQty: z.number({ error: "Enter a valid stock quantity." }).int("Stock quantity must be a whole number.").min(0, "Stock quantity cannot be negative."),
   categoryUuid: z.string().min(1, "Please select a category."),
   images: z.array(productImageSchema).min(1, "Please add at least one cover image.").max(8, "You can upload up to 8 images."),
-})
+}).refine(
+  (data) => data.discountPrice === undefined || data.discountPrice < data.price,
+  { path: ["discountPrice"], message: "Discount price must be lower than the regular price." },
+)
 
 type CreateProductForm = z.infer<typeof createProductSchema>
 
@@ -145,6 +149,7 @@ export function CreateProduct() {
       title: "",
       description: "",
       price: undefined,
+      discountPrice: undefined,
       stockQty: undefined,
       categoryUuid: "",
       images: [],
@@ -162,6 +167,7 @@ export function CreateProduct() {
       description: data.description.trim(),
       categoryUuid: data.categoryUuid,
       price: Number.isFinite(data.price) ? String(data.price) : "",
+      discountPrice: Number.isFinite(data.discountPrice) ? String(data.discountPrice) : "",
       stockQty: Number.isFinite(data.stockQty) ? String(data.stockQty) : "",
       imageNames: data.images.map((image) => image.name),
       updatedAt: new Date().toISOString(),
@@ -184,7 +190,8 @@ export function CreateProduct() {
         categoryUuid: data.categoryUuid,
         title: data.title,
         description: data.description,
-        price: data.price,
+        fullPrice: data.price,
+        discountPrice: data.discountPrice,
         stockQty: data.stockQty,
         isFeatured: false,
         thumbnailObjectName: uploadedImages[0]?.objectName,
@@ -279,7 +286,7 @@ export function CreateProduct() {
         </Section>
 
         <Section title="Price" color="bg-emerald-200">
-          <div className="grid gap-5 sm:grid-cols-2">
+          <div className="grid gap-5 sm:grid-cols-3">
             <div>
               <FieldLabel>Amount</FieldLabel>
               <div className="relative">
@@ -287,6 +294,22 @@ export function CreateProduct() {
                 <input {...register("price", { valueAsNumber: true })} aria-invalid={Boolean(errors.price)} min="0" step="0.01" type="number" className="h-12 w-full rounded-xl border border-slate-200 pl-9 pr-4 text-base outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100 aria-invalid:border-red-400 aria-invalid:ring-red-100" placeholder="0.00" />
               </div>
               <FieldError message={errors.price?.message} />
+            </div>
+            <div>
+              <FieldLabel>Discount price (optional)</FieldLabel>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 font-semibold text-slate-500">$</span>
+                <input
+                  {...register("discountPrice", { setValueAs: (value) => value === "" ? undefined : Number(value) })}
+                  aria-invalid={Boolean(errors.discountPrice)}
+                  min="0"
+                  step="0.01"
+                  type="number"
+                  className="h-12 w-full rounded-xl border border-slate-200 pl-9 pr-4 text-base outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100 aria-invalid:border-red-400 aria-invalid:ring-red-100"
+                  placeholder="0.00"
+                />
+              </div>
+              <FieldError message={errors.discountPrice?.message} />
             </div>
             <div>
               <FieldLabel>Stock quantity</FieldLabel>

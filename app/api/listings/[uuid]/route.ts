@@ -62,3 +62,26 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return NextResponse.json({ message: error instanceof Error ? error.message : "Failed to update listing status" }, { status: 502 });
   }
 }
+
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ uuid: string }> }) {
+  const authorization = await getAuthHeader(request);
+  if (!authorization) return NextResponse.json({ message: "Unauthorized - Please sign in" }, { status: 401 });
+  const { uuid } = await params;
+
+  try {
+    const res = await fetch(`${BASE_URL}/api/v1/listings/${encodeURIComponent(uuid)}`, {
+      method: "DELETE",
+      headers: { Authorization: authorization, Accept: "application/json" },
+      cache: "no-store",
+    });
+    const text = await res.text();
+    if (!text) return new NextResponse(null, { status: res.status });
+    try {
+      return NextResponse.json(JSON.parse(text), { status: res.status });
+    } catch {
+      return NextResponse.json({ message: text }, { status: res.status });
+    }
+  } catch (error) {
+    return NextResponse.json({ message: error instanceof Error ? error.message : "Failed to delete listing" }, { status: 502 });
+  }
+}

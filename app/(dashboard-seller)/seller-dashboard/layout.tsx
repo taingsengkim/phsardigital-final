@@ -10,7 +10,7 @@ export default function DashboardLayout({
 }) {
   return (
     <TooltipProvider>
-      <SidebarProvider data-seller-dashboard className="bg-background text-foreground">
+      <SidebarProvider open data-seller-dashboard className="bg-background text-foreground">
         <SellerSidebar />
         <SidebarInset className="bg-background text-foreground transition-colors">
           <NavTopbar />

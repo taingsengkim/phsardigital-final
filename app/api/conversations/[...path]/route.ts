@@ -1,0 +1,12 @@
+import { NextRequest } from "next/server"
+import { proxyAuthenticated } from "@/lib/api/authenticated-proxy"
+
+type Context = { params: Promise<{ path: string[] }> }
+async function upstream(request: NextRequest, context: Context) {
+  const { path } = await context.params
+  const query = new URL(request.url).search
+  return `/api/v1/conversations/${path.map(encodeURIComponent).join("/")}${query}`
+}
+export async function GET(request: NextRequest, context: Context) { return proxyAuthenticated(request, await upstream(request, context)) }
+export async function POST(request: NextRequest, context: Context) { return proxyAuthenticated(request, await upstream(request, context)) }
+export async function PATCH(request: NextRequest, context: Context) { return proxyAuthenticated(request, await upstream(request, context)) }

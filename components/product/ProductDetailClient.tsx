@@ -23,6 +23,7 @@ import RatingStars from "@/components/product/RatingStars";
 import SavedButton from "@/components/saved/SavedButton";
 import { addToCart } from "@/app/api/cart";
 import type { ApiListing, ReviewSummary } from "@/lib/types";
+import { getListingFullPrice, getListingPrice, hasListingDiscount } from "@/lib/api/listing-price";
 
 type Props = {
   listing: ApiListing;
@@ -76,7 +77,9 @@ export default function ProductDetailClient({
   const listingId = listing.uuid;
   const productSlug = listing.slug || listing.uuid;
 
-  const price = typeof listing.price === "number" ? listing.price : 0;
+  const price = getListingPrice(listing);
+  const fullPrice = getListingFullPrice(listing);
+  const hasDiscount = hasListingDiscount(listing);
   const stock = typeof listing.stockQty === "number" ? listing.stockQty : 0;
   const sold = typeof listing.sold === "number" ? listing.sold : 0;
 
@@ -231,6 +234,11 @@ export default function ProductDetailClient({
           <span className="text-[36px] font-black leading-none text-[#6C4CD8]">
             {formatUsd(price)}
           </span>
+          {hasDiscount && (
+            <span className="text-[16px] font-medium text-[#8B85A0] line-through">
+              {formatUsd(fullPrice)}
+            </span>
+          )}
           <span className="text-[15px] font-medium text-[#8B85A0]">
             ≈ {formatKhr(price)}
           </span>

@@ -2,6 +2,7 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react"
 
 import type {
   CreateListingRequest,
+  DeleteListingRequest,
   SellerCategory,
   SellerListing,
   UploadedFile,
@@ -52,6 +53,13 @@ export const sellerProductApi = createApi({
       query: (body) => ({ url: "/listings", method: "POST", body }),
       invalidatesTags: ["SellerListing"],
     }),
+    deleteSellerListing: builder.mutation<void, DeleteListingRequest>({
+      query: ({ uuid }) => ({
+        url: `/listings/${encodeURIComponent(uuid)}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["SellerListing"],
+    }),
   }),
 })
 
@@ -59,4 +67,5 @@ export const {
   useGetSellerCategoriesQuery,
   useUploadProductFileMutation,
   useCreateSellerListingMutation,
+  useDeleteSellerListingMutation,
 } = sellerProductApi

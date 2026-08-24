@@ -11,6 +11,7 @@ import {
   getDiscountedPrice,
   formatPrice,
 } from "./listing-helpers";
+import { getListingFullPrice, hasListingDiscount } from "@/lib/api/listing-price";
 
 type ProductCardProps = {
   listing: any;
@@ -22,6 +23,8 @@ export function ProductCard({ listing, sellerName }: ProductCardProps) {
   const rating = getAverageRating(listing);
   const discountPercent = getActiveDiscountPercent(listing);
   const finalPrice = getDiscountedPrice(listing);
+  const fullPrice = getListingFullPrice(listing);
+  const hasApiDiscount = hasListingDiscount(listing);
 
   const productSlug = listing.uuid || listing.slug || listing.id || "#";
   const displaySeller =
@@ -85,9 +88,9 @@ export function ProductCard({ listing, sellerName }: ProductCardProps) {
             <span className="text-sm font-extrabold text-[#6C4CD8]">
               {formatPrice(finalPrice)}
             </span>
-            {discountPercent && (
+            {(discountPercent || hasApiDiscount) && (
               <span className="text-xs text-[#8B85A0] line-through">
-                {formatPrice(listing.price)}
+                {formatPrice(fullPrice)}
               </span>
             )}
           </div>
