@@ -5,15 +5,19 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, ArrowRight, Loader2 } from "lucide-react";
-import { ProductCard } from "../ProductCard";
 import { useGetListingsByCategoryQuery } from "@/lib/api/homeApi";
+import ProductCard from "../ProductCard";
 
 const CATEGORY_TABS = [
   { id: "womens-fashion", label: "Women's Dresses", slug: "womens-fashion" },
   { id: "health-beauty", label: "Health & Beauty", slug: "health-beauty" },
   { id: "mens-fashion", label: "Men's Wear", slug: "mens-fashion" },
   { id: "electronics", label: "Electronics", slug: "electronics" },
-  { id: "groceries-essentials", label: "Coffee & Food", slug: "groceries-essentials" },
+  {
+    id: "groceries-essentials",
+    label: "Coffee & Food",
+    slug: "groceries-essentials",
+  },
 ];
 
 const DRESS_PRODUCTS = [
@@ -74,7 +78,8 @@ const DRESS_PRODUCTS = [
 export function WearableSection() {
   const [activeTab, setActiveTab] = React.useState(CATEGORY_TABS[0].slug);
 
-  const { data: categoryResponse, isLoading } = useGetListingsByCategoryQuery(activeTab);
+  const { data: categoryResponse, isLoading } =
+    useGetListingsByCategoryQuery(activeTab);
 
   const apiListings =
     categoryResponse?.data || (categoryResponse as any)?.content || [];
@@ -115,7 +120,6 @@ export function WearableSection() {
 
       {/* Grid: Left Collection Banner + Right Products */}
       <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-5 items-stretch">
-        
         {/* Left Side Banner */}
         <div className="relative min-h-[300px] rounded-2xl overflow-hidden bg-gradient-to-b from-[#FAF5EE] to-[#EFE7D8] dark:from-zinc-900 dark:to-zinc-800 p-6 flex flex-col justify-between border border-amber-100/60 dark:border-zinc-800 shadow-xs">
           <Image
@@ -174,7 +178,6 @@ export function WearableSection() {
             </motion.div>
           </AnimatePresence>
         )}
-
       </div>
     </section>
   );

@@ -3,9 +3,18 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ChevronRight, ArrowRight, Star, ShoppingBag, Plus } from "lucide-react";
-import { useGetTopRatedListingsQuery, useGetListingsQuery } from "@/lib/api/homeApi";
-import { ProductCard } from "../ProductCard";
+import {
+  ChevronRight,
+  ArrowRight,
+  Star,
+  ShoppingBag,
+  Plus,
+} from "lucide-react";
+import {
+  useGetTopRatedListingsQuery,
+  useGetListingsQuery,
+} from "@/lib/api/homeApi";
+import ProductCard from "../ProductCard";
 
 const FALLBACK_TRENDING = [
   {
@@ -69,7 +78,9 @@ export function TrendingSection() {
     topRatedResponse?.data || (topRatedResponse as any)?.content || [];
 
   const listings =
-    apiListings && apiListings.length >= 4 ? apiListings.slice(0, 4) : FALLBACK_TRENDING;
+    apiListings && apiListings.length >= 4
+      ? apiListings.slice(0, 4)
+      : FALLBACK_TRENDING;
 
   return (
     <section className="mx-auto w-full max-w-[1380px] px-4 sm:px-6 py-6 font-sans">
@@ -92,7 +103,6 @@ export function TrendingSection() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-5 items-stretch">
-        
         {/* Collection Promo Banner (Left) */}
         <motion.div
           whileHover={{ scale: 1.01 }}
@@ -117,7 +127,8 @@ export function TrendingSection() {
               Summer Elegance Collection
             </h3>
             <p className="text-xs text-white/80 line-clamp-2">
-              Discover timeless floral dresses, natural skincare, and premium artisanal essentials.
+              Discover timeless floral dresses, natural skincare, and premium
+              artisanal essentials.
             </p>
             <Link
               href="/products?category=womens-fashion"
@@ -135,7 +146,6 @@ export function TrendingSection() {
             <ProductCard key={item.uuid || item.id || idx} listing={item} />
           ))}
         </div>
-
       </div>
     </section>
   );

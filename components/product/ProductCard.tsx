@@ -13,7 +13,14 @@ type CardListing = {
   slug: string;
   title: string;
   price: number;
-  images?: { uuid?: string; uri?: string; url?: string; isPrimary?: boolean; is_primary?: boolean; sortOrder?: number }[];
+  images?: {
+    uuid?: string;
+    uri?: string;
+    url?: string;
+    isPrimary?: boolean;
+    is_primary?: boolean;
+    sortOrder?: number;
+  }[];
   thumbnailUri?: { uri?: string };
 };
 
@@ -27,8 +34,7 @@ export default function ProductCard({ listing, className }: Props) {
   const primary =
     listing.images?.find((img) => img.isPrimary || img.is_primary) ??
     listing.images?.[0];
-  const imgSrc =
-    primary?.uri ?? primary?.url ?? listing.thumbnailUri?.uri;
+  const imgSrc = primary?.uri ?? primary?.url ?? listing.thumbnailUri?.uri;
 
   const key = listing.uuid ?? String(listing.id ?? listing.slug);
 
@@ -36,12 +42,16 @@ export default function ProductCard({ listing, className }: Props) {
     <article
       className={cn(
         "group relative flex flex-col overflow-hidden rounded-2xl bg-white shadow-[0_2px_12px_rgba(36,31,53,0.08)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_32px_rgba(108,76,216,0.18)]",
-        className
+        className,
       )}
     >
       {/* ── image ── */}
       <div className="relative aspect-square w-full overflow-hidden bg-[#F5F3FA]">
-        <Link href={`/products/${listing.slug}`} tabIndex={-1} aria-hidden="true">
+        <Link
+          href={`/products/${listing.slug}`}
+          tabIndex={-1}
+          aria-hidden="true"
+        >
           {imgSrc ? (
             <Image
               src={imgSrc}
@@ -53,7 +63,13 @@ export default function ProductCard({ listing, className }: Props) {
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-[#C4B5FD]">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" className="h-12 w-12">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                className="h-12 w-12"
+              >
                 <rect x="3" y="3" width="18" height="18" rx="3" />
                 <circle cx="8.5" cy="8.5" r="1.5" />
                 <path d="m21 15-5-5L5 21" />
@@ -63,10 +79,7 @@ export default function ProductCard({ listing, className }: Props) {
         </Link>
 
         {/* save button */}
-        <SavedButton
-          listingId={key}
-          className="absolute right-2 top-2 z-10"
-        />
+        <SavedButton listingId={key} className="absolute right-2 top-2 z-10" />
       </div>
 
       {/* ── info ── */}
