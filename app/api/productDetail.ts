@@ -199,6 +199,18 @@ import { CURATED_PRODUCTS } from "@/lib/curated-products";
  */
 import { getPrimaryImage } from "@/app/(public)/home/listing-helpers";
 
+/**
+ * Leftover seed rows that should not surface as real products. Matched whole,
+ * not by substring — `includes("cat")` also rejected any genuine listing with
+ * "cat" inside a word (Delicate, Education, Category), sending it to the
+ * curated fallback complete with placeholder imagery.
+ */
+const PLACEHOLDER_TITLES = new Set(["cat", "cats", "this is cat", "vengroth"]);
+
+function isPlaceholderTitle(title: string): boolean {
+  return PLACEHOLDER_TITLES.has(title.trim().toLowerCase());
+}
+
 export const getListing = cache(async function getListing(
   identifier: string
 ): Promise<ApiListing | null> {
@@ -210,17 +222,19 @@ export const getListing = cache(async function getListing(
       : `/api/v1/listings/slug/${encodeURIComponent(identifier)}`;
 
     const { data } = await apiGet<ApiListing>(path, { revalidate: 30 });
-    if (data?.uuid && data.title && !data.title.toLowerCase().includes("cat") && !data.title.toLowerCase().includes("vengroth")) {
+    if (data?.uuid && data.title && !isPlaceholderTitle(data.title)) {
       const primaryImage = getPrimaryImage(data);
-      const cleanImages =
-        data.images && data.images.length > 0 && !data.images[0]?.uri?.includes("51.79.146.203")
+      // Real uploads live on the file host, so they are the images to show —
+      // the gallery only falls back to the thumbnail when there are none.
+      const gallery =
+        Array.isArray(data.images) && data.images.length > 0
           ? data.images
           : [{ uri: primaryImage, sortOrder: 0 }];
 
       return {
         ...data,
         thumbnailUri: { uri: primaryImage, sortOrder: 0 },
-        images: cleanImages,
+        images: gallery,
         price:
           typeof data.discountPrice === "number" && data.discountPrice > 0
             ? data.discountPrice

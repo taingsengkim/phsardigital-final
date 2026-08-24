@@ -175,10 +175,16 @@ export async function GET(request: NextRequest) {
           stockQty: item.stockQty ?? 20,
           status: item.status || "ACTIVE",
           isFeatured: item.isFeatured ?? true,
+          // The upstream image fields have to survive this remap — without them
+          // getPrimaryImage() falls through to its placeholder and every card
+          // renders the same stock photo.
+          thumbnailUri: item.thumbnailUri ?? null,
+          images: item.images ?? null,
           category: { name: normalizedCat, slug: normalizedCatSlug },
           sellerProfile: {
             businessName: item.sellerProfile?.businessName || "Phsar Digital Store",
             sellerId: item.sellerProfile?.sellerId || "seller-live",
+            logoUri: item.sellerProfile?.logoUri ?? null,
           },
           averageRating: item.averageRating ?? 4.9,
           reviewCount: item.reviewCount ?? 18,
