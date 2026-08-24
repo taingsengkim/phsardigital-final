@@ -33,10 +33,10 @@ export async function GET(
 
     const data = await res.json();
     return NextResponse.json(data, { status: res.status });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error(`Error fetching listing ${uuid}:`, err);
     return NextResponse.json(
-      { message: err?.message || "Failed to fetch listing" },
+      { message: err instanceof Error ? err.message : "Failed to fetch listing" },
       { status: 502 }
     );
   }
@@ -48,7 +48,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const { uuid } = await params;
   const body = await request.text();
   try {
-    const res = await fetch(`${BASE_URL}/api/v1/listings/${encodeURIComponent(uuid)}/status`, {
+    const res = await fetch(`${BASE_URL}/api/v1/listings/${encodeURIComponent(uuid)}`, {
       method: "PATCH",
       headers: { Authorization: authorization, Accept: "application/json", "Content-Type": "application/json" },
       body,
@@ -59,7 +59,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (text) { try { data = JSON.parse(text); } catch { data = { message: text }; } }
     return NextResponse.json(data, { status: res.status });
   } catch (error) {
-    return NextResponse.json({ message: error instanceof Error ? error.message : "Failed to update listing status" }, { status: 502 });
+    return NextResponse.json({ message: error instanceof Error ? error.message : "Failed to update listing" }, { status: 502 });
   }
 }
 

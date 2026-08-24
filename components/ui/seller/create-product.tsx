@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm, useWatch } from "react-hook-form"
+import type { FieldErrors } from "react-hook-form"
 import { z } from "zod"
 import {
   ArrowLeft,
@@ -16,16 +17,20 @@ import {
 
 import {
   useCreateSellerListingMutation,
-  useGetSellerCategoriesQuery,
+  useAddListingImageMutation,
+  useGetSellerCategoryTreeQuery,
+  useGetSellerCategoryAttributesQuery,
+  useGetSellerListingQuery,
+  useRemoveListingDiscountMutation,
+  useUpdateListingThumbnailMutation,
+  useUpdateSellerListingMutation,
   useUploadProductFileMutation,
 } from "@/lib/redux/service/sellerProductApi"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { readSellerDrafts, writeSellerDrafts } from "@/lib/seller-drafts"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { useAppDispatch } from "@/lib/hooks"
+import { sellerApi } from "@/lib/api/sellerApi"
+import type { CategoryAttributeDefinition, SellerCategoryTree } from "@/lib/types/seller-product"
 
 const productImageSchema = z.custom<File>(
   (value) => typeof File !== "undefined" && value instanceof File,
@@ -40,13 +45,70 @@ const createProductSchema = z.object({
   discountPrice: z.number({ error: "Enter a valid discount price." }).positive("Discount price must be greater than 0.").optional(),
   stockQty: z.number({ error: "Enter a valid stock quantity." }).int("Stock quantity must be a whole number.").min(0, "Stock quantity cannot be negative."),
   categoryUuid: z.string().min(1, "Please select a category."),
-  images: z.array(productImageSchema).min(1, "Please add at least one cover image.").max(8, "You can upload up to 8 images."),
+  status: z.enum(["DRAFT", "ACTIVE", "ARCHIVED"]),
+  images: z.array(productImageSchema).max(8, "You can upload up to 8 images."),
 }).refine(
   (data) => data.discountPrice === undefined || data.discountPrice < data.price,
   { path: ["discountPrice"], message: "Discount price must be lower than the regular price." },
 )
 
 type CreateProductForm = z.infer<typeof createProductSchema>
+
+type ApiFailure = {
+  status?: number | string
+  error?: string
+  data?: string | {
+    message?: string
+    detail?: string
+    title?: string
+    error?: string
+    errors?: Record<string, string | string[]> | Array<{ field?: string; message?: string; defaultMessage?: string }>
+  }
+}
+
+function apiFailureMessage(error: unknown, fallback: string): string {
+  const failure = error as ApiFailure
+  if (typeof failure.data === "string" && failure.data.trim()) return failure.data
+  const data = typeof failure.data === "object" && failure.data ? failure.data : undefined
+  if (data?.message) return data.message
+  if (data?.detail) return data.detail
+  if (data?.error) return data.error
+  if (Array.isArray(data?.errors)) {
+    const messages = data.errors
+      .map((item) => item.message ?? item.defaultMessage)
+      .filter(Boolean)
+    if (messages.length) return messages.join(" ")
+  }
+  if (data?.errors && typeof data.errors === "object") {
+    const messages = Object.entries(data.errors).flatMap(([field, value]) =>
+      (Array.isArray(value) ? value : [value]).map((message) => `${field}: ${message}`),
+    )
+    if (messages.length) return messages.join(" ")
+  }
+  if (data?.title && data.title.toLowerCase() !== "bad request") return data.title
+  if (failure.error && failure.error !== "PARSING_ERROR") return failure.error
+  return failure.status ? `${fallback} (API ${failure.status})` : fallback
+}
+
+function categoryPath(tree: SellerCategoryTree[], uuid?: string | null): SellerCategoryTree[] {
+  if (!uuid) return []
+  for (const category of tree) {
+    if (category.uuid === uuid) return [category]
+    const childPath = categoryPath(category.children ?? [], uuid)
+    if (childPath.length) return [category, ...childPath]
+  }
+  return []
+}
+
+function flattenCategoryTree(tree: SellerCategoryTree[], parents: string[] = []): SellerCategoryTree[] {
+  return tree.flatMap((category) => {
+    const path = [...parents, category.name]
+    return [
+      { ...category, name: path.join(" / ") },
+      ...flattenCategoryTree(category.children ?? [], path),
+    ]
+  })
+}
 
 function FieldError({ message }: { message?: string }) {
   return message ? <p className="mt-2 text-sm font-medium text-red-600">{message}</p> : null
@@ -128,19 +190,66 @@ function DropZone({
   )
 }
 
-export function CreateProduct() {
+function CategoryAttributeField({ attribute, value, onChange }: { attribute: CategoryAttributeDefinition; value: string; onChange: (value: string) => void }) {
+  const label = <FieldLabel>{attribute.label}{attribute.required ? " *" : ""}{attribute.unit ? ` (${attribute.unit})` : ""}</FieldLabel>
+  const inputClass = "h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+
+  if (attribute.dataType === "BOOLEAN") return <div>{label}<select value={value} onChange={(event) => onChange(event.target.value)} className={inputClass}><option value="">Select an option</option><option value="true">Yes</option><option value="false">No</option></select></div>
+  if (attribute.dataType === "SELECT") return <div>{label}<select value={value} onChange={(event) => onChange(event.target.value)} className={inputClass}><option value="">Select {attribute.label.toLowerCase()}</option>{(attribute.options ?? []).map((option) => <option key={option.uuid ?? option.value} value={option.value}>{option.label || option.value}</option>)}</select></div>
+  if (attribute.dataType === "MULTI_SELECT") {
+    const selected = new Set(value.split(",").filter(Boolean))
+    return <fieldset><legend className="mb-2 text-sm font-semibold text-slate-700">{attribute.label}{attribute.required ? " *" : ""}</legend><div className="flex min-h-12 flex-wrap gap-2 rounded-xl border border-slate-200 p-2">{(attribute.options ?? []).map((option) => <label key={option.uuid ?? option.value} className={`cursor-pointer rounded-lg px-3 py-2 text-sm transition ${selected.has(option.value) ? "bg-primary text-primary-foreground" : "bg-slate-100 text-slate-700"}`}><input type="checkbox" checked={selected.has(option.value)} onChange={(event) => { const next = new Set(selected); if (event.target.checked) next.add(option.value); else next.delete(option.value); onChange([...next].join(",")) }} className="sr-only" />{option.label || option.value}</label>)}</div></fieldset>
+  }
+  return <div>{label}<input type={attribute.dataType === "NUMBER" ? "number" : "text"} value={value} onChange={(event) => onChange(event.target.value)} placeholder={`Enter ${attribute.label.toLowerCase()}`} className={inputClass} /></div>
+}
+
+function CategoryDropdown({ label, placeholder, options, value, disabled, onChange }: { label: string; placeholder: string; options: SellerCategoryTree[]; value?: string; disabled?: boolean; onChange: (uuid: string) => void }) {
+  const selected = options.find((option) => option.uuid === value)
+  return (
+    <div>
+      <FieldLabel>{label}</FieldLabel>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild disabled={disabled}>
+          <button type="button" className="flex h-12 w-full items-center rounded-xl border border-slate-200 bg-white px-4 text-left text-sm outline-none transition hover:bg-slate-50 focus-visible:border-violet-400 focus-visible:ring-4 focus-visible:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400">
+            <span className={`truncate ${selected ? "text-slate-900" : "text-slate-400"}`}>{selected?.name || placeholder}</span>
+            <ChevronDown className="ml-auto size-4 shrink-0 text-slate-400" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="max-h-72 w-[var(--radix-dropdown-menu-trigger-width)] overflow-y-auto p-1.5">
+          {options.map((option) => (
+            <DropdownMenuItem key={option.uuid} onSelect={() => onChange(option.uuid)} className="cursor-pointer rounded-lg px-3 py-2.5">
+              <span className="truncate">{option.name}</span>
+              {option.uuid === value && <span className="ml-auto font-bold text-primary">✓</span>}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  )
+}
+
+export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
   const router = useRouter()
+  const dispatch = useAppDispatch()
+  const isEditing = Boolean(editUuid)
   const [formError, setFormError] = React.useState("")
   const [requiresSubscription, setRequiresSubscription] = React.useState(false)
   const [draftSaved, setDraftSaved] = React.useState(false)
-  const { data: categories = [], isLoading: categoriesLoading, isError: categoriesError } = useGetSellerCategoriesQuery()
+  const { data: categoryTree = [], isLoading: categoriesLoading, isError: categoriesError } = useGetSellerCategoryTreeQuery()
+  const { data: listing, error: listingError } = useGetSellerListingQuery(editUuid, { skip: !isEditing })
   const [uploadProductFile] = useUploadProductFileMutation()
   const [createSellerListing, { isLoading: isCreating }] = useCreateSellerListingMutation()
+  const [updateSellerListing, { isLoading: isUpdating }] = useUpdateSellerListingMutation()
+  const [updateListingThumbnail] = useUpdateListingThumbnailMutation()
+  const [addListingImage] = useAddListingImageMutation()
+  const [removeListingDiscount] = useRemoveListingDiscountMutation()
   const {
     register,
     handleSubmit,
     setValue,
+    setError,
     getValues,
+    reset,
     control,
     formState: { errors },
   } = useForm<CreateProductForm>({
@@ -152,11 +261,50 @@ export function CreateProduct() {
       discountPrice: undefined,
       stockQty: undefined,
       categoryUuid: "",
+      status: "ACTIVE",
       images: [],
     },
   })
   const images = useWatch({ control, name: "images" })
   const categoryUuid = useWatch({ control, name: "categoryUuid" })
+  const [attributeValues, setAttributeValues] = React.useState<Record<string, string>>({})
+  const categoryOptions = React.useMemo(() => flattenCategoryTree(categoryTree), [categoryTree])
+  const selectedCategory = categoryOptions.find((category) => category.uuid === categoryUuid)
+  const attributeCategoryUuid = selectedCategory?.uuid ?? ""
+  const { data: attributeSchema, isLoading: attributesLoading, isError: attributesError, refetch: refetchAttributes } = useGetSellerCategoryAttributesQuery(attributeCategoryUuid, { skip: !attributeCategoryUuid })
+  const categoryAttributes = React.useMemo(() => {
+    const grouped = attributeSchema?.groups?.flatMap((group) => group.attributes ?? []) ?? []
+    const attributes = grouped.length ? grouped : (attributeSchema?.attributes ?? [])
+    return [...attributes].sort((a, b) => (a.groupSortOrder ?? 0) - (b.groupSortOrder ?? 0) || (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+  }, [attributeSchema])
+  const isSubmitting = isCreating || isUpdating
+
+  React.useEffect(() => {
+    if (!listing || !isEditing) return
+    const path = categoryPath(categoryTree, listing.category?.uuid)
+    reset({
+      title: listing.title ?? "",
+      description: listing.description ?? "",
+      price: Number(listing.fullPrice ?? listing.price ?? 0),
+      discountPrice: listing.discountPrice == null ? undefined : Number(listing.discountPrice),
+      stockQty: Number(listing.stockQty ?? 0),
+      categoryUuid: listing.category?.uuid ?? path.at(-1)?.uuid ?? "",
+      status: listing.status === "DRAFT" || listing.status === "ARCHIVED" ? listing.status : "ACTIVE",
+      images: [],
+    })
+  }, [categoryTree, isEditing, listing, reset])
+
+  React.useEffect(() => {
+    if (!isEditing || !listing || categoryAttributes.length === 0) return
+    const values: Record<string, string> = {}
+    for (const value of listing.listingAttributes ?? []) {
+      const definition = categoryAttributes.find((attribute) => attribute.code === value.key || attribute.label === value.key)
+      values[definition?.code ?? value.key] = value.value ?? ""
+    }
+    // Populate dynamic category fields after their schema and listing are both available.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setAttributeValues(values)
+  }, [categoryAttributes, isEditing, listing])
 
   const saveDraft = () => {
     const data = getValues()
@@ -182,60 +330,108 @@ export function CreateProduct() {
     setFormError("")
     setRequiresSubscription(false)
     try {
+      const missingAttribute = categoryAttributes.find((attribute) => attribute.required && !attributeValues[attribute.code]?.trim())
+      if (missingAttribute) {
+        setFormError(`${missingAttribute.label} is required for this category.`)
+        return
+      }
+      if (!isEditing && data.images.length === 0) {
+        setError("images", { type: "manual", message: "Please add at least one cover image." })
+        return
+      }
       const uploadedImages = await Promise.all(
         data.images.map((file) => uploadProductFile(file).unwrap()),
       )
+      const listingAttributes = categoryAttributes
+        .map((attribute, index) => ({ key: attribute.code, value: attributeValues[attribute.code]?.trim() ?? "", sortOrder: attribute.sortOrder ?? index }))
+        .filter((attribute) => attribute.value)
 
-      await createSellerListing({
-        categoryUuid: data.categoryUuid,
-        title: data.title,
-        description: data.description,
-        fullPrice: data.price,
-        discountPrice: data.discountPrice,
-        stockQty: data.stockQty,
-        isFeatured: false,
-        thumbnailObjectName: uploadedImages[0]?.objectName,
-        images: uploadedImages.map((image, index) => ({
-          objectName: image.objectName,
-          sortOrder: index,
-          isPrimary: index === 0,
-        })),
-        listingAttributes: [],
-      }).unwrap()
+      if (isEditing) {
+        await updateSellerListing({
+          uuid: editUuid,
+          body: {
+            categoryUuid: data.categoryUuid,
+            title: data.title,
+            description: data.description,
+            fullPrice: data.price,
+            ...(data.discountPrice !== undefined ? { discountPrice: data.discountPrice } : {}),
+            stockQty: data.stockQty,
+            status: data.status,
+            listingAttributes,
+          },
+        }).unwrap()
 
+        if (data.discountPrice === undefined && listing?.discountPrice != null) {
+          await removeListingDiscount(editUuid).unwrap()
+        }
+
+        if (uploadedImages.length > 0) {
+          await updateListingThumbnail({ uuid: editUuid, objectName: uploadedImages[0].objectName }).unwrap()
+          await Promise.all(uploadedImages.map((image, index) => addListingImage({
+            uuid: editUuid,
+            objectName: image.objectName,
+            sortOrder: (listing?.images?.length ?? 0) + index,
+          }).unwrap()))
+        }
+      } else {
+        await createSellerListing({
+          categoryUuid: data.categoryUuid,
+          title: data.title,
+          description: data.description,
+          fullPrice: data.price,
+          discountPrice: data.discountPrice,
+          stockQty: data.stockQty,
+          isFeatured: false,
+          thumbnailObjectName: uploadedImages[0]?.objectName,
+          images: uploadedImages.map((image, index) => ({
+            objectName: image.objectName,
+            sortOrder: index,
+            isPrimary: index === 0,
+          })),
+          listingAttributes,
+        }).unwrap()
+      }
+
+      dispatch(sellerApi.util.invalidateTags(["SellerListings"]))
       router.push("/seller-dashboard/products/dashboard")
       router.refresh()
     } catch (error) {
-      const apiError = error as { status?: number; data?: { message?: string } | string; error?: string }
+      const apiError = error as ApiFailure
       const subscriptionRequired = apiError.status === 402
-      const message = typeof apiError.data === "string"
-        ? apiError.data
-        : apiError.data?.message ?? apiError.error ?? "Could not create the product. Please try again."
       setRequiresSubscription(subscriptionRequired)
-      setFormError(message)
+      setFormError(apiFailureMessage(error, `Could not ${isEditing ? "update" : "create"} the product. Please try again.`))
+      window.scrollTo({ top: 0, behavior: "smooth" })
     }
   }
 
+  const showValidationError = (validationErrors: FieldErrors<CreateProductForm>) => {
+    const firstError = Object.values(validationErrors).find((error) => error?.message)
+    setFormError(typeof firstError?.message === "string" ? firstError.message : "Please check the highlighted fields before saving.")
+    window.scrollTo({ top: 0, behavior: "smooth" })
+  }
+
   return (
-    <form className="mx-auto w-full max-w-5xl pb-10" noValidate onSubmit={handleSubmit(submitProduct)}>
+    <form className="mx-auto w-full max-w-5xl pb-10" noValidate onSubmit={handleSubmit(submitProduct, showValidationError)}>
       <div className="mb-7 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p className="mb-1 text-sm font-medium text-violet-600">Products / Create</p>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">New product</h1>
+          <p className="mb-1 text-sm font-medium text-violet-600">Products / {isEditing ? "Edit" : "Create"}</p>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">{isEditing ? "Edit product" : "New product"}</h1>
         </div>
         <div className="flex items-center gap-3">
           <Link href="/seller-dashboard/products/dashboard" className="inline-flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50">
             <ArrowLeft className="size-4" /> Back
           </Link>
-          <button
-            type="button"
-            onClick={saveDraft}
-            className="h-11 rounded-xl border border-violet-300 bg-white px-5 text-sm font-semibold text-violet-700 shadow-sm transition hover:bg-violet-50"
-          >
-            Save draft
-          </button>
-          <button disabled={isCreating} type="submit" className="h-11 rounded-xl bg-[#6C4CD8] px-5 text-sm font-semibold text-white shadow-sm hover:bg-[#5d3fc4] disabled:cursor-not-allowed disabled:opacity-60">
-            {isCreating ? "Creating..." : "Create product"}
+          {!isEditing && (
+            <button
+              type="button"
+              onClick={saveDraft}
+              className="h-11 rounded-xl border border-violet-300 bg-white px-5 text-sm font-semibold text-violet-700 shadow-sm transition hover:bg-violet-50"
+            >
+              Save draft
+            </button>
+          )}
+          <button disabled={isSubmitting} type="submit" className="h-11 rounded-xl bg-[#6C4CD8] px-5 text-sm font-semibold text-white shadow-sm hover:bg-[#5d3fc4] disabled:cursor-not-allowed disabled:opacity-60">
+            {isSubmitting ? (isEditing ? "Saving..." : "Creating...") : (isEditing ? "Save changes" : "Create product")}
           </button>
         </div>
       </div>
@@ -261,6 +457,10 @@ export function CreateProduct() {
         </div>
       )}
 
+      {isEditing && listingError && (
+        <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">Could not load this product. Check that it still exists and belongs to your store.</div>
+      )}
+
       <div className="space-y-4">
         <Section title="Name & description" color="bg-emerald-200">
           <div className="space-y-5">
@@ -280,7 +480,10 @@ export function CreateProduct() {
         </Section>
 
         <Section title="Images" color="bg-sky-200">
-          <FieldLabel>Cover images</FieldLabel>
+          <FieldLabel>{isEditing ? "Add new product images (optional)" : "Cover images"}</FieldLabel>
+          {isEditing && listing?.thumbnailUri && (
+            <p className="mb-3 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">The current product images will be kept. Selecting new images will add them and set the first new image as the cover.</p>
+          )}
           <DropZone accept="image/*" multiple label="Click to add images" files={images} onFiles={(files) => setValue("images", [...images, ...files], { shouldDirty: true, shouldValidate: true })} />
           <FieldError message={errors.images?.message} />
         </Section>
@@ -329,35 +532,48 @@ export function CreateProduct() {
         </Section>
 
         <Section title="Category" color="bg-violet-200">
-          <FieldLabel>Category</FieldLabel>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild disabled={categoriesLoading || categoriesError}>
-              <button type="button" className="flex h-12 w-full items-center rounded-xl border border-border bg-background px-4 text-left text-sm text-foreground outline-none transition hover:bg-muted/50 focus-visible:border-violet-400 focus-visible:ring-4 focus-visible:ring-violet-100 dark:focus-visible:ring-violet-950 disabled:cursor-not-allowed disabled:opacity-60">
-                <span className={!categoryUuid ? "text-muted-foreground" : undefined}>
-                  {categoriesLoading
-                    ? "Loading categories..."
-                    : categoriesError
-                      ? "Could not load categories"
-                      : categories.find((category) => category.uuid === categoryUuid)?.name ?? "Select category"}
-                </span>
-                <ChevronDown className="ml-auto size-4 text-muted-foreground" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="max-h-64 p-1.5">
-              {categories.map((category) => (
-                <DropdownMenuItem
-                  key={category.uuid}
-                  onSelect={() => setValue("categoryUuid", category.uuid, { shouldDirty: true, shouldValidate: true })}
-                  className="cursor-pointer rounded-lg px-3 py-2.5"
-                >
-                  {category.name}
-                  {category.uuid === categoryUuid && <span className="ml-auto text-primary">✓</span>}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <CategoryDropdown label="Category" placeholder={categoriesLoading ? "Loading categories..." : categoriesError ? "Could not load categories" : "Select category"} options={categoryOptions} value={categoryUuid} disabled={categoriesLoading || categoriesError} onChange={(uuid) => { setAttributeValues({}); setValue("categoryUuid", uuid, { shouldDirty: true, shouldValidate: true }) }} />
+          <p className="mt-3 text-xs text-slate-500">Choose the most specific category so the correct product attributes can load.</p>
           <FieldError message={errors.categoryUuid?.message} />
         </Section>
+
+        {attributeCategoryUuid && (attributesLoading || attributesError || categoryAttributes.length > 0) && (
+          <Section title={`${attributeSchema?.categoryName || "Category"} attributes`} color="bg-fuchsia-200">
+            {attributesLoading ? (
+              <div className="flex items-center gap-3 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-500"><span className="size-4 animate-spin rounded-full border-2 border-primary/25 border-t-primary" />Loading category attributes...</div>
+            ) : attributesError ? (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"><span>The category service is taking too long to respond.</span><button type="button" onClick={() => refetchAttributes()} className="rounded-lg bg-amber-700 px-4 py-2 font-semibold text-white hover:bg-amber-800">Try again</button></div>
+            ) : (
+              <div className="grid gap-5 md:grid-cols-2">
+                {categoryAttributes.map((attribute) => (
+                  <CategoryAttributeField
+                    key={attribute.uuid || attribute.code}
+                    attribute={attribute}
+                    value={attributeValues[attribute.code] ?? ""}
+                    onChange={(value) => setAttributeValues((current) => ({ ...current, [attribute.code]: value }))}
+                  />
+                ))}
+              </div>
+            )}
+          </Section>
+        )}
+
+        {isEditing && (
+          <Section title="Product status" color="bg-amber-200">
+            <FieldLabel>Availability</FieldLabel>
+            <select
+              {...register("status")}
+              className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+            >
+              <option value="DRAFT">Draft — visible only to you</option>
+              <option value="ACTIVE">Active — available and visible to buyers</option>
+              <option value="ARCHIVED">Inactive — unavailable and hidden from buyers</option>
+            </select>
+            <p className="mt-2 text-xs text-slate-500">
+              Active products are available in the marketplace. Inactive products remain in your inventory but buyers cannot see or purchase them.
+            </p>
+          </Section>
+        )}
 
       </div>
     </form>

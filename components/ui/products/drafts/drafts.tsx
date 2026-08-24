@@ -21,6 +21,9 @@ import {
 import { readSellerDrafts, writeSellerDrafts } from "@/lib/seller-drafts";
 import { ProductTableToolbar } from "@/components/ui/products/product-table-toolbar";
 import { ProductTablePagination } from "@/components/ui/products/product-table-pagination";
+import { ProductDetailModal } from "@/components/ui/products/product-detail-modal";
+import { useDeleteSellerListingMutation } from "@/lib/redux/service/sellerProductApi";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -116,12 +119,12 @@ function ProductArtwork({
 }) {
   if (image)
     return (
-      <div className="relative size-[76px] shrink-0 overflow-hidden rounded-[8px] bg-muted">
+      <div className="relative size-[56px] shrink-0 overflow-hidden rounded-[8px] bg-muted">
         <Image
           src={image}
           alt={title}
           fill
-          sizes="76px"
+          sizes="56px"
           unoptimized={image.startsWith("http")}
           className="object-cover"
         />
@@ -130,7 +133,7 @@ function ProductArtwork({
   return (
     <div
       className={cn(
-        "relative size-[76px] shrink-0 overflow-hidden rounded-[8px] bg-gradient-to-br",
+        "relative size-[56px] shrink-0 overflow-hidden rounded-[8px] bg-gradient-to-br",
         art,
       )}
       aria-hidden="true"
@@ -155,11 +158,12 @@ export function Drafts({
   variant?: "drafts" | "schedualed";
 }) {
   const isScheduled = variant === "schedualed";
-  const { data: serverDraftData } = useGetMyListingsQuery(
+  const { data: serverDraftData, refetch: refetchDrafts } = useGetMyListingsQuery(
     { status: "DRAFT", pageNumber: 0, pageSize: 100 },
     { skip: isScheduled },
   );
   const [updateListingStatus] = useUpdateListingStatusMutation();
+  const [deleteListing, { isLoading: isDeleting }] = useDeleteSellerListingMutation();
   const [products, setProducts] = React.useState<DraftProduct[]>(() =>
     isScheduled
       ? []
@@ -179,6 +183,8 @@ export function Drafts({
         })),
   );
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
+  const [removedIds, setRemovedIds] = React.useState<Set<string>>(new Set());
+  const [viewProductUuid, setViewProductUuid] = React.useState<string | null>(null);
   const [query, setQuery] = React.useState("");
   const [createdDate, setCreatedDate] = React.useState("");
   const [visibleColumns, setVisibleColumns] = React.useState(
@@ -232,7 +238,7 @@ export function Drafts({
   const allProducts = [
     ...products,
     ...serverItems.filter(
-      (server) => !products.some((local) => local.id === server.id),
+      (server) => !removedIds.has(server.id) && !products.some((local) => local.id === server.id),
     ),
   ];
   const serverIds = new Set(serverItems.map((item) => item.id));
@@ -273,6 +279,31 @@ export function Drafts({
       else visibleProducts.forEach((product) => next.add(product.id));
       return next;
     });
+  }
+
+  async function removeDraft(product: DraftProduct) {
+    const isServerProduct = serverIds.has(product.id);
+    setRemovedIds((current) => new Set(current).add(product.id));
+    setProducts((items) => items.filter((item) => item.id !== product.id));
+    setSelected((items) => {
+      const next = new Set(items);
+      next.delete(product.id);
+      return next;
+    });
+    if (!isServerProduct) {
+      writeSellerDrafts(readSellerDrafts().filter((draft) => draft.id !== product.id));
+      return;
+    }
+    try {
+      await deleteListing({ uuid: product.id }).unwrap();
+      await refetchDrafts();
+    } catch {
+      setRemovedIds((current) => {
+        const next = new Set(current);
+        next.delete(product.id);
+        return next;
+      });
+    }
   }
 
   return (
@@ -449,14 +480,15 @@ export function Drafts({
                   className={cn(!visibleColumns.has("view") && "hidden")}
                 >
                   {serverIds.has(product.id) ? (
-                    <Link
-                      href={`/products/${product.id}`}
+                    <button
+                      type="button"
+                      onClick={() => setViewProductUuid(product.id)}
                       aria-label={`View ${product.title}`}
                       className="inline-flex items-center gap-2 text-sm font-medium text-[#596273] hover:text-[#8068e8]"
                     >
                       <Eye className="size-4" />
                       View
-                    </Link>
+                    </button>
                   ) : (
                     <span className="text-sm text-muted-foreground">—</span>
                   )}
@@ -464,86 +496,60 @@ export function Drafts({
                 <TableCell
                   className={cn(!visibleColumns.has("actions") && "hidden")}
                 >
-                  <details className="relative mx-auto w-fit">
-                    <summary className="grid size-9 cursor-pointer list-none place-items-center rounded-lg hover:bg-muted">
-                      <MoreHorizontal className="size-6" />
-                    </summary>
-                    <div className="absolute right-0 z-20 mt-1 w-44 rounded-xl border bg-white p-1.5 text-left text-sm shadow-xl dark:bg-slate-900">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button type="button" aria-label={`Actions for ${product.title}`} className="mx-auto grid size-9 place-items-center rounded-lg hover:bg-muted"><MoreHorizontal className="size-6" /></button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" sideOffset={6} className="w-44 p-1.5">
                       {serverIds.has(product.id) && (
-                        <Link
-                          href={`/products/${product.id}`}
-                          className="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-muted"
-                        >
-                          <Eye className="size-4" />
-                          View
-                        </Link>
+                        <DropdownMenuItem onSelect={() => setViewProductUuid(product.id)} className="cursor-pointer rounded-lg"><Eye className="size-4" />View</DropdownMenuItem>
                       )}
-                      <Link
-                        href={`/seller-dashboard/products/new?edit=${product.id}`}
-                        className="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-muted"
-                      >
-                        <Pencil className="size-4" />
-                        Edit
-                      </Link>
+                      <DropdownMenuItem asChild className="cursor-pointer rounded-lg"><Link href={`/seller-dashboard/products/new?edit=${product.id}`}><Pencil className="size-4" />Edit</Link></DropdownMenuItem>
                       {serverIds.has(product.id) && (
                         <>
-                          <button
-                            type="button"
+                          <DropdownMenuItem
                             onClick={() =>
                               updateListingStatus({
                                 uuid: product.id,
                                 status: "ACTIVE",
                               })
                             }
-                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 hover:bg-muted"
+                            className="cursor-pointer rounded-lg"
                           >
                             <Power className="size-4" />
                             Set active
-                          </button>
-                          <button
-                            type="button"
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
                             onClick={() =>
                               updateListingStatus({
                                 uuid: product.id,
-                                status: "INACTIVE",
+                                status: "ARCHIVED",
                               })
                             }
-                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 hover:bg-muted"
+                            className="cursor-pointer rounded-lg"
                           >
                             <Power className="size-4" />
                             Set inactive
-                          </button>
+                          </DropdownMenuItem>
                         </>
                       )}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setProducts((items) =>
-                            items.filter((item) => item.id !== product.id),
-                          );
-                          writeSellerDrafts(
-                            readSellerDrafts().filter(
-                              (draft) => draft.id !== product.id,
-                            ),
-                          );
-                          setSelected((items) => {
-                            const next = new Set(items);
-                            next.delete(product.id);
-                            return next;
-                          });
-                        }}
-                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-red-500 hover:bg-red-50"
+                      <DropdownMenuItem
+                        disabled={isDeleting}
+                        onClick={() => removeDraft(product)}
+                        className="cursor-pointer rounded-lg text-red-600 focus:bg-red-50 focus:text-red-600"
                       >
                         <Trash2 className="size-4" />
-                        Delete
-                      </button>
-                    </div>
-                  </details>
+                        {isDeleting ? "Deleting..." : "Delete"}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
+
+        <ProductDetailModal uuid={viewProductUuid} onClose={() => setViewProductUuid(null)} />
 
         {visibleProducts.length === 0 && (
           <p className="py-[60px] text-center text-[13px] text-[#858c95]">

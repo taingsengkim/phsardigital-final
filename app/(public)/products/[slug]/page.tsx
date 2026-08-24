@@ -177,6 +177,7 @@ export default async function ProductDetailPage({ params }: Props) {
           listingUuid={listing.uuid}
           description={listing.description}
           attributes={listing.listingAttributes}
+          specifications={listing.specifications}
           reviews={reviews}
           reviewSummary={reviewSummary}
           sellerName={sellerName}

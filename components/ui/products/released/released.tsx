@@ -28,6 +28,8 @@ import {
 } from "@/components/ui/table";
 import { ProductTableToolbar } from "@/components/ui/products/product-table-toolbar";
 import { ProductTablePagination } from "@/components/ui/products/product-table-pagination";
+import { ProductDetailModal } from "@/components/ui/products/product-detail-modal";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 type ApiProduct = {
   uuid?: string;
@@ -108,20 +110,21 @@ function Checkbox({
   );
 }
 
-function ProductImage({ product }: { product: Product }) {
+function ProductImage({ product, compact = false }: { product: Product; compact?: boolean }) {
+  const sizeClass = compact ? "size-[56px]" : "size-[76px]";
   return product.image ? (
-    <div className="relative size-[76px] shrink-0 overflow-hidden rounded-lg bg-muted">
+    <div className={cn("relative shrink-0 overflow-hidden rounded-lg bg-muted", sizeClass)}>
       <Image
         src={product.image}
         alt={product.title}
         fill
-        sizes="76px"
+        sizes={compact ? "56px" : "76px"}
         unoptimized={product.image.startsWith("http")}
         className="object-cover"
       />
     </div>
   ) : (
-    <div className="grid size-[76px] shrink-0 place-items-center rounded-lg bg-gradient-to-br from-[#c9b7ff] to-[#8068e8] text-2xl font-bold text-white">
+    <div className={cn("grid shrink-0 place-items-center rounded-lg bg-gradient-to-br from-[#c9b7ff] to-[#8068e8] font-bold text-white", sizeClass, compact ? "text-lg" : "text-2xl")}>
       {product.title[0]?.toUpperCase()}
     </div>
   );
@@ -163,6 +166,7 @@ export function Released() {
     [data],
   );
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
+  const [removedIds, setRemovedIds] = React.useState<Set<string>>(new Set());
   const [query, setQuery] = React.useState("");
   const [createdDate, setCreatedDate] = React.useState("");
   const [visibleColumns, setVisibleColumns] = React.useState(
@@ -179,7 +183,7 @@ export function Released() {
   const [page, setPage] = React.useState(0);
   const [view] = React.useState<"list" | "grid">("list");
   const releasedProducts = products.filter(
-    (p) => p.status.toUpperCase() !== "DRAFT",
+    (p) => !removedIds.has(p.id) && p.status.toUpperCase() !== "DRAFT",
   );
   const filteredProducts = releasedProducts.filter(
     (p) =>
@@ -216,11 +220,13 @@ export function Released() {
     });
   const [actionMessage, setActionMessage] = React.useState("");
   const [pendingDelete, setPendingDelete] = React.useState<Product | null>(null);
+  const [viewProductUuid, setViewProductUuid] = React.useState<string | null>(null);
 
   async function deleteProduct() {
     if (!pendingDelete) return;
     const { id: uuid } = pendingDelete;
     setActionMessage("");
+    setRemovedIds((current) => new Set(current).add(uuid));
     try {
       await deleteListing({ uuid }).unwrap();
       await refetch();
@@ -232,6 +238,11 @@ export function Released() {
       setActionMessage("Product deleted successfully.");
       setPendingDelete(null);
     } catch (error) {
+      setRemovedIds((current) => {
+        const next = new Set(current);
+        next.delete(uuid);
+        return next;
+      });
       const apiError = error as { data?: { message?: string } };
       setActionMessage(apiError.data?.message ?? "Could not delete the product.");
     }
@@ -379,7 +390,7 @@ export function Released() {
                     className={cn(!visibleColumns.has("product") && "hidden")}
                   >
                     <div className="flex min-w-0 items-center gap-4">
-                      <ProductImage product={p} />
+                      <ProductImage product={p} compact />
                       <div className="min-w-0">
                         <p className="truncate text-base font-semibold">{p.title}</p>
                         <p className="truncate text-sm text-muted-foreground">
@@ -426,42 +437,22 @@ export function Released() {
                             : "bg-slate-400",
                         )}
                       />
-                      {p.status}
+                      {p.status.toUpperCase() === "ARCHIVED" ? "Inactive" : p.status}
                     </span>
                   </TableCell>
                   <TableCell
                     className={cn(!visibleColumns.has("actions") && "hidden")}
                   >
-                    <details className="relative mx-auto w-fit">
-                      <summary className="grid size-9 cursor-pointer list-none place-items-center rounded-lg hover:bg-muted">
-                        <MoreHorizontal className="size-6" />
-                      </summary>
-                      <div className="absolute right-0 z-20 mt-1 w-44 rounded-xl border bg-white p-1.5 text-sm shadow-xl">
-                        <Link
-                          href={`/products/${p.slug}`}
-                          className="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-muted"
-                        >
-                          <Eye className="size-4" />
-                          View
-                        </Link>
-                        <Link
-                          href={`/seller-dashboard/products/new?edit=${p.id}`}
-                          className="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-muted"
-                        >
-                          <Pencil className="size-4" />
-                          Edit
-                        </Link>
-                        <button
-                          type="button"
-                          disabled={isDeleting}
-                          onClick={() => setPendingDelete(p)}
-                          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-red-600 hover:bg-red-50 disabled:opacity-50"
-                        >
-                          <Trash2 className="size-4" />
-                          {isDeleting ? "Deleting..." : "Delete"}
-                        </button>
-                      </div>
-                    </details>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button type="button" aria-label={`Actions for ${p.title}`} className="mx-auto grid size-9 place-items-center rounded-lg hover:bg-muted"><MoreHorizontal className="size-6" /></button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" sideOffset={6} className="w-44 p-1.5">
+                        <DropdownMenuItem onSelect={() => setViewProductUuid(p.id)} className="cursor-pointer rounded-lg"><Eye className="size-4" />View</DropdownMenuItem>
+                        <DropdownMenuItem asChild className="cursor-pointer rounded-lg"><Link href={`/seller-dashboard/products/new?edit=${p.id}`}><Pencil className="size-4" />Edit</Link></DropdownMenuItem>
+                        <DropdownMenuItem disabled={isDeleting} onClick={() => setPendingDelete(p)} className="cursor-pointer rounded-lg text-red-600 focus:bg-red-50 focus:text-red-600"><Trash2 className="size-4" />{isDeleting ? "Deleting..." : "Delete"}</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))}
@@ -509,6 +500,8 @@ export function Released() {
           onPageChange={setPage}
         />
       </div>
+      <ProductDetailModal uuid={viewProductUuid} onClose={() => setViewProductUuid(null)} />
+
       {pendingDelete && (
         <div
           className="fixed inset-0 z-50 grid place-items-center bg-slate-950/55 px-4 backdrop-blur-[2px]"

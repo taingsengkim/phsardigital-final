@@ -346,7 +346,7 @@ export const sellerApi = createApi({
       },
       providesTags: ["SellerListings"],
     }),
-    updateListingStatus: builder.mutation<void, { uuid: string; status: "DRAFT" | "ACTIVE" | "INACTIVE" }>({
+    updateListingStatus: builder.mutation<void, { uuid: string; status: "DRAFT" | "ACTIVE" | "ARCHIVED" }>({
       query: ({ uuid, status }) => ({
         url: `/listings/${encodeURIComponent(uuid)}`,
         method: "PATCH",

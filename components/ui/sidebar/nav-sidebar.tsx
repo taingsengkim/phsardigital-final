@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { BarChart3, ChevronDown, LayoutDashboard, LogOut, MessageCircle, PackageCheck, Settings, ShoppingBag, Users } from "lucide-react"
+import { BarChart3, ChevronDown, LayoutDashboard, LogOut, MessageCircle, PackageCheck, ShoppingBag, Store, Users } from "lucide-react"
 import PhsarDigitalLogo from "@/assets/svg/phsardigitalLogo"
 import { logoutFromKeycloak } from "@/lib/auth-client"
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from "@/components/ui/sidebar"
@@ -16,8 +16,10 @@ const reports: NavLink[] = [
   { label: "Comments", href: "/seller-dashboard/products/comment" },
 ]
 const inventory: NavLink[] = [
+  { label: "Add Product", href: "/seller-dashboard/products/new" },
   { label: "Drafts", href: "/seller-dashboard/products/drafts" },
   { label: "Released", href: "/seller-dashboard/products/released" },
+  { label: "Orders", href: "/seller-dashboard/orders" },
 ]
 
 const itemClass = "flex h-[50px] w-full items-center gap-4 rounded-[26px] px-5 text-[15px] font-medium text-[#77746f] transition-colors hover:bg-primary/10 hover:text-primary dark:text-sidebar-foreground dark:hover:bg-primary/15 dark:hover:text-primary group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
@@ -39,7 +41,7 @@ function Submenu({ links }: { links: NavLink[] }) {
 export function SellerSidebar() {
   const pathname = usePathname()
   const [reportsOpen, setReportsOpen] = React.useState(pathname.includes("/products/dashboard") || pathname.includes("/products/comment"))
-  const [inventoryOpen, setInventoryOpen] = React.useState(pathname.includes("/products/drafts") || pathname.includes("/products/released"))
+  const [inventoryOpen, setInventoryOpen] = React.useState(pathname.includes("/products/") || pathname.startsWith("/seller-dashboard/orders"))
   const [logoutOpen, setLogoutOpen] = React.useState(false)
   const [isLoggingOut, setIsLoggingOut] = React.useState(false)
   const active = (href: string, prefix = false) => prefix ? pathname.startsWith(href) : pathname === href
@@ -73,6 +75,10 @@ export function SellerSidebar() {
             <ChevronDown className={cn("ml-auto size-[18px] transition-transform group-data-[collapsible=icon]:hidden", inventoryOpen && "rotate-180")} />
           </button>
           {inventoryOpen && <Submenu links={inventory} />}
+          <Link href="/seller-dashboard/shop" className={cn(itemClass, active("/seller-dashboard/shop") && activeClass)}>
+            <Store className="size-[21px] shrink-0" strokeWidth={1.8} />
+            <span className="group-data-[collapsible=icon]:hidden">Shop</span>
+          </Link>
           <Link href="/seller-dashboard/quick-order" className={cn(itemClass, active("/seller-dashboard/quick-order") && activeClass)}>
             <ShoppingBag className="size-[21px] shrink-0" strokeWidth={2} />
             <span className="group-data-[collapsible=icon]:hidden">Quick Order</span>
@@ -99,11 +105,7 @@ export function SellerSidebar() {
 
       <SidebarFooter className="bg-white px-[18px] pb-7 dark:bg-sidebar">
         <div className="mb-5 h-px bg-[#eee6db] dark:bg-sidebar-border" />
-        <Link href="/seller-dashboard/shop" className={cn(itemClass, active("/seller-dashboard/shop") && activeClass)}>
-          <Settings className="size-[21px] shrink-0" strokeWidth={1.8} />
-          <span className="group-data-[collapsible=icon]:hidden">Settings</span>
-        </Link>
-        <button type="button" onClick={() => setLogoutOpen(true)} className={cn(itemClass, "text-[#e74e58] hover:bg-red-50 hover:text-[#d93d48] dark:text-red-400 dark:hover:bg-red-500/10")}>
+        <button type="button" onClick={() => setLogoutOpen(true)} className={cn(itemClass, "text-[#e74e58] hover:bg-red-50 hover:text-[#d93d48] dark:text-red-400 dark:hover:bg-red-500/10")}> 
           <LogOut className="size-[21px] shrink-0" strokeWidth={1.8} />
           <span className="group-data-[collapsible=icon]:hidden">Log Out</span>
         </button>

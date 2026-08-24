@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import RatingStars from "@/components/product/RatingStars";
 import type {
   ApiListingAttribute,
+  ApiListingSpecificationGroup,
   ApiReview,
   ApiReviewReply,
   ReviewSummary,
@@ -26,6 +27,7 @@ type Props = {
   listingUuid: string;
   description?: string | null;
   attributes?: ApiListingAttribute[] | null;
+  specifications?: ApiListingSpecificationGroup[] | null;
   reviews?: ApiReview[];
   reviewSummary: ReviewSummary;
   sellerName?: string | null;
@@ -47,6 +49,7 @@ export default function ProductDetailTabs({
   listingUuid,
   description,
   attributes,
+  specifications,
   reviews = [],
   reviewSummary,
   sellerName,
@@ -77,6 +80,9 @@ export default function ProductDetailTabs({
 
   const sortedAttributes = [...(attributes ?? [])].sort(
     (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
+  );
+  const specificationGroups = (specifications ?? []).filter(
+    (group) => (group.attributes ?? []).length > 0
   );
 
   const tabs: { id: Tab; label: string }[] = [
@@ -115,7 +121,19 @@ export default function ProductDetailTabs({
             {description?.trim() || "The seller has not written a description for this product yet."}
           </p>
 
-          {sortedAttributes.length > 0 && (
+          {specificationGroups.length > 0 ? (
+            <div className="mt-8 space-y-5">
+              <h3 className="text-[20px] font-bold text-[#1A1330]">Specifications</h3>
+              {specificationGroups.map((group, groupIndex) => (
+                <section key={`${group.name ?? "General"}-${groupIndex}`} className="overflow-hidden rounded-2xl border border-[#E2DFEC]">
+                  <h4 className="bg-[#F1EFFA] px-6 py-3 text-[15px] font-bold text-[#6C4CD8]">{group.name?.trim() || "General"}</h4>
+                  {[...(group.attributes ?? [])].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)).map((attr, i) => (
+                    <div key={attr.uuid ?? `${attr.key}-${i}`} className={cn("grid grid-cols-[minmax(120px,1fr)_2fr] gap-4 px-6 py-4 text-[16px]", i % 2 === 0 ? "bg-white" : "bg-[#F8F6FD]")}><span className="font-semibold text-[#1A1330]">{attr.key}</span><span className="text-[#5A5470]">{attr.value}</span></div>
+                  ))}
+                </section>
+              ))}
+            </div>
+          ) : sortedAttributes.length > 0 && (
             <div className="mt-8">
               <h3 className="mb-4 text-[20px] font-bold text-[#1A1330]">
                 Specifications

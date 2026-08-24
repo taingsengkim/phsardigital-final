@@ -67,11 +67,6 @@ export default function QuickOrderPage() {
   return (
     <main className="min-h-[calc(100svh-70px)] bg-[#f7f7f8] p-4 sm:p-7">
       <div className="mx-auto max-w-[1500px]">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold tracking-tight">Quick Order</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Select products and complete a point-of-sale order.</p>
-        </div>
-
         <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
           <section className="min-w-0">
             <div className="mb-5 flex gap-2 overflow-x-auto rounded-2xl bg-white p-3 shadow-sm">

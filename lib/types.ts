@@ -166,6 +166,11 @@ export type ApiListingAttribute = {
   listingUuid?: string;
 };
 
+export type ApiListingSpecificationGroup = {
+  name?: string | null;
+  attributes?: ApiListingAttribute[] | null;
+};
+
 export type ApiCategorySummary = {
   uuid?: string;
   name?: string | null;
@@ -198,6 +203,7 @@ export type ApiListing = {
   sold?: number | null;
   images?: ApiImage[] | null;
   listingAttributes?: ApiListingAttribute[] | null;
+  specifications?: ApiListingSpecificationGroup[] | null;
   createdAt?: string | null;
   lastModifiedAt?: string | null;
   /** server-computed aggregate — no need to derive it from fetched reviews */
