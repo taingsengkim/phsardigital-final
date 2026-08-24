@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronRight,
   Truck,
@@ -30,10 +31,13 @@ import {
   Camera,
   Link2,
   Eye,
+  Minus,
+  Edit2,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getListingBySlug } from "@/app/api/listings";
-import { getCart, getCarts } from "@/app/api/cart";
+import { getCart, getCarts, updateCartItemQty, deleteCartItem, deleteSellerCart } from "@/app/api/cart";
 import { createOrder } from "@/app/api/orders";
 import type { Listing } from "@/lib/types";
 
@@ -45,6 +49,8 @@ type CheckoutItem = {
   image: string;
   slug?: string;
   storeName: string;
+  sellerId?: string;
+  itemUuid?: string;
 };
 
 type SavedAddress = {
@@ -255,7 +261,17 @@ export default function CheckoutClient() {
   // Workflow Stage Control: "form" | "invoice_success" | "full_chat_page"
   const [stage, setStage] = useState<"form" | "invoice_success" | "full_chat_page">("form");
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showEditCartModal, setShowEditCartModal] = useState(false);
+  const [showDeleteCartConfirmModal, setShowDeleteCartConfirmModal] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [orderCompleted, setOrderCompleted] = useState<{ id: number; total: number; storeName: string } | null>(null);
+
+  function triggerToast(msg: string) {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 4000);
+  }
 
   // Saved Addresses State
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>(INITIAL_SAVED_ADDRESSES);
@@ -305,6 +321,7 @@ export default function CheckoutClient() {
 
         if (vendorCarts && Array.isArray(vendorCarts) && vendorCarts.length > 0) {
           vendorCarts.forEach((cart, cartIdx) => {
+            const sellerId = cart.sellerId || cart.sellerProfile?.sellerId || "";
             const storeName = cart.sellerProfile?.businessName?.trim()
               || (cart.sellerId
                 ? cart.sellerId.length > 20
@@ -342,6 +359,8 @@ export default function CheckoutClient() {
                   image: img,
                   slug: item.listingUuid,
                   storeName,
+                  sellerId,
+                  itemUuid: item.uuid,
                 });
               });
             }
@@ -530,6 +549,63 @@ export default function CheckoutClient() {
 
   // Filter items for currently selected store
   const activeItems = items.filter((i) => i.storeName === (selectedStore || allStores[0]));
+
+  // Quantity management handlers for Order Summary
+  async function handleUpdateQuantity(itemId: string | number, newQty: number) {
+    const targetItem = items.find((i) => String(i.id) === String(itemId));
+
+    // Optimistic UI state update
+    if (newQty <= 0) {
+      setItems((prev) => prev.filter((i) => String(i.id) !== String(itemId)));
+    } else {
+      setItems((prev) =>
+        prev.map((i) => (String(i.id) === String(itemId) ? { ...i, quantity: newQty } : i))
+      );
+    }
+
+    // Proxy request to backend API via Route Handler
+    if (targetItem?.sellerId && targetItem?.itemUuid) {
+      if (newQty <= 0) {
+        await deleteCartItem(targetItem.sellerId, targetItem.itemUuid);
+      } else {
+        await updateCartItemQty(targetItem.sellerId, targetItem.itemUuid, newQty);
+      }
+    }
+  }
+
+  // Delete entire cart for selected store
+  async function handleDeleteSellerCart() {
+    if (!selectedStore || activeItems.length === 0) return;
+
+    const storeToDelete = selectedStore;
+    const sellerId = activeItems[0]?.sellerId;
+
+    // Optimistic UI update: filter out all items belonging to this store
+    const remainingItems = items.filter((i) => i.storeName !== storeToDelete);
+    setItems(remainingItems);
+
+    // Trigger success toast notification banner
+    triggerToast(`Successfully removed all items from ${storeToDelete}!`);
+
+    // Auto-switch to next available store if available
+    const remainingStores = Array.from(new Set(remainingItems.map((i) => i.storeName)));
+    if (remainingStores.length > 0) {
+      setSelectedStore(remainingStores[0]);
+    } else {
+      setSelectedStore("");
+    }
+
+    // Call backend API via route handler proxy
+    if (sellerId) {
+      await deleteSellerCart(sellerId);
+    } else {
+      for (const item of activeItems) {
+        if (item.sellerId && item.itemUuid) {
+          await deleteCartItem(item.sellerId, item.itemUuid);
+        }
+      }
+    }
+  }
 
   // Price calculations for active store
   const subtotal = activeItems.reduce((sum, i) => sum + (typeof i.price === "number" && !isNaN(i.price) ? i.price : 0) * (i.quantity || 1), 0);
@@ -1578,16 +1654,40 @@ export default function CheckoutClient() {
           {/* ── RIGHT COLUMN: Order Summary (Selected Vendor Only) ── */}
           <div>
             <div className="sticky top-24 rounded-3xl border border-[#EDEBF3] bg-white p-7 shadow-[0_4px_24px_rgba(108,76,216,0.08)] space-y-6">
-              <div className="border-b border-[#F0EDFB] pb-4">
-                <div className="flex items-center gap-2 text-[#6C4CD8]">
-                  <Store size={18} />
-                  <span className="text-[13px] font-extrabold uppercase tracking-wide">
-                    {selectedStore || "Vendor Order"}
-                  </span>
+              <div className="border-b border-[#F0EDFB] pb-4 flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2 text-[#6C4CD8]">
+                    <Store size={18} />
+                    <span className="text-[13px] font-extrabold uppercase tracking-wide">
+                      {selectedStore || "Vendor Order"}
+                    </span>
+                  </div>
+                  <h2 className="text-[20px] font-extrabold text-[#1A1330] mt-1">
+                    Order Summary
+                  </h2>
                 </div>
-                <h2 className="text-[20px] font-extrabold text-[#1A1330] mt-1">
-                  Order Summary
-                </h2>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setShowEditCartModal(true)}
+                    title="Edit item quantities"
+                    aria-label="Edit item quantities"
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-[#EDEBF3] bg-[#FAF9FD] text-[#6C4CD8] transition hover:border-[#6C4CD8]/40 hover:bg-[#6C4CD8] hover:text-white cursor-pointer shadow-2xs"
+                  >
+                    <Edit2 size={18} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteCartConfirmModal(true)}
+                    title="Delete entire cart for this store"
+                    aria-label="Delete entire cart for this store"
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-rose-600 transition hover:bg-rose-600 hover:text-white cursor-pointer shadow-xs"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
               </div>
 
               {/* Items List for Selected Vendor */}
@@ -1753,6 +1853,179 @@ export default function CheckoutClient() {
         </div>
       )}
 
+      {/* ── SCROLLABLE EDIT QUANTITY POPUP MODAL ── */}
+      {showEditCartModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 sm:p-6 backdrop-blur-xs animate-in fade-in">
+          <div className="w-full max-w-2xl sm:max-w-3xl overflow-hidden rounded-3xl bg-white p-6 sm:p-8 shadow-2xl space-y-6">
+            <div className="flex items-center justify-between border-b border-[#F0EDFB] pb-4">
+              <div>
+                <div className="flex items-center gap-2 text-[#6C4CD8]">
+                  <Store size={18} />
+                  <span className="text-xs font-extrabold uppercase tracking-wide">{selectedStore}</span>
+                </div>
+                <h3 className="text-[22px] font-extrabold text-[#1A1330] mt-1">
+                  Edit Item Quantities ({activeItems.length})
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowEditCartModal(false)}
+                className="flex h-10 w-10 items-center justify-center rounded-xl p-1 text-[#8B85A0] hover:bg-[#F6F5FA] cursor-pointer transition"
+                title="Close modal"
+              >
+                <X size={22} />
+              </button>
+            </div>
+
+            {/* Scrollable list of items to edit quantity */}
+            <div className="space-y-4 max-h-[55vh] overflow-y-auto pr-2 scrollbar-thin">
+              {activeItems.length === 0 ? (
+                <div className="py-12 text-center text-[#8B85A0]">
+                  <p className="text-base font-semibold">No items left in cart for this store.</p>
+                </div>
+              ) : (
+                activeItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-[#EDEBF3] bg-[#FAF9FD] p-4 sm:p-5 transition hover:border-[#6C4CD8]/40 hover:bg-white shadow-xs"
+                  >
+                    <div className="flex items-center gap-4 min-w-0 flex-1">
+                      <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-white border border-[#EDEBF3]">
+                        {item.image && item.image.length > 5 ? (
+                          <Image
+                            src={item.image}
+                            alt={item.title}
+                            fill
+                            className="object-cover"
+                            unoptimized={item.image.startsWith("http")}
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-[#6C4CD8]">
+                            <ShoppingBag size={26} />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[16px] font-extrabold text-[#1A1330] truncate">{item.title}</p>
+                        <p className="text-[13px] text-[#8B85A0] mt-0.5">
+                          Sold by <span className="font-semibold text-[#6C4CD8]">{item.storeName}</span>
+                        </p>
+                        <p className="text-[14px] font-extrabold text-[#6C4CD8] mt-1">
+                          ${(typeof item.price === "number" && !isNaN(item.price) ? item.price : 0).toFixed(2)} / unit
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Quantity Stepper & Line Total */}
+                    <div className="flex items-center justify-between sm:justify-end gap-6 pt-2 sm:pt-0 border-t sm:border-t-0 border-[#EDEBF3]">
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
+                          className="flex h-10 w-10 items-center justify-center rounded-xl bg-white border border-[#E2DFEC] text-[#6C4CD8] font-bold hover:bg-[#6C4CD8] hover:text-white transition cursor-pointer shadow-2xs"
+                        >
+                          <Minus size={16} />
+                        </button>
+                        <span className="w-10 text-center text-[16px] font-black text-[#1A1330]">
+                          {item.quantity}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
+                          className="flex h-10 w-10 items-center justify-center rounded-xl bg-white border border-[#E2DFEC] text-[#6C4CD8] font-bold hover:bg-[#6C4CD8] hover:text-white transition cursor-pointer shadow-2xs"
+                        >
+                          <Plus size={16} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateQuantity(item.id, 0)}
+                          title="Remove item"
+                          className="ml-2 flex h-10 w-10 items-center justify-center rounded-xl text-rose-500 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition cursor-pointer"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+
+                      <div className="text-right min-w-[90px]">
+                        <p className="text-[11px] font-semibold text-[#8B85A0] uppercase">Total</p>
+                        <p className="text-[17px] font-black text-[#6C4CD8]">
+                          ${((typeof item.price === "number" && !isNaN(item.price) ? item.price : 0) * (item.quantity || 1)).toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="border-t border-[#F0EDFB] pt-5 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase text-[#8B85A0] tracking-wider">Order Total</p>
+                <p className="text-[24px] font-black text-[#6C4CD8]">${grandTotal.toFixed(2)}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowEditCartModal(false)}
+                className="rounded-2xl bg-[#6C4CD8] px-8 py-3.5 text-sm font-extrabold text-white shadow-lg transition hover:bg-[#5B3DC0] cursor-pointer"
+              >
+                Done Editing
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── DELETE STORE CART CONFIRMATION MODAL ── */}
+      {showDeleteCartConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in">
+          <div className="w-full max-w-lg overflow-hidden rounded-3xl bg-white p-7 sm:p-8 shadow-2xl space-y-6 border border-[#EDEBF3]">
+            <div className="flex items-center gap-4 border-b border-[#F0EDFB] pb-4">
+              <div className="flex h-13 w-13 shrink-0 items-center justify-center rounded-2xl bg-rose-50 border border-rose-100 text-rose-600">
+                <AlertTriangle size={26} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 text-[#6C4CD8]">
+                  <Store size={15} />
+                  <span className="text-[12px] font-extrabold uppercase tracking-wider truncate">
+                    {selectedStore}
+                  </span>
+                </div>
+                <h3 className="text-[22px] font-black text-[#1A1330] mt-0.5">
+                  Clear Store Cart?
+                </h3>
+              </div>
+            </div>
+
+            <p className="text-[15px] sm:text-[16px] text-[#5A5470] leading-relaxed font-medium">
+              Are you sure you want to remove all <span className="font-black text-[#1A1330]">{activeItems.length} items</span> from <span className="font-extrabold text-[#6C4CD8]">{selectedStore}</span>? This action will delete the entire cart for this store.
+            </p>
+
+            <div className="flex items-center gap-3.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowDeleteCartConfirmModal(false)}
+                className="flex-1 rounded-2xl border border-[#EDEBF3] bg-[#F6F5FA] py-3.5 text-[14px] font-extrabold text-[#5A5470] transition hover:bg-[#EDEBF3] hover:text-[#1A1330] cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  setShowDeleteCartConfirmModal(false);
+                  await handleDeleteSellerCart();
+                }}
+                className="flex-1 rounded-2xl bg-rose-600 py-3.5 text-[14px] font-extrabold text-white shadow-md transition hover:bg-rose-700 cursor-pointer flex items-center justify-center gap-2"
+              >
+                <Trash2 size={17} />
+                <span>Yes, Clear Cart</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── FULL-SIZE PHOTO PREVIEW LIGHTBOX MODAL ── */}
       {viewPhotoUrl && (
         <div
@@ -1779,6 +2052,31 @@ export default function CheckoutClient() {
           </div>
         </div>
       )}
+
+      {/* ── SUCCESS TOAST NOTIFICATION ── */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            className="fixed top-24 right-6 z-50 flex items-center gap-3.5 rounded-3xl bg-[#00875A] p-4 pr-6 text-white shadow-2xl border border-emerald-400/30 max-w-md w-full"
+          >
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/20 text-white">
+              <CheckCircle2 size={24} />
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <p className="text-[15px] font-black text-white leading-snug">
+                Cart Cleared Successfully!
+              </p>
+              <p className="text-[13px] font-medium text-emerald-100 truncate mt-0.5">
+                {toastMessage}
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

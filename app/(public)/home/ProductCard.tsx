@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Heart, Star, Trash2 } from "lucide-react";
+import { authClient, useSession } from "@/lib/auth-client";
 import {
   getPrimaryImage,
   getAverageRating,
@@ -21,6 +22,9 @@ type ProductCardProps = {
 };
 
 export function ProductCard({ listing, sellerName, isSavedPage, onRemove }: ProductCardProps) {
+  const { data: session } = useSession();
+  const isLoggedIn = Boolean(session?.user);
+
   const initialFav = Boolean(
     listing?.isFavorite ?? listing?.is_favorite ?? listing?.isFav ?? false
   );
@@ -98,6 +102,13 @@ export function ProductCard({ listing, sellerName, isSavedPage, onRemove }: Prod
               onClick={async (e) => {
                 e.preventDefault();
                 e.stopPropagation();
+                if (!isLoggedIn) {
+                  await authClient.signIn.oauth2({
+                    providerId: "keycloak",
+                    callbackURL: typeof window !== "undefined" ? window.location.href : "/",
+                  });
+                  return;
+                }
                 const targetUuid = listing.uuid || listing.slug || listing.id;
                 const nextSaved = !isSaved;
                 setIsSaved(nextSaved);

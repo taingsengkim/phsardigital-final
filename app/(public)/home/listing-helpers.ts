@@ -16,12 +16,14 @@ export function getPrimaryImage(listing: any): string {
 
   const rawUri =
     listing.thumbnailUri?.uri ||
+    (typeof listing.thumbnailUri === "string" ? listing.thumbnailUri : null) ||
     (listing.thumbnailUri?.objectName ? getFileUrl(listing.thumbnailUri.objectName) : null) ||
     listing.thumbnail_url ||
     listing.images?.find((img: any) => img.is_primary || img.isPrimary)?.url ||
     listing.images?.find((img: any) => img.is_primary || img.isPrimary)?.uri ||
     listing.images?.[0]?.url ||
-    listing.images?.[0]?.uri;
+    listing.images?.[0]?.uri ||
+    listing.image;
 
   // If the raw image is a local curated picture that is NOT a test photo
   if (

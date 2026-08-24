@@ -25,6 +25,7 @@ import {
 import { cn } from "@/lib/utils";
 import RatingStars from "@/components/product/RatingStars";
 import SavedButton from "@/components/saved/SavedButton";
+import { authClient, useSession } from "@/lib/auth-client";
 import { addToCart } from "@/app/api/cart";
 import type { ApiListing, ReviewSummary } from "@/lib/types";
 
@@ -72,6 +73,9 @@ export default function ProductDetailClient({
   sellerId,
 }: Props) {
   const router = useRouter();
+  const { data: session } = useSession();
+  const isLoggedIn = Boolean(session?.user);
+
   const [qty, setQty] = useState(1);
   const [adding, setAdding] = useState(false);
   const [added, setAdded] = useState(false);
@@ -116,6 +120,13 @@ export default function ProductDetailClient({
   }
 
   async function handleAddToCart() {
+    if (!isLoggedIn) {
+      await authClient.signIn.oauth2({
+        providerId: "keycloak",
+        callbackURL: typeof window !== "undefined" ? window.location.href : "/",
+      });
+      return;
+    }
     setAdding(true);
     try {
       await addToCart(listingId, qty, productSlug ?? undefined);
@@ -130,6 +141,13 @@ export default function ProductDetailClient({
   }
 
   async function handleBuyNow() {
+    if (!isLoggedIn) {
+      await authClient.signIn.oauth2({
+        providerId: "keycloak",
+        callbackURL: typeof window !== "undefined" ? window.location.href : "/",
+      });
+      return;
+    }
     try {
       await addToCart(listingId, qty, productSlug ?? undefined);
     } catch {
