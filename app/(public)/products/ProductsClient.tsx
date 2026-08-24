@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { useGetListingsQuery } from "@/lib/api/homeApi";
 import { MOCK_PRODUCTS } from "@/lib/mock-products";
 import { ProductCard } from "@/app/(public)/home/ProductCard";
+import { getPrimaryImage } from "@/app/(public)/home/listing-helpers";
 
 function usd(n: number) {
   return (n || 0).toLocaleString("en-US", { style: "currency", currency: "USD" });
@@ -167,14 +168,7 @@ export default function ProductsClient() {
                 ? Math.round(((fullPrice - discountPrice) / fullPrice) * 100)
                 : item.discountPercent || null;
 
-            const image =
-              item.thumbnailUri?.uri ||
-              item.thumbnailUri?.url ||
-              (typeof item.thumbnailUri === "string" ? item.thumbnailUri : null) ||
-              item.images?.[0]?.uri ||
-              item.images?.[0]?.url ||
-              item.image ||
-              "/picture/pic1.jpg";
+            const image = getPrimaryImage(item);
 
             const storeName =
               item.sellerProfile?.businessName ||

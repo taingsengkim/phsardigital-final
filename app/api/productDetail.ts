@@ -197,6 +197,8 @@ import { CURATED_PRODUCTS } from "@/lib/curated-products";
  * Resolve a listing from a URL segment. The API exposes a dedicated slug
  * endpoint, so both a UUID and a pretty slug cost exactly one request.
  */
+import { getPrimaryImage } from "@/app/(public)/home/listing-helpers";
+
 export const getListing = cache(async function getListing(
   identifier: string
 ): Promise<ApiListing | null> {
@@ -209,7 +211,25 @@ export const getListing = cache(async function getListing(
 
     const { data } = await apiGet<ApiListing>(path, { revalidate: 30 });
     if (data?.uuid && data.title && !data.title.toLowerCase().includes("cat") && !data.title.toLowerCase().includes("vengroth")) {
-      return data;
+      const primaryImage = getPrimaryImage(data);
+      const cleanImages =
+        data.images && data.images.length > 0 && !data.images[0]?.uri?.includes("51.79.146.203")
+          ? data.images
+          : [{ uri: primaryImage, sortOrder: 0 }];
+
+      return {
+        ...data,
+        thumbnailUri: { uri: primaryImage, sortOrder: 0 },
+        images: cleanImages,
+        price:
+          typeof data.discountPrice === "number" && data.discountPrice > 0
+            ? data.discountPrice
+            : (typeof data.fullPrice === "number" && data.fullPrice > 0
+              ? data.fullPrice
+              : (typeof data.price === "number" && data.price > 0 ? data.price : 25)),
+        fullPrice: typeof data.fullPrice === "number" && data.fullPrice > 0 ? data.fullPrice : 25,
+        discountPrice: typeof data.discountPrice === "number" && data.discountPrice > 0 ? data.discountPrice : null,
+      };
     }
   } catch (err) {
     console.warn("Live API listing fetch failed, checking curated listings:", identifier);

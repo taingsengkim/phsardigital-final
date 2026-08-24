@@ -81,14 +81,18 @@ export default function ProductDetailClient({
   const listingId = listing.uuid;
   const productSlug = listing.slug || listing.uuid;
 
-  const rawFull = typeof listing.fullPrice === "number" ? listing.fullPrice : (typeof listing.price === "number" ? listing.price : null);
-  const rawDiscount = typeof listing.discountPrice === "number" ? listing.discountPrice : null;
+  const rawFull = typeof listing.fullPrice === "number" && listing.fullPrice > 0 ? listing.fullPrice : (typeof listing.price === "number" && listing.price > 0 ? listing.price : null);
+  const rawDiscount = typeof listing.discountPrice === "number" && listing.discountPrice > 0 ? listing.discountPrice : null;
 
-  // Purple main price: discountPrice if present, otherwise 0 if discountPrice is null, or listing.price
-  const price = rawDiscount !== null ? rawDiscount : (listing.discountPrice === null && typeof listing.fullPrice === "number" ? 0 : (typeof listing.price === "number" ? listing.price : 0));
+  // Main price: discountPrice if present and valid, otherwise fullPrice or listing.price
+  const price = rawDiscount !== null
+    ? rawDiscount
+    : (rawFull !== null
+      ? rawFull
+      : (typeof listing.price === "number" && listing.price > 0 ? listing.price : 0));
 
-  // Gray strikethrough full price: fullPrice if present and greater than current price
-  const fullPrice = rawFull !== null && rawFull > price ? rawFull : null;
+  // Gray strikethrough full price: only if discountPrice exists and fullPrice is higher
+  const fullPrice = rawDiscount !== null && rawFull !== null && rawFull > rawDiscount ? rawFull : null;
 
   const stock = typeof listing.stockQty === "number" ? listing.stockQty : 0;
   const sold = typeof listing.sold === "number" ? listing.sold : 0;
