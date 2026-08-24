@@ -27,7 +27,6 @@ import {
   Clock,
   ArrowRight,
   BadgeCheck,
-  Building2,
   AlertCircle,
   MapPinned,
   FileCheck,
@@ -41,7 +40,10 @@ import {
   useDeleteAvatarMutation,
   type UserProfile,
 } from "@/lib/api/authApi";
-import { useGetSellerApplicationQuery } from "@/lib/api/sellerApi";
+import {
+  useGetSellerApplicationQuery,
+  useGetSellerProfileQuery,
+} from "@/lib/api/sellerApi";
 import AddressBook from "@/components/account/AddressBook";
 import { AuthToast, type ToastState } from "@/components/auth/AuthToast";
 import { cn } from "@/lib/utils";
@@ -57,6 +59,13 @@ export default function AccountPageClient() {
   });
 
   const { data: sellerApp } = useGetSellerApplicationQuery(undefined, {
+    skip: !session?.user,
+  });
+
+  /* The live shop, not the application that created it — a seller who renames
+     their store should see the new name here, not the one they first applied
+     with. Returns null for anyone who is not a seller. */
+  const { data: sellerProfile } = useGetSellerProfileQuery(undefined, {
     skip: !session?.user,
   });
 
@@ -135,12 +144,28 @@ export default function AccountPageClient() {
     })
     : null;
 
-  const isSeller = sellerApp?.status === "APPROVED";
-  const isPendingSeller = sellerApp?.status === "PENDING";
-  const isRejectedSeller = sellerApp?.status === "REJECTED";
+  /* Having a live shop profile is what makes someone a seller — the approved
+     application is only how they got there. Application states matter only for
+     people who are not sellers yet. */
+  const isSeller = Boolean(sellerProfile);
+  const isPendingSeller = !isSeller && sellerApp?.status === "PENDING";
+  const isRejectedSeller = !isSeller && sellerApp?.status === "REJECTED";
+  const isSuspended = Boolean(sellerProfile?.suspendedAt);
 
-  const storeName = sellerApp?.businessName || `${userFullName}'s Store`;
-  const storeLogo = sellerApp?.logoUri || userAvatarUrl;
+  const storeName =
+    sellerProfile?.businessName || sellerApp?.businessName || "My Store";
+  const storeLogo = sellerProfile?.logoUri || sellerApp?.logoUri || "";
+  const storeLocation = [
+    sellerProfile?.address ?? sellerApp?.address,
+    sellerProfile?.city ?? sellerApp?.city,
+    sellerProfile?.province ?? sellerApp?.province,
+  ]
+    .filter(Boolean)
+    .join(", ");
+  const storeRating =
+    typeof sellerProfile?.averageRating === "number"
+      ? sellerProfile.averageRating
+      : null;
 
   function getInitials() {
     if (firstName || lastName) {
@@ -268,10 +293,10 @@ export default function AccountPageClient() {
                 className="relative group cursor-pointer shrink-0"
                 onClick={() => fileInputRef.current?.click()}
               >
-                {storeLogo ? (
+                {userAvatarUrl ? (
                   <img
-                    src={storeLogo}
-                    alt={isSeller ? storeName : userFullName}
+                    src={userAvatarUrl}
+                    alt={userFullName}
                     className="h-20 w-20 rounded-2xl border-4 border-white/20 object-cover shadow-xl ring-2 ring-white/10"
                   />
                 ) : (
@@ -291,11 +316,11 @@ export default function AccountPageClient() {
               <div>
                 <div className="flex flex-wrap items-center gap-2.5">
                   <h1 className="text-2xl font-bold text-white sm:text-3xl">
-                    {isSeller ? storeName : userFullName}
+                    {userFullName}
                   </h1>
                   {isSeller ? (
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-400/20 px-3 py-1 text-xs font-bold text-emerald-300 backdrop-blur ring-1 ring-emerald-400/30">
-                      <BadgeCheck size={15} /> Verified Store
+                      <BadgeCheck size={15} /> Seller Account
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white/90 backdrop-blur">
@@ -305,12 +330,6 @@ export default function AccountPageClient() {
                 </div>
 
                 <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-white/80">
-                  {isSeller && sellerApp?.businessName && (
-                    <span className="flex items-center gap-1.5 font-medium text-white/90">
-                      <Building2 size={15} className="text-white/60" />{" "}
-                      {sellerApp.businessName}
-                    </span>
-                  )}
                   <span className="flex items-center gap-1.5">
                     <Mail size={15} className="text-white/60" /> {userEmail}
                   </span>
@@ -325,37 +344,12 @@ export default function AccountPageClient() {
                   )}
                 </div>
 
-                {isSeller && sellerApp?.city && (
-                  <div className="mt-1.5 flex items-center gap-1.5 text-xs text-white/70">
-                    <MapPin size={13} className="text-emerald-400" />
-                    <span>
-                      {[sellerApp.address, sellerApp.city, sellerApp.province]
-                        .filter(Boolean)
-                        .join(", ")}
-                    </span>
-                  </div>
-                )}
               </div>
             </div>
 
             {/* Seller / Account Quick Actions */}
             <div className="flex flex-wrap items-center gap-3">
-              {isSeller ? (
-                <>
-                  <Link
-                    href="/seller-dashboard/home"
-                    className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-[#6C4CD8] shadow-lg transition hover:bg-[#F4F0FF] active:scale-95"
-                  >
-                    <Store size={18} /> Seller Dashboard
-                  </Link>
-                  <Link
-                    href="/seller-dashboard/products/dashboard"
-                    className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-3 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20 active:scale-95"
-                  >
-                    <ShoppingBag size={18} /> Manage Products
-                  </Link>
-                </>
-              ) : isPendingSeller ? (
+              {isSeller ? null : isPendingSeller ? ( // sellers get the store card below instead
                 <Link
                   href="/account/seller-application"
                   className="inline-flex items-center gap-2 rounded-xl bg-amber-400 px-5 py-3 text-sm font-bold text-[#1A1330] shadow-lg transition hover:bg-amber-300 active:scale-95"
@@ -386,41 +380,82 @@ export default function AccountPageClient() {
       {/* ── Main Layout Body ── */}
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {/* Banner Callout for Sellers or Applicants */}
+        {/* The shop is something this person owns — shown as its own card, so
+            it never competes with their personal identity above. */}
         {isSeller && (
-          <div className="mb-8 overflow-hidden rounded-2xl bg-gradient-to-r from-[#6C4CD8] to-[#4F35A5] p-6 text-white shadow-md">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 backdrop-blur shrink-0 text-white">
-                  <Store size={28} />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-lg font-bold text-white sm:text-xl">
-                      {storeName} Dashboard & Operations
-                    </h2>
-                    <span className="rounded-md bg-emerald-400/20 px-2 py-0.5 text-[11px] font-bold text-emerald-300 uppercase tracking-wider">
-                      Active Store
-                    </span>
+          <div className="mb-8 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5">
+            <div className="flex flex-col gap-5 p-6 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex min-w-0 items-start gap-4">
+                {storeLogo ? (
+                  <img
+                    src={storeLogo}
+                    alt={storeName}
+                    className="h-16 w-16 shrink-0 rounded-2xl object-cover ring-1 ring-black/5"
+                  />
+                ) : (
+                  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[#EDE9FB] text-[#6C4CD8]">
+                    <Store size={28} />
                   </div>
-                  <p className="mt-1 text-xs text-white/80 sm:text-sm">
-                    Manage store listings, view customer orders, process sales, and update store business profile.
-                  </p>
+                )}
+
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="truncate text-lg font-bold text-[#1A1330] sm:text-xl">
+                      {storeName}
+                    </h2>
+                    {isSuspended ? (
+                      <span className="rounded-md bg-rose-100 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-rose-700">
+                        Suspended
+                      </span>
+                    ) : (
+                      <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-emerald-700">
+                        Active Store
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[#6B6580]">
+                    {storeRating !== null && (
+                      <span className="flex items-center gap-1.5 font-semibold text-[#1A1330]">
+                        <Sparkles size={14} className="text-amber-500" />
+                        {storeRating.toFixed(1)}
+                        <span className="font-normal text-[#8D86A8]">
+                          ({sellerProfile?.reviewCount ?? 0} reviews)
+                        </span>
+                      </span>
+                    )}
+                    {storeLocation && (
+                      <span className="flex items-center gap-1.5">
+                        <MapPin size={14} className="text-[#8D86A8]" />
+                        {storeLocation}
+                      </span>
+                    )}
+                  </div>
+
+                  {isSuspended && sellerProfile?.suspensionReason && (
+                    <p className="mt-2 flex items-start gap-1.5 text-xs text-rose-700">
+                      <AlertCircle size={13} className="mt-0.5 shrink-0" />
+                      {sellerProfile.suspensionReason}
+                    </p>
+                  )}
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3 shrink-0">
+              <div className="flex shrink-0 flex-wrap items-center gap-3">
                 <Link
                   href="/seller-dashboard/home"
-                  className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-xs font-bold text-[#6C4CD8] shadow-sm transition hover:bg-[#F4F0FF]"
+                  className="inline-flex items-center gap-2 rounded-xl bg-[#6C4CD8] px-5 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#5B3DC0]"
                 >
                   Open Dashboard <ArrowRight size={14} />
                 </Link>
-                <Link
-                  href="/seller-dashboard/products/dashboard"
-                  className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2.5 text-xs font-bold text-white backdrop-blur transition hover:bg-white/20"
-                >
-                  Manage Products
-                </Link>
+                {sellerProfile?.id && (
+                  <Link
+                    href={`/stores/${sellerProfile.id}`}
+                    className="inline-flex items-center gap-2 rounded-xl bg-[#F1EFFA] px-4 py-2.5 text-xs font-bold text-[#6C4CD8] transition hover:bg-[#E4DFF7]"
+                  >
+                    View Storefront <ExternalLink size={13} />
+                  </Link>
+                )}
               </div>
             </div>
           </div>
@@ -507,7 +542,9 @@ export default function AccountPageClient() {
                     ? "/seller-dashboard/home"
                     : "/account/seller-application",
                   badge: isSeller
-                    ? "Store Active"
+                    ? isSuspended
+                      ? "Suspended"
+                      : "Store Active"
                     : isPendingSeller
                       ? "Pending"
                       : isRejectedSeller
@@ -656,14 +693,6 @@ export default function AccountPageClient() {
                       </p>
                     </div>
 
-                    {isSeller && (
-                      <Link
-                        href="/seller-dashboard/home"
-                        className="inline-flex items-center gap-1.5 text-xs font-bold text-[#6C4CD8] bg-[#EDE9FB] px-3.5 py-2 rounded-xl hover:bg-[#6C4CD8] hover:text-white transition"
-                      >
-                        <Building2 size={14} /> Go to Seller Dashboard
-                      </Link>
-                    )}
                   </div>
 
                   {/* Avatar Upload Banner inside form */}

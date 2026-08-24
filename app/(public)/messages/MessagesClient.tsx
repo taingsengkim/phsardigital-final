@@ -21,7 +21,11 @@ import {
   useStartConversationMutation,
 } from "@/lib/redux/service/sellerMessageApi";
 import { useMessageWebSocket } from "@/lib/hooks/use-message-websocket";
-import type { ConversationMessage } from "@/lib/types/seller-message";
+import { useStoreProfiles } from "@/lib/hooks/use-store-profiles";
+import type {
+  ConversationMessage,
+  SellerConversation,
+} from "@/lib/types/seller-message";
 
 /** Thread-list stamp: clock time for today, "Yesterday", then a short date. */
 function threadStamp(iso?: string): string {
@@ -192,14 +196,34 @@ function BuyerChat({ sellerParam }: { sellerParam: string }) {
     }
   }
 
+  /* The API names the other *user*; a buyer expects the shop behind them. */
+  const otherUserIds = React.useMemo(
+    () => conversations.map((item) => item.otherUserId),
+    [conversations],
+  );
+  const storeProfiles = useStoreProfiles(otherUserIds);
+  const identityOf = React.useCallback(
+    (conversation?: SellerConversation) => {
+      const profile = conversation
+        ? storeProfiles[conversation.otherUserId]
+        : undefined;
+      return {
+        name:
+          profile?.businessName || conversation?.otherUserName || "Store",
+        avatar: profile?.logoUri || conversation?.otherUserAvatar,
+      };
+    },
+    [storeProfiles],
+  );
+
   const needle = query.trim().toLowerCase();
   const visibleConversations = needle
     ? conversations.filter((item) =>
-        (item.otherUserName ?? "").toLowerCase().includes(needle),
+        identityOf(item).name.toLowerCase().includes(needle),
       )
     : conversations;
 
-  const storeName = active?.otherUserName || "Store";
+  const storeName = identityOf(active).name;
 
   return (
     <div className={SHELL}>
@@ -257,6 +281,7 @@ function BuyerChat({ sellerParam }: { sellerParam: string }) {
             ) : (
               visibleConversations.map((conversation) => {
                 const isActive = conversation.uuid === activeId;
+                const identity = identityOf(conversation);
                 return (
                   <button
                     key={conversation.uuid}
@@ -270,8 +295,8 @@ function BuyerChat({ sellerParam }: { sellerParam: string }) {
                     )}
                   >
                     <StoreAvatar
-                      name={conversation.otherUserName}
-                      avatar={conversation.otherUserAvatar}
+                      name={identity.name}
+                      avatar={identity.avatar}
                       size={40}
                     />
 
@@ -285,7 +310,7 @@ function BuyerChat({ sellerParam }: { sellerParam: string }) {
                               : "font-bold text-[#1A1330]",
                           )}
                         >
-                          {conversation.otherUserName || "Store"}
+                          {identity.name}
                         </p>
                         <span className="ml-1 shrink-0 text-[10px] text-[#8B85A0]">
                           {threadStamp(conversation.lastMessageAt)}
@@ -313,8 +338,8 @@ function BuyerChat({ sellerParam }: { sellerParam: string }) {
           <div className="flex w-full shrink-0 items-center justify-between border-b border-[#EDEBF3] bg-white px-8 py-4">
             <div className="flex min-w-0 items-center gap-3">
               <StoreAvatar
-                name={active?.otherUserName}
-                avatar={active?.otherUserAvatar}
+                name={storeName}
+                avatar={identityOf(active).avatar}
                 size={44}
               />
               <div className="min-w-0">
