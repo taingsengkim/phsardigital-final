@@ -1,4 +1,5 @@
-import { getFileUrl } from "@/lib/api/utils";
+import type { Listing } from "@/lib/types";
+import { getListingPrice } from "@/lib/api/listing-price";
 
 /**
  * Intelligent Image Resolver:
@@ -137,61 +138,35 @@ export function getPrimaryImage(listing: any): string {
 
 export function getAverageRating(listing: any): number {
   if (!listing) return 4.8;
-  if (typeof listing.averageRating === "number" && listing.averageRating > 0) return listing.averageRating;
-  if (typeof listing.rating === "number" && listing.rating > 0) return listing.rating;
-  return 4.8;
+  const reviews = listing.reviews ?? [];
+  if (reviews.length === 0) return listing.rating || 4.8;
+  const sum = reviews.reduce((acc: number, r: any) => acc + (r.rating || 5), 0);
+  return Math.round((sum / reviews.length) * 10) / 10;
 }
 
-export function getPrices(listing: any) {
-  if (!listing) return { currentPrice: 29.99, originalPrice: 39.99, discountPercent: 25 };
-
-  const rawFull = typeof listing.fullPrice === "number" && listing.fullPrice > 0 ? listing.fullPrice : (typeof listing.price === "number" && listing.price > 0 ? listing.price : null);
-  const rawDiscount = typeof listing.discountPrice === "number" && listing.discountPrice > 0 ? listing.discountPrice : null;
-
-  let currentPrice = 29.99;
-  let originalPrice: number | null = null;
-  let discountPercent: number | null = null;
-
-  // Sanitize unreasonable test numbers (e.g. 16888, 1234)
-  const isCrazyNumber = (n: number | null) => typeof n === "number" && (n > 500 || n <= 0);
-
-  if (rawDiscount !== null && !isCrazyNumber(rawDiscount)) {
-    currentPrice = rawDiscount;
-    if (rawFull !== null && !isCrazyNumber(rawFull) && rawFull > rawDiscount) {
-      originalPrice = rawFull;
-      discountPercent = Math.round(((rawFull - rawDiscount) / rawFull) * 100);
-    }
-  } else if (rawFull !== null && !isCrazyNumber(rawFull)) {
-    currentPrice = rawFull;
-  } else if (typeof listing.price === "number" && !isCrazyNumber(listing.price)) {
-    currentPrice = listing.price;
-  } else {
-    // If numbers were test junk, provide a realistic price based on title/category
-    const title = (listing.title || "").toLowerCase();
-    if (title.includes("dress")) { currentPrice = 39.99; originalPrice = 49.99; discountPercent = 20; }
-    else if (title.includes("hoodie") || title.includes("jacket")) { currentPrice = 29.99; originalPrice = 39.99; discountPercent = 25; }
-    else if (title.includes("headphone") || title.includes("audio")) { currentPrice = 49.99; originalPrice = 69.99; discountPercent = 28; }
-    else if (title.includes("backpack")) { currentPrice = 35.00; originalPrice = 45.00; discountPercent = 22; }
-    else if (title.includes("shirt")) { currentPrice = 34.00; originalPrice = 42.00; discountPercent = 19; }
-    else if (title.includes("wallet")) { currentPrice = 24.50; originalPrice = 32.00; discountPercent = 23; }
-    else if (title.includes("bottle")) { currentPrice = 18.00; originalPrice = 24.00; discountPercent = 25; }
-    else if (title.includes("candle")) { currentPrice = 16.00; originalPrice = 22.00; discountPercent = 27; }
-    else if (title.includes("coffee")) { currentPrice = 22.00; originalPrice = 28.00; discountPercent = 21; }
-    else if (title.includes("book")) { currentPrice = 29.99; originalPrice = 38.00; discountPercent = 21; }
-    else if (title.includes("watch")) { currentPrice = 89.00; originalPrice = 129.00; discountPercent = 31; }
-    else if (title.includes("shoes") || title.includes("sneaker")) { currentPrice = 68.00; originalPrice = 89.00; discountPercent = 24; }
-    else { currentPrice = 29.99; originalPrice = 39.99; discountPercent = 25; }
+export function getActiveDiscountPercent(listing: any): number | null {
+  if (!listing) return null;
+  if (listing.discountPercent || listing.discount_percent) {
+    return listing.discountPercent || listing.discount_percent;
   }
+  const now = Date.now();
+  const active = listing.discounts?.find(
+    (d: any) =>
+      new Date(d.starts_at || d.startsAt).getTime() <= now &&
+      new Date(d.ends_at || d.endsAt).getTime() >= now
+  );
+  return active?.discount_percent ?? active?.discountPercent ?? null;
+}
 
-  if (!discountPercent && (listing.discountPercent || listing.discount_percent)) {
-    discountPercent = listing.discountPercent || listing.discount_percent;
-  }
-
-  return {
-    currentPrice,
-    originalPrice,
-    discountPercent: discountPercent && discountPercent > 0 ? discountPercent : null,
-  };
+export function getDiscountedPrice(listing: any): number {
+  if (!listing) return 0;
+  // New responses contain a server-calculated discountPrice. Legacy responses
+  // contain price plus a discounts collection.
+  if (typeof listing.discountPrice === "number") return listing.discountPrice;
+  const price = getListingPrice(listing);
+  const pct = getActiveDiscountPercent(listing);
+  if (!pct) return price;
+  return Math.round(price * (1 - pct / 100) * 100) / 100;
 }
 
 export function formatPrice(value: number): string {

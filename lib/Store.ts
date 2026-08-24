@@ -4,6 +4,9 @@ import { sellerApi } from "@/lib/api/sellerApi";
 import { homeApi } from "@/lib/api/homeApi";
 import { addressApi } from "@/lib/api/addressApi";
 import { sellerDashboardApi } from "@/lib/redux/service/sellerDashboardApi";
+import { sellerProductApi } from "@/lib/redux/service/sellerProductApi";
+import { sellerCommentApi } from "@/lib/redux/service/sellerCommentApi";
+import { sellerMessageApi } from "@/lib/redux/service/sellerMessageApi";
 
 export const makeStore = () => {
   return configureStore({
@@ -13,6 +16,9 @@ export const makeStore = () => {
       [homeApi.reducerPath]: homeApi.reducer,
       [addressApi.reducerPath]: addressApi.reducer,
       [sellerDashboardApi.reducerPath]: sellerDashboardApi.reducer,
+      [sellerProductApi.reducerPath]: sellerProductApi.reducer,
+      [sellerCommentApi.reducerPath]: sellerCommentApi.reducer,
+      [sellerMessageApi.reducerPath]: sellerMessageApi.reducer,
     },
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware().concat(
@@ -20,7 +26,10 @@ export const makeStore = () => {
         sellerApi.middleware,
         homeApi.middleware,
         addressApi.middleware,
-        sellerDashboardApi.middleware
+        sellerDashboardApi.middleware,
+        sellerProductApi.middleware,
+        sellerCommentApi.middleware,
+        sellerMessageApi.middleware
       ),
   });
 };

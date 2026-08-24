@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 import Image from "next/image";
 import {
   CornerDownRight,
@@ -8,21 +8,26 @@ import {
   RotateCcw,
   ShieldCheck,
   Truck,
+  Star,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import RatingStars from "@/components/product/RatingStars";
 import type {
   ApiListingAttribute,
+  ApiListingSpecificationGroup,
   ApiReview,
   ApiReviewReply,
   ReviewSummary,
 } from "@/lib/types";
+import { useCreateProductReviewMutation } from "@/lib/redux/service/sellerCommentApi";
 
 type Tab = "details" | "reviews" | "shipping";
 
 type Props = {
+  listingUuid: string;
   description?: string | null;
   attributes?: ApiListingAttribute[] | null;
+  specifications?: ApiListingSpecificationGroup[] | null;
   reviews?: ApiReview[];
   reviewSummary: ReviewSummary;
   sellerName?: string | null;
@@ -41,22 +46,48 @@ function formatDate(value?: string | null): string | null {
 }
 
 export default function ProductDetailTabs({
+  listingUuid,
   description,
   attributes,
+  specifications,
   reviews = [],
   reviewSummary,
   sellerName,
   storeCity,
 }: Props) {
   const [active, setActive] = useState<Tab>("details");
+  const [submittedReviews, setSubmittedReviews] = useState<ApiReview[]>([]);
+  const shownReviews = [...submittedReviews, ...reviews];
+  const shownSummary = useMemo<ReviewSummary>(() => {
+    if (!submittedReviews.length) return reviewSummary;
+    const ratings = submittedReviews
+      .map((review) => Number(review.rating))
+      .filter((rating) => rating >= 1 && rating <= 5);
+    const previousTotal = reviewSummary.total;
+    const previousSum = (reviewSummary.average ?? 0) * previousTotal;
+    const total = previousTotal + ratings.length;
+    const breakdown = { ...reviewSummary.breakdown };
+    ratings.forEach((rating) => {
+      const star = Math.round(rating);
+      breakdown[star] = (breakdown[star] ?? 0) + 1;
+    });
+    return {
+      total,
+      average: total ? (previousSum + ratings.reduce((sum, rating) => sum + rating, 0)) / total : null,
+      breakdown,
+    };
+  }, [reviewSummary, submittedReviews]);
 
   const sortedAttributes = [...(attributes ?? [])].sort(
     (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
   );
+  const specificationGroups = (specifications ?? []).filter(
+    (group) => (group.attributes ?? []).length > 0
+  );
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "details", label: "Product details" },
-    { id: "reviews", label: `Reviews${reviewSummary.total ? ` (${reviewSummary.total})` : ""}` },
+    { id: "reviews", label: `Reviews${shownSummary.total ? ` (${shownSummary.total})` : ""}` },
     { id: "shipping", label: "Shipping & returns" },
   ];
 
@@ -90,7 +121,19 @@ export default function ProductDetailTabs({
             {description?.trim() || "The seller has not written a description for this product yet."}
           </p>
 
-          {sortedAttributes.length > 0 && (
+          {specificationGroups.length > 0 ? (
+            <div className="mt-8 space-y-5">
+              <h3 className="text-[20px] font-bold text-[#1A1330]">Specifications</h3>
+              {specificationGroups.map((group, groupIndex) => (
+                <section key={`${group.name ?? "General"}-${groupIndex}`} className="overflow-hidden rounded-2xl border border-[#E2DFEC]">
+                  <h4 className="bg-[#F1EFFA] px-6 py-3 text-[15px] font-bold text-[#6C4CD8]">{group.name?.trim() || "General"}</h4>
+                  {[...(group.attributes ?? [])].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)).map((attr, i) => (
+                    <div key={attr.uuid ?? `${attr.key}-${i}`} className={cn("grid grid-cols-[minmax(120px,1fr)_2fr] gap-4 px-6 py-4 text-[16px]", i % 2 === 0 ? "bg-white" : "bg-[#F8F6FD]")}><span className="font-semibold text-[#1A1330]">{attr.key}</span><span className="text-[#5A5470]">{attr.value}</span></div>
+                  ))}
+                </section>
+              ))}
+            </div>
+          ) : sortedAttributes.length > 0 && (
             <div className="mt-8">
               <h3 className="mb-4 text-[20px] font-bold text-[#1A1330]">
                 Specifications
@@ -117,13 +160,17 @@ export default function ProductDetailTabs({
       {/* ── reviews ── */}
       {active === "reviews" && (
         <div id="reviews" className="mt-8 max-w-[860px] scroll-mt-24">
-          {reviews.length === 0 ? (
+          <ReviewForm
+            listingUuid={listingUuid}
+            onCreated={(review) => setSubmittedReviews((current) => [review, ...current])}
+          />
+          {shownReviews.length === 0 ? (
             <EmptyReviews />
           ) : (
             <>
-              <ReviewSummaryCard summary={reviewSummary} />
+              <ReviewSummaryCard summary={shownSummary} />
               <div className="space-y-5">
-                {reviews.map((review, index) => (
+                {shownReviews.map((review, index) => (
                   <ReviewRow
                     key={review.uuid ?? index}
                     review={review}
@@ -192,6 +239,103 @@ function EmptyReviews() {
         Buy this product and be the first to share your experience.
       </p>
     </div>
+  );
+}
+
+function getMutationError(error: unknown): string {
+  const value = error as { status?: number; data?: { message?: string; error?: string } };
+  if (value?.status === 401) return "Please sign in before writing a review.";
+  if (value?.status === 403) return "Only buyers who purchased this product can review it.";
+  return value?.data?.message || value?.data?.error || "We could not submit your review. Please try again.";
+}
+
+function ReviewForm({
+  listingUuid,
+  onCreated,
+}: {
+  listingUuid: string;
+  onCreated: (review: ApiReview) => void;
+}) {
+  const [rating, setRating] = useState(0);
+  const [hoveredRating, setHoveredRating] = useState(0);
+  const [comment, setComment] = useState("");
+  const [message, setMessage] = useState<string | null>(null);
+  const [createReview, { isLoading }] = useCreateProductReviewMutation();
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!rating) {
+      setMessage("Choose a star rating first.");
+      return;
+    }
+    setMessage(null);
+    try {
+      const review = await createReview({
+        listingUuid,
+        rating,
+        ...(comment.trim() ? { comment: comment.trim() } : {}),
+      }).unwrap();
+      onCreated(review);
+      setRating(0);
+      setComment("");
+      setMessage("Your review was posted.");
+    } catch (error) {
+      setMessage(getMutationError(error));
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="mb-8 rounded-2xl border border-[#E2DFEC] bg-white p-5 sm:p-6">
+      <h3 className="text-[19px] font-bold text-[#1A1330]">Review this product</h3>
+      <p className="mt-1 text-[14px] text-[#8B85A0]">Share your experience to help other shoppers.</p>
+      <fieldset className="mt-5">
+        <legend className="mb-2 text-[14px] font-semibold text-[#443C58]">Your rating</legend>
+        <div className="flex gap-1" onMouseLeave={() => setHoveredRating(0)}>
+          {[1, 2, 3, 4, 5].map((star) => (
+            <button
+              key={star}
+              type="button"
+              aria-label={`${star} star${star === 1 ? "" : "s"}`}
+              onMouseEnter={() => setHoveredRating(star)}
+              onFocus={() => setHoveredRating(star)}
+              onBlur={() => setHoveredRating(0)}
+              onClick={() => setRating(star)}
+              className="rounded-md p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6C4CD8]"
+            >
+              <Star
+                size={28}
+                className={star <= (hoveredRating || rating) ? "text-[#F5B301]" : "text-[#D7D2E3]"}
+                fill="currentColor"
+              />
+            </button>
+          ))}
+        </div>
+      </fieldset>
+      <label className="mt-4 block text-[14px] font-semibold text-[#443C58]" htmlFor="product-review-comment">
+        Comment <span className="font-normal text-[#8B85A0]">(optional)</span>
+      </label>
+      <textarea
+        id="product-review-comment"
+        value={comment}
+        onChange={(event) => setComment(event.target.value)}
+        rows={4}
+        maxLength={1000}
+        placeholder="What did you like or dislike about this product?"
+        className="mt-2 w-full resize-y rounded-xl border border-[#DCD8E8] px-4 py-3 text-[15px] text-[#1A1330] outline-none placeholder:text-[#AAA4BA] focus:border-[#6C4CD8] focus:ring-2 focus:ring-[#6C4CD8]/15"
+      />
+      <div className="mt-4 flex flex-wrap items-center gap-4">
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="rounded-xl bg-[#6C4CD8] px-6 py-3 text-[15px] font-bold text-white transition hover:bg-[#5E3FC9] disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isLoading ? "Posting..." : "Post review"}
+        </button>
+        {message && (
+          <p role="status" className={cn("text-[14px]", message === "Your review was posted." ? "text-emerald-600" : "text-red-600")}>{message}</p>
+        )}
+      </div>
+    </form>
   );
 }
 

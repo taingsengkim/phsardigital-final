@@ -12,7 +12,11 @@ import {
   getPrices,
   formatPrice,
 } from "./listing-helpers";
+<<<<<<< HEAD
 import { addFavorite, removeFavorites } from "@/app/api/favorites";
+=======
+import { getListingFullPrice, hasListingDiscount } from "@/lib/api/listing-price";
+>>>>>>> cadf4b509bb9305c934c3caaa3a9ed5f63eaa2eb
 
 type ProductCardProps = {
   listing: any;
@@ -39,7 +43,14 @@ export function ProductCard({ listing, sellerName, isSavedPage, onRemove }: Prod
 
   const image = getPrimaryImage(listing);
   const rating = getAverageRating(listing);
+<<<<<<< HEAD
   const { currentPrice, originalPrice, discountPercent } = getPrices(listing);
+=======
+  const discountPercent = getActiveDiscountPercent(listing);
+  const finalPrice = getDiscountedPrice(listing);
+  const fullPrice = getListingFullPrice(listing);
+  const hasApiDiscount = hasListingDiscount(listing);
+>>>>>>> cadf4b509bb9305c934c3caaa3a9ed5f63eaa2eb
 
   const productSlug = listing.uuid || listing.slug || listing.id || "#";
   const displaySeller =
@@ -151,6 +162,14 @@ export function ProductCard({ listing, sellerName, isSavedPage, onRemove }: Prod
             <span className="text-[16px] sm:text-[17px] font-black text-[#6C4CD8] dark:text-[#A78BFA]">
               {formatPrice(currentPrice)}
             </span>
+<<<<<<< HEAD
+=======
+            {(discountPercent || hasApiDiscount) && (
+              <span className="text-xs text-[#8B85A0] line-through">
+                {formatPrice(fullPrice)}
+              </span>
+            )}
+>>>>>>> cadf4b509bb9305c934c3caaa3a9ed5f63eaa2eb
           </div>
 
           {/* 3. 5-Star Rating Row + (reviewCount) */}

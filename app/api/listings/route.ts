@@ -38,6 +38,47 @@ const FORWARDED_PARAMS = [
 
 import { CURATED_PRODUCTS } from "@/lib/curated-products";
 
+type ListingResponseItem = Record<string, unknown> & {
+  price?: number | null;
+  fullPrice?: number | null;
+  discountPrice?: number | null;
+};
+
+function withCompatiblePrice(item: ListingResponseItem): ListingResponseItem {
+  return {
+    ...item,
+    price: item.discountPrice ?? item.price ?? item.fullPrice ?? 0,
+  };
+}
+
+function normalizeListingsResponse(data: unknown): unknown {
+  if (Array.isArray(data)) return data.map(withCompatiblePrice);
+  if (!data || typeof data !== "object") return data;
+
+  const body = data as Record<string, unknown>;
+  const items = Array.isArray(body.content)
+    ? body.content.map((item) => withCompatiblePrice(item as ListingResponseItem))
+    : Array.isArray(body.data)
+      ? body.data.map((item) => withCompatiblePrice(item as ListingResponseItem))
+      : null;
+
+  if (!items) return data;
+
+  const page = body.page && typeof body.page === "object"
+    ? body.page as Record<string, unknown>
+    : {};
+
+  return {
+    ...body,
+    content: items,
+    data: items,
+    total: page.totalElements ?? body.total ?? items.length,
+    page: page.number ?? body.pageNumber ?? 0,
+    pageSize: page.size ?? body.pageSize ?? items.length,
+    totalPages: page.totalPages ?? body.totalPages ?? 1,
+  };
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
 

@@ -28,6 +28,11 @@ import SavedButton from "@/components/saved/SavedButton";
 import { authClient, useSession } from "@/lib/auth-client";
 import { addToCart } from "@/app/api/cart";
 import type { ApiListing, ReviewSummary } from "@/lib/types";
+import {
+  getListingFullPrice,
+  getListingPrice,
+  hasListingDiscount,
+} from "@/lib/api/listing-price";
 
 type Props = {
   listing: ApiListing;
@@ -85,19 +90,9 @@ export default function ProductDetailClient({
   const listingId = listing.uuid;
   const productSlug = listing.slug || listing.uuid;
 
-  const rawFull = typeof listing.fullPrice === "number" && listing.fullPrice > 0 ? listing.fullPrice : (typeof listing.price === "number" && listing.price > 0 ? listing.price : null);
-  const rawDiscount = typeof listing.discountPrice === "number" && listing.discountPrice > 0 ? listing.discountPrice : null;
-
-  // Main price: discountPrice if present and valid, otherwise fullPrice or listing.price
-  const price = rawDiscount !== null
-    ? rawDiscount
-    : (rawFull !== null
-      ? rawFull
-      : (typeof listing.price === "number" && listing.price > 0 ? listing.price : 0));
-
-  // Gray strikethrough full price: only if discountPrice exists and fullPrice is higher
-  const fullPrice = rawDiscount !== null && rawFull !== null && rawFull > rawDiscount ? rawFull : null;
-
+  const price = getListingPrice(listing);
+  const fullPrice = getListingFullPrice(listing);
+  const hasDiscount = hasListingDiscount(listing);
   const stock = typeof listing.stockQty === "number" ? listing.stockQty : 0;
   const sold = typeof listing.sold === "number" ? listing.sold : 0;
 
@@ -108,9 +103,9 @@ export default function ProductDetailClient({
   const attributes = useMemo(
     () =>
       [...(listing.listingAttributes ?? [])].sort(
-        (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
+        (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0),
       ),
-    [listing.listingAttributes]
+    [listing.listingAttributes],
   );
 
   const listedOn = formatListedDate(listing.createdAt);
@@ -158,7 +153,7 @@ export default function ProductDetailClient({
       // continue to checkout
     }
     router.push(
-      `/checkout?slug=${encodeURIComponent(productSlug ?? "")}&qty=${qty}`
+      `/checkout?slug=${encodeURIComponent(productSlug ?? "")}&qty=${qty}`,
     );
   }
 
@@ -205,8 +200,12 @@ export default function ProductDetailClient({
             </div>
 
             <div className="flex-1 pr-1">
-              <p className="text-base font-extrabold text-white leading-snug">Item Added to Cart!</p>
-              <p className="text-xs sm:text-sm font-medium text-emerald-100 line-clamp-1 mt-0.5">{toastMessage}</p>
+              <p className="text-base font-extrabold text-white leading-snug">
+                Item Added to Cart!
+              </p>
+              <p className="text-xs sm:text-sm font-medium text-emerald-100 line-clamp-1 mt-0.5">
+                {toastMessage}
+              </p>
             </div>
 
             <Link href="/cart">
@@ -288,7 +287,9 @@ export default function ProductDetailClient({
         {average !== null ? (
           <span className="flex items-center gap-2 border-l border-[#E2DFEC] pl-4">
             <RatingStars rating={average} size={16} />
-            <span className="font-bold text-[#F5B301]">{average.toFixed(1)}</span>
+            <span className="font-bold text-[#F5B301]">
+              {average.toFixed(1)}
+            </span>
             <a href="#reviews" className="text-[#8B85A0] hover:text-[#6C4CD8]">
               ({total} {total === 1 ? "review" : "reviews"})
             </a>
@@ -304,15 +305,15 @@ export default function ProductDetailClient({
       <div className="rounded-2xl bg-[#F6F5FA] px-6 py-5">
         <div className="flex flex-wrap items-baseline gap-3">
           <span className="text-[36px] font-black leading-none text-[#6C4CD8]">
-            {formatUsd(price)}
+            {formatUsd(fullPrice)}
           </span>
-          {fullPrice !== null && (
-            <span className="text-[20px] font-extrabold text-[#8B85A0] line-through">
-              {formatUsd(fullPrice)}
+          {hasDiscount && (
+            <span className="text-[15px] font-semibold text-emerald-600">
+              Discount price: {formatUsd(price)}
             </span>
           )}
           <span className="text-[15px] font-medium text-[#8B85A0]">
-            ≈ {formatKhr(price)}
+            ≈ {formatKhr(fullPrice)}
           </span>
         </div>
 
@@ -321,7 +322,11 @@ export default function ProductDetailClient({
           <span
             className={cn(
               "h-2.5 w-2.5 rounded-full",
-              inStock ? (lowStock ? "bg-amber-500" : "bg-emerald-500") : "bg-red-500"
+              inStock
+                ? lowStock
+                  ? "bg-amber-500"
+                  : "bg-emerald-500"
+                : "bg-red-500",
             )}
           />
           <span
@@ -331,7 +336,7 @@ export default function ProductDetailClient({
                 ? lowStock
                   ? "text-amber-600"
                   : "text-emerald-600"
-                : "text-red-500"
+                : "text-red-500",
             )}
           >
             {!isActive
@@ -359,7 +364,10 @@ export default function ProductDetailClient({
         <div className="overflow-hidden rounded-2xl border border-[#E2DFEC] bg-white">
           <div className="grid grid-cols-1 divide-y divide-[#F0EDFB] sm:grid-cols-2 sm:divide-x">
             {attributes.slice(0, 6).map((attr, i) => (
-              <div key={attr.uuid ?? `${attr.key}-${i}`} className="px-5 py-3.5">
+              <div
+                key={attr.uuid ?? `${attr.key}-${i}`}
+                className="px-5 py-3.5"
+              >
                 <p className="text-[13px] font-semibold uppercase tracking-wide text-[#8B85A0]">
                   {attr.key}
                 </p>
@@ -415,7 +423,9 @@ export default function ProductDetailClient({
           disabled={adding || !inStock}
           className={cn(
             "flex flex-1 items-center justify-center gap-2.5 rounded-xl py-3.5 text-[17px] font-bold text-white shadow-md transition-all hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50",
-            added ? "bg-emerald-500 hover:bg-emerald-600" : "bg-[#6C4CD8] hover:bg-[#5B3DC0]"
+            added
+              ? "bg-emerald-500 hover:bg-emerald-600"
+              : "bg-[#6C4CD8] hover:bg-[#5B3DC0]",
           )}
         >
           {added ? <Check size={20} /> : <ShoppingCart size={20} />}
@@ -435,9 +445,17 @@ export default function ProductDetailClient({
       {/* ── trust badges ── */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { Icon: Truck, label: "Fast delivery", sub: "Phnom Penh & provinces" },
+          {
+            Icon: Truck,
+            label: "Fast delivery",
+            sub: "Phnom Penh & provinces",
+          },
           { Icon: RotateCcw, label: "7-day returns", sub: "On damaged items" },
-          { Icon: ShieldCheck, label: "Buyer protection", sub: "Secure checkout" },
+          {
+            Icon: ShieldCheck,
+            label: "Buyer protection",
+            sub: "Secure checkout",
+          },
         ].map(({ Icon, label, sub }) => (
           <div
             key={label}
@@ -467,9 +485,7 @@ export default function ProductDetailClient({
         <div className="flex items-center gap-1.5">
           <Package size={13} />
           <dt className="sr-only">Item code</dt>
-          <dd className="font-mono">
-            {listingId.slice(0, 8).toUpperCase()}
-          </dd>
+          <dd className="font-mono">{listingId.slice(0, 8).toUpperCase()}</dd>
         </div>
         {listedOn && (
           <div className="flex items-center gap-1.5">

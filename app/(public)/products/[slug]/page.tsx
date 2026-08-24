@@ -9,6 +9,7 @@ import SellerPanel from "@/components/product/SellerPanel";
 import ProductDetailTabs from "@/components/product/ProductDetailTabs";
 import ProductRail from "@/components/product/ProductRail";
 import { formatAddress } from "@/lib/maps";
+import { getListingPrice } from "@/lib/api/listing-price";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -94,7 +95,7 @@ export default async function ProductDetailPage({ params }: Props) {
       : undefined,
     offers: {
       "@type": "Offer",
-      price: listing.price ?? 0,
+      price: getListingPrice(listing),
       priceCurrency: "USD",
       availability:
         (listing.stockQty ?? 0) > 0
@@ -173,8 +174,10 @@ export default async function ProductDetailPage({ params }: Props) {
 
         {/* ── details / reviews / shipping ── */}
         <ProductDetailTabs
+          listingUuid={listing.uuid}
           description={listing.description}
           attributes={listing.listingAttributes}
+          specifications={listing.specifications}
           reviews={reviews}
           reviewSummary={reviewSummary}
           sellerName={sellerName}

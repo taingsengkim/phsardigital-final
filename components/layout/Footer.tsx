@@ -1,4 +1,4 @@
-"use client";
+"use client"
 
 import { useState } from "react";
 import Link from "next/link";
@@ -74,7 +74,15 @@ const CONTACTS = [
 /* ── Main Component ─────────────────────────────────────────────────────── */
 
 export default function Footer() {
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = React.useState("")
+  const [subscribed, setSubscribed] = React.useState(false)
+
+  function subscribe(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!email.trim()) return
+    setSubscribed(true)
+    setEmail("")
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,9 +130,9 @@ export default function Footer() {
               Sign up
             </button>
           </form>
-        </div>
-      </div>
-
+          {subscribed && <p role="status" className="mt-3 text-sm font-medium text-white lg:absolute lg:bottom-2 lg:right-8">Thanks for subscribing!</p>}
+        </section>
+    <div>
       {/* ── Main Links Section ── */}
       <div className="mx-auto max-w-7xl px-6 pt-12 pb-8 sm:px-12 lg:px-20">
         <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-[1.2fr_1fr_1.2fr_1fr] items-start">
@@ -160,6 +168,15 @@ export default function Footer() {
                   </li>
                 ))}
               </ul>
+            </nav>
+          ))}
+        </div>
+
+        <div className="grid border-y border-white/10 py-6 sm:grid-cols-2 lg:grid-cols-4">
+          {benefits.map(({ Icon, title, text }, index) => (
+            <div key={title} className={`flex items-center gap-3 py-3 ${index > 0 ? "lg:border-l lg:border-white/10 lg:pl-6" : ""}`}>
+              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white/10 text-[#b8aaff]"><Icon className="size-5" /></span>
+              <span><strong className="block text-sm">{title}</strong><span className="text-xs text-white/45">{text}</span></span>
             </div>
           ))}
         </div>
