@@ -9,7 +9,6 @@ import { PromoBannersRow } from "./feature/PromoBannersRow";
 import { WearableSection } from "./feature/WearableSection";
 import { RecommendedSection } from "./feature/RecommendedSection";
 import { SiteFeatures } from "./feature/SiteFeatures";
-import { NewsletterSignup } from "./feature/NewsletterSignup";
 
 export default function HomePage() {
   return (
@@ -40,9 +39,6 @@ export default function HomePage() {
 
       {/* 9. Site Features / 4 Trust Badges */}
       <SiteFeatures />
-
-      {/* 10. Newsletter Signup Banner */}
-      <NewsletterSignup />
     </main>
   );
 }

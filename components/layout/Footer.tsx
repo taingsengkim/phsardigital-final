@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Mail, Send, Phone, User, MapPin, RefreshCw, Headphones, Star } from "lucide-react";
+import PhsarDigitalLogo from "@/assets/svg/phsardigitalLogo";
 
 /* ── Data Config ───────────────────────────────────────────────────────── */
 
@@ -102,7 +103,7 @@ export default function Footer() {
             className="flex w-full max-w-md items-center rounded-lg bg-white p-1.5 shadow-sm ring-1 ring-black/5"
           >
             <div className="flex flex-1 items-center gap-2.5 px-3">
-              <Mail className="h-5 w-5 shrink-0 text-[#5B3DE8]" />
+              <Mail className="h-5 w-5 shrink-0 text-[#6C4CD8]" />
               <input
                 type="email"
                 value={email}
@@ -110,12 +111,12 @@ export default function Footer() {
                 placeholder="Phsar.Digital@com.kh"
                 aria-label="Email address"
                 required
-                className="w-full bg-transparent text-sm text-gray-800 placeholder:text-[#5B3DE8]/80 outline-none"
+                className="w-full bg-transparent text-sm text-gray-800 placeholder:text-[#6C4CD8]/80 outline-none"
               />
             </div>
             <button
               type="submit"
-              className="flex shrink-0 items-center gap-2 rounded-md bg-[#5B3DE8] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#4d32c9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5B3DE8]"
+              className="flex shrink-0 items-center gap-2 rounded-md bg-[#6C4CD8] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#5839be] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6C4CD8]"
             >
               <Send className="h-4 w-4" />
               Sign up
@@ -130,17 +131,15 @@ export default function Footer() {
           
           {/* Brand Identity */}
           <div className="flex flex-col items-center justify-center text-center sm:col-span-2 lg:col-span-1 lg:items-start lg:text-left">
-            <svg width={76} height={76} viewBox="0 0 100 100" fill="none" className="shrink-0">
-              <circle cx="50" cy="50" r="34" fill="#5B3DE8" />
-              <rect x="14" y="34" width="6" height="6" rx="1" fill="#5B3DE8" />
-              <rect x="6" y="46" width="6" height="6" rx="1" fill="#5B3DE8" />
-              <rect x="14" y="58" width="6" height="6" rx="1" fill="#5B3DE8" />
-              <path d="M44 32h14a12 12 0 0 1 0 24H44V32z" fill="white" />
-              <rect x="44" y="32" width="8" height="42" rx="3" fill="white" />
-            </svg>
-            <h3 className="mt-4 text-2xl font-extrabold tracking-tight text-gray-950">
-              Phsar Digital
-            </h3>
+            <Link href="/home" className="flex items-center gap-3 group">
+              <PhsarDigitalLogo className="h-10 w-10 sm:h-12 sm:w-12 shrink-0 transition-transform group-hover:scale-105" aria-hidden="true" />
+              <h3 className="text-2xl font-extrabold tracking-tight text-gray-950">
+                Phsar Digital
+              </h3>
+            </Link>
+            <p className="mt-3 text-xs sm:text-sm text-gray-500 leading-relaxed max-w-xs">
+              Cambodia&apos;s leading digital marketplace for authentic products, verified sellers, and secure payments.
+            </p>
           </div>
 
           {/* Navigation Columns */}
@@ -154,7 +153,7 @@ export default function Footer() {
                   <li key={link.label}>
                     <Link
                       href={link.href}
-                      className="text-sm text-gray-600 transition hover:text-[#5B3DE8] hover:underline underline-offset-4"
+                      className="text-sm text-gray-600 transition hover:text-[#6C4CD8] hover:underline underline-offset-4"
                     >
                       {link.label}
                     </Link>
@@ -175,9 +174,9 @@ export default function Footer() {
             return (
               <div key={idx} className="flex items-center justify-center sm:justify-start gap-4">
                 <Icon
-                  className={`h-7 w-7 shrink-0 text-[#5B3DE8] ${badge.fill ? "fill-[#5B3DE8]" : ""}`}
+                  className={`h-7 w-7 shrink-0 text-[#6C4CD8] ${badge.fill ? "fill-[#6C4CD8]" : ""}`}
                 />
-                <span className="text-xs font-black tracking-wide text-[#5B3DE8] leading-snug">
+                <span className="text-xs font-black tracking-wide text-[#6C4CD8] leading-snug">
                   {badge.line1}
                   <br />
                   {badge.line2}
@@ -189,11 +188,11 @@ export default function Footer() {
 
         {/* ── Sub-header with Dual Lines ── */}
         <div className="my-6 flex items-center gap-4">
-          <span className="text-sm font-bold text-[#5B3DE8] whitespace-nowrap">
+          <span className="text-sm font-bold text-[#6C4CD8] whitespace-nowrap">
             Start A Conversation
           </span>
           <div className="h-[1px] flex-1 bg-gray-400" />
-          <span className="text-sm font-bold text-[#5B3DE8] whitespace-nowrap">
+          <span className="text-sm font-bold text-[#6C4CD8] whitespace-nowrap">
             Address
           </span>
           <div className="h-[1px] flex-1 bg-gray-400" />
@@ -207,9 +206,9 @@ export default function Footer() {
               <Link
                 key={idx}
                 href={item.href}
-                className="flex items-center gap-2 transition hover:text-[#5B3DE8]"
+                className="flex items-center gap-2 transition hover:text-[#6C4CD8]"
               >
-                <Icon className="h-4 w-4 shrink-0 text-[#5B3DE8]" />
+                <Icon className="h-4 w-4 shrink-0 text-[#6C4CD8]" />
                 <span>{item.text}</span>
               </Link>
             );
