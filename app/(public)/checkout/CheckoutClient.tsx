@@ -35,7 +35,7 @@ import {
   Edit2,
   Trash2,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, displayImageUrl } from "@/lib/utils";
 import { getListingBySlug } from "@/app/api/listings";
 import { getCart, getCarts, updateCartItemQty, deleteCartItem, deleteSellerCart } from "@/app/api/cart";
 import { createOrder } from "@/app/api/orders";
@@ -1561,7 +1561,7 @@ export default function CheckoutClient() {
                             onClick={() => setViewPhotoUrl(photo)}
                             title="Click to view full image"
                           >
-                            <img src={photo} alt={`House photo ${idx + 1}`} className="h-full w-full object-cover" />
+                            <img src={displayImageUrl(photo)} alt={`House photo ${idx + 1}`} className="h-full w-full object-cover" />
                             <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
                               <Eye size={16} className="text-white drop-shadow-md" />
                             </div>
@@ -2068,7 +2068,7 @@ export default function CheckoutClient() {
               <X size={20} />
             </button>
             <img
-              src={viewPhotoUrl}
+              src={displayImageUrl(viewPhotoUrl)}
               alt="House Photo Full View"
               className="max-h-[85vh] w-auto max-w-full rounded-2xl object-contain"
             />

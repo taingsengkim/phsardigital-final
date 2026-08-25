@@ -34,7 +34,7 @@ import { useGetCategoriesQuery } from "@/lib/api/homeApi";
 import LoginButton from "@/components/auth/LoginButton";
 import RegisterButton from "@/components/auth/RegisterButton";
 import { NAV_PILL, NAV_RAIL_PILL } from "@/components/layout/nav-pill";
-import { cn } from "@/lib/utils";
+import { cn, displayImageUrl } from "@/lib/utils";
 
 const BRAND = "#6C4CD8";
 const NAV_LINKS = ["Home", "Offers", "Brands", "Stores", "All Products"];
@@ -223,7 +223,7 @@ export default function Navbar() {
                     >
                       {userAvatar ? (
                         <img
-                          src={userAvatar}
+                          src={displayImageUrl(userAvatar)}
                           alt="User Avatar"
                           className="h-full w-full object-cover"
                         />
@@ -236,7 +236,7 @@ export default function Navbar() {
                     <DropdownMenuLabel className="p-3 font-normal">
                       <div className="flex min-w-0 items-center gap-3">
                         <span className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-primary/10 text-primary">
-                          {userAvatar ? <img src={userAvatar} alt="" className="size-full object-cover" /> : <User className="size-5" />}
+                          {userAvatar ? <img src={displayImageUrl(userAvatar)} alt="" className="size-full object-cover" /> : <User className="size-5" />}
                         </span>
                         <div className="min-w-0">
                           <p className="truncate text-base font-bold text-[#1A1330]">
@@ -400,7 +400,7 @@ export default function Navbar() {
               <div className="flex items-center gap-3">
                 {userAvatar ? (
                   <img
-                    src={userAvatar}
+                    src={displayImageUrl(userAvatar)}
                     alt="User Avatar"
                     className="h-10 w-10 rounded-full object-cover ring-2 ring-white/30"
                   />

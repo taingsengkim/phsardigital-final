@@ -13,7 +13,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, displayImageUrl } from "@/lib/utils";
 
 export type AddressItem = {
   id: string;
@@ -592,7 +592,7 @@ export default function AddressBook({ defaultRecipient, defaultPhone, onToast }:
                       onClick={() => setViewPhotoUrl(photo)}
                       title="Click to view full image"
                     >
-                      <img src={photo} alt={`House photo ${idx + 1}`} className="h-full w-full object-cover" />
+                      <img src={displayImageUrl(photo)} alt={`House photo ${idx + 1}`} className="h-full w-full object-cover" />
                       <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Eye size={16} className="text-white drop-shadow-md" />
                       </div>
@@ -658,7 +658,7 @@ export default function AddressBook({ defaultRecipient, defaultPhone, onToast }:
               <X size={20} />
             </button>
             <img
-              src={viewPhotoUrl}
+              src={displayImageUrl(viewPhotoUrl)}
               alt="House Photo Full View"
               className="max-h-[85vh] w-auto max-w-full rounded-2xl object-contain"
             />

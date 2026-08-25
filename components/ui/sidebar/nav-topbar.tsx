@@ -41,6 +41,7 @@ import {
   useGetSellerReviewsQuery,
 } from "@/lib/redux/service/sellerDashboardApi";
 import { useGetConversationsQuery } from "@/lib/redux/service/sellerMessageApi";
+import { displayImageUrl } from "@/lib/utils";
 
 type SellerNotification = {
   id: string;
@@ -304,7 +305,7 @@ export function NavTopbar() {
             >
               <Avatar className="size-10 border border-[#e4dacd]">
                 {userAvatar ? (
-                  <AvatarImage src={userAvatar} alt={displayName} />
+                  <AvatarImage src={displayImageUrl(userAvatar)} alt={displayName} />
                 ) : null}
                 <AvatarFallback className="bg-primary text-xs font-semibold text-primary-foreground">
                   {fallbackInitial}
