@@ -176,8 +176,8 @@ export default function ProductsClient() {
               item.sellerName ||
               "Phsar Store";
 
-            const rating = item.averageRating ?? item.rating ?? 4.8;
-            const reviewCount = item.reviewCount ?? item.review_count ?? 12;
+            const rating = item.averageRating ?? item.rating ?? 0;
+            const reviewCount = item.reviewCount ?? item.review_count ?? 0;
             const isSaved =
               favoriteMap[itemUuid] !== undefined
                 ? favoriteMap[itemUuid]
@@ -188,7 +188,7 @@ export default function ProductsClient() {
                 key={itemUuid}
                 className="group relative flex gap-3 overflow-hidden rounded-xl bg-white shadow-[0_1px_4px_rgba(36,31,53,0.08)] transition hover:shadow-md"
               >
-                <Link href={`/products/${slug}`} className="flex flex-1 gap-3">
+                <Link href={`/products/${itemUuid || slug}`} className="flex flex-1 gap-3">
                   <div className="relative h-28 w-28 flex-shrink-0 overflow-hidden bg-[#F5F3FA]">
                     <Image
                       src={image}

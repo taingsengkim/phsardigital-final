@@ -23,61 +23,6 @@ const CATEGORY_TABS = [
   },
 ];
 
-const DRESS_PRODUCTS = [
-  {
-    uuid: "dress-1",
-    title: "Vintage Floral Cottagecore Corset Lace-Up Mini Dress",
-    slug: "vintage-floral-cottagecore-corset-mini-dress",
-    fullPrice: 65,
-    discountPrice: 45,
-    sellerProfile: { businessName: "Dance skirts" },
-    category: { name: "Women's Dresses", slug: "womens-fashion" },
-    thumbnailUri: { uri: "/picture/product_dress_blue_floral.jpg" },
-    averageRating: 4.9,
-    reviewCount: 48,
-    isFavorite: true,
-  },
-  {
-    uuid: "dress-2",
-    title: "Beige Floral Sweetheart Neckline Midi Dress with High Slit",
-    slug: "beige-floral-slit-sweetheart-midi-dress",
-    fullPrice: 85,
-    discountPrice: 58,
-    sellerProfile: { businessName: "Fashion By Srey" },
-    category: { name: "Women's Dresses", slug: "womens-fashion" },
-    thumbnailUri: { uri: "/picture/product_dress_beige_slit.jpg" },
-    averageRating: 4.8,
-    reviewCount: 29,
-    isFavorite: false,
-  },
-  {
-    uuid: "dress-3",
-    title: "French Toile De Jouy Blue Porcelain Vintage Mini Dress",
-    slug: "french-toile-blue-porcelain-vintage-mini-dress",
-    fullPrice: 72,
-    discountPrice: 52,
-    sellerProfile: { businessName: "Dance skirts" },
-    category: { name: "Women's Dresses", slug: "womens-fashion" },
-    thumbnailUri: { uri: "/picture/product_dress_toile_blue.jpg" },
-    averageRating: 4.9,
-    reviewCount: 32,
-    isFavorite: false,
-  },
-  {
-    uuid: "dress-4",
-    title: "Rose Gold Square Watch & Elegant Bracelet Set",
-    slug: "rose-gold-square-watch-bracelet-set",
-    fullPrice: 129,
-    discountPrice: 89,
-    sellerProfile: { businessName: "Jewel & Co." },
-    category: { name: "Women's Fashion", slug: "womens-fashion" },
-    thumbnailUri: { uri: "/picture/pic5.jpg" },
-    averageRating: 4.8,
-    reviewCount: 15,
-    isFavorite: false,
-  },
-];
-
 export function WearableSection() {
   /* Tabs come from the live category list so their slugs cannot drift from the
      API's. The hardcoded set had "health-beauty" and "groceries-essentials"

@@ -186,8 +186,8 @@ export async function GET(request: NextRequest) {
             sellerId: item.sellerProfile?.sellerId || "seller-live",
             logoUri: item.sellerProfile?.logoUri ?? null,
           },
-          averageRating: item.averageRating ?? 4.9,
-          reviewCount: item.reviewCount ?? 18,
+          averageRating: item.averageRating ?? null,
+          reviewCount: item.reviewCount ?? 0,
           isFavorite: item.isFavorite ?? false,
           sold: item.sold ?? 45,
         };

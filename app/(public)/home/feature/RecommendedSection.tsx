@@ -8,8 +8,6 @@ import { cn } from "@/lib/utils";
 import { useGetListingsQuery } from "@/lib/api/homeApi";
 import ProductCard from "../ProductCard";
 
-import { CURATED_PRODUCTS } from "@/lib/curated-products";
-
 const TABS = [
   "Featured Products",
   "Best Selling",

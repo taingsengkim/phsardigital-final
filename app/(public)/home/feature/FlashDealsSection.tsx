@@ -43,64 +43,7 @@ const FEATURED_DEAL: FlashDealItem = {
   ],
 };
 
-const FLASH_ITEMS: FlashDealItem[] = [
-  {
-    id: "flash-item-2",
-    slug: "french-toile-blue-porcelain-vintage-mini-dress",
-    title: "French Toile De Jouy Blue Vintage Puff Sleeve Mini Dress",
-    category: "Women's Fashion",
-    storeName: "Dance skirts",
-    originalPrice: 72,
-    salePrice: 52,
-    discountPercent: 28,
-    rating: 4.9,
-    reviewCount: 32,
-    badge: "New",
-    image: "/picture/product_dress_toile_blue.jpg",
-  },
-  {
-    id: "flash-item-3",
-    slug: "beige-floral-slit-sweetheart-midi-dress",
-    title: "Beige Floral Sweetheart Neckline Midi Dress with High Leg Slit",
-    category: "Women's Fashion",
-    storeName: "Fashion By Srey",
-    originalPrice: 85,
-    salePrice: 58,
-    discountPercent: 32,
-    rating: 4.8,
-    reviewCount: 29,
-    badge: "Popular",
-    image: "/picture/product_dress_beige_slit.jpg",
-  },
-  {
-    id: "flash-item-4",
-    slug: "luxury-organic-botanical-facial-serum",
-    title: "Luxury Organic Botanical Hydrating Facial Essence & Serum Set",
-    category: "Health & Beauty",
-    storeName: "Aura Naturals",
-    originalPrice: 110,
-    salePrice: 75,
-    discountPercent: 31,
-    rating: 5.0,
-    reviewCount: 64,
-    badge: "Limited",
-    image: "/picture/hero_natural_care.jpg",
-  },
-  {
-    id: "flash-item-5",
-    slug: "premium-aquamarine-skincare-moisturizer",
-    title: "Aquamarine Deep Moisture Restoring Face Oil & Night Cream",
-    category: "Health & Beauty",
-    storeName: "Storee Corner",
-    originalPrice: 95,
-    salePrice: 62,
-    discountPercent: 35,
-    rating: 4.7,
-    reviewCount: 19,
-    badge: "Sale",
-    image: "/picture/hero_slide_summer_sale.jpg",
-  },
-];
+
 
 function formatFlashDeal(item: any): FlashDealItem {
   const full = item.fullPrice ?? item.price ?? 50;
@@ -134,8 +77,8 @@ function formatFlashDeal(item: any): FlashDealItem {
     originalPrice,
     salePrice,
     discountPercent,
-    rating: item.averageRating ?? 4.9,
-    reviewCount: item.reviewCount ?? 18,
+    rating: item.averageRating ?? 0,
+    reviewCount: item.reviewCount ?? 0,
     badge: item.isFeatured ? "Hot Deal" : "Flash Sale",
     image: primaryImage,
     thumbnails,
@@ -309,7 +252,7 @@ export function FlashDealsSection() {
                 <span className="text-[11px] font-bold text-[#6C4CD8] dark:text-[#A78BFA] uppercase tracking-wider">
                   {featuredDeal.category}
                 </span>
-                <Link href={`/products/${featuredDeal.slug}`}>
+                <Link href={`/products/${featuredDeal.id || featuredDeal.slug}`}>
                   <h3 className="text-[16px] sm:text-[17px] font-bold text-[#111827] dark:text-white line-clamp-2 hover:text-[#6C4CD8] transition-colors leading-snug">
                     {featuredDeal.title}
                   </h3>
@@ -338,7 +281,7 @@ export function FlashDealsSection() {
               </div>
 
               <Link
-                href={`/products/${featuredDeal.slug}`}
+                href={`/products/${featuredDeal.id || featuredDeal.slug}`}
                 className="inline-flex items-center gap-1.5 rounded-xl bg-[#111827] dark:bg-[#6C4CD8] text-white px-4 py-2 text-xs font-bold hover:bg-[#6C4CD8] transition-colors shadow-xs"
               >
                 <ShoppingBag className="size-3.5" />
@@ -359,7 +302,7 @@ export function FlashDealsSection() {
                 transition={{ duration: 0.15 }}
                 className="group relative flex flex-col justify-between overflow-hidden rounded-xl border border-[#EDEBF3] dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs hover:shadow-md transition-all hover:border-[#6C4CD8]/40"
               >
-                <Link href={`/products/${item.slug}`} className="flex flex-col h-full justify-between">
+                <Link href={`/products/${item.id || item.slug}`} className="flex flex-col h-full justify-between">
                   {/* Top Image Container - Compact Height */}
                   <div className="relative aspect-[16/10] w-full overflow-hidden bg-[#F8F7FB] dark:bg-zinc-800">
                     <Image
