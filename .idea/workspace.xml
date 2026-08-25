@@ -5,9 +5,15 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="8cf1466c-bfd0-4bf0-ae9f-91da3abd3ed1" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/components/ui/sidebar/nav-topbar.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/ui/sidebar/nav-topbar.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/auth-client.ts" beforeDir="false" afterPath="$PROJECT_DIR$/lib/auth-client.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/redux/service/sellerMessageApi.ts" beforeDir="false" afterPath="$PROJECT_DIR$/lib/redux/service/sellerMessageApi.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/(public)/home/feature/RecommendedSection.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/app/(public)/home/feature/RecommendedSection.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/(public)/layout.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/app/(public)/layout.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/(public)/messages/MessagesClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/app/(public)/messages/MessagesClient.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/globals.css" beforeDir="false" afterPath="$PROJECT_DIR$/app/globals.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/layout/navbar-component-01.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/layout/navbar-component-01.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ui/message/message-center.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/ui/message/message-center.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ui/seller/create-product.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/ui/seller/create-product.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ui/sidebar/nav-sidebar.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/ui/sidebar/nav-sidebar.tsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -27,61 +33,61 @@
   </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.0065953596092663" />
-      <entry key="MS500" value="1.6978009170825314" />
-      <entry key="S2" value="5.359515900114873" />
-      <entry key="S5" value="11.645300833880237" />
-      <entry key="S10" value="19.463709968160863" />
-      <entry key="S30" value="34.60128773743023" />
-      <entry key="S60" value="42.673680638451046" />
-      <entry key="M2" value="48.89142199648453" />
-      <entry key="M5" value="66.02075702183603" />
-      <entry key="M10" value="92.49786753705415" />
-      <entry key="M15" value="110.50591637351663" />
-      <entry key="M30" value="144.3681947302064" />
-      <entry key="H1" value="182.56216284619785" />
-      <entry key="H2" value="243.6877924947148" />
-      <entry key="H4" value="404.8758662713481" />
-      <entry key="D1" value="1123.3277593846612" />
-      <entry key="W1" value="1426.6744570377623" />
+      <entry key="MS100" value="1.233611941297791" />
+      <entry key="MS500" value="2.70869568126939" />
+      <entry key="S2" value="6.973069761941276" />
+      <entry key="S5" value="10.907307070826125" />
+      <entry key="S10" value="13.093316588937228" />
+      <entry key="S30" value="14.935908764515782" />
+      <entry key="S60" value="15.45495372570928" />
+      <entry key="M2" value="15.724138073976313" />
+      <entry key="M5" value="15.945765243131321" />
+      <entry key="M10" value="19.01251079395975" />
+      <entry key="M15" value="28.26278222088865" />
+      <entry key="M30" value="69.33462494146401" />
+      <entry key="H1" value="137.22018655772513" />
+      <entry key="H2" value="227.33446307461935" />
+      <entry key="H4" value="401.2824692272602" />
+      <entry key="D1" value="1156.0840147997321" />
+      <entry key="W1" value="1484.987230588916" />
     </decayedCancelled>
     <decayedSelected>
       <entry key="MS100" value="0.0" />
       <entry key="MS500" value="0.0" />
-      <entry key="S2" value="1.1048557651066821E-148" />
-      <entry key="S5" value="6.566322885537383E-60" />
-      <entry key="S10" value="2.5624837337117584E-30" />
-      <entry key="S30" value="1.3684230231864392E-10" />
-      <entry key="S60" value="1.1697961459957161E-5" />
-      <entry key="M2" value="0.0034202282760010545" />
-      <entry key="M5" value="0.10318629933738058" />
-      <entry key="M10" value="0.3212262432290594" />
-      <entry key="M15" value="0.46903728598882694" />
-      <entry key="M30" value="0.6851037323567332" />
-      <entry key="H1" value="0.856534203978293" />
-      <entry key="H2" value="1.3804726477678901" />
-      <entry key="H4" value="3.4267573450933306" />
-      <entry key="D1" value="12.558200664089735" />
-      <entry key="W1" value="16.26947615852239" />
+      <entry key="S2" value="0.0" />
+      <entry key="S5" value="2.9622408689341974E-263" />
+      <entry key="S10" value="5.4426472133826355E-132" />
+      <entry key="S30" value="1.7590171006985736E-44" />
+      <entry key="S60" value="1.3262794202951955E-22" />
+      <entry key="M2" value="1.151642053893132E-11" />
+      <entry key="M5" value="4.212374801607725E-5" />
+      <entry key="M10" value="0.006490281042971916" />
+      <entry key="M15" value="0.03479437377429129" />
+      <entry key="M30" value="0.1865980760885023" />
+      <entry key="H1" value="0.4470129701178914" />
+      <entry key="H2" value="0.9972763341178131" />
+      <entry key="H4" value="2.91257559297334" />
+      <entry key="D1" value="12.222491028910303" />
+      <entry key="W1" value="16.20662081572476" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="0.11432592578522696" />
-      <entry key="MS500" value="1.1229186711991979" />
-      <entry key="S2" value="5.08628115159211" />
-      <entry key="S5" value="11.511016767445383" />
-      <entry key="S10" value="19.38310895565393" />
-      <entry key="S30" value="34.562013745860405" />
-      <entry key="S60" value="42.650160025825855" />
-      <entry key="M2" value="48.881488422938105" />
-      <entry key="M5" value="66.11619071377034" />
-      <entry key="M10" value="92.81309116361034" />
-      <entry key="M15" value="110.96997898007884" />
-      <entry key="M30" value="145.04994628464667" />
-      <entry key="H1" value="183.41656753121157" />
-      <entry key="H2" value="245.06678844953143" />
-      <entry key="H4" value="408.30128187067226" />
-      <entry key="D1" value="1135.885307178033" />
-      <entry key="W1" value="1442.9438149405285" />
+      <entry key="MS100" value="1.1927790595721777" />
+      <entry key="MS500" value="2.69130153681438" />
+      <entry key="S2" value="6.9612930444872765" />
+      <entry key="S5" value="10.899851101424446" />
+      <entry key="S10" value="13.088835006277327" />
+      <entry key="S30" value="14.934204504067411" />
+      <entry key="S60" value="15.454072057636784" />
+      <entry key="M2" value="15.723689588232642" />
+      <entry key="M5" value="15.94562244754236" />
+      <entry key="M10" value="19.018779051752258" />
+      <entry key="M15" value="28.297124508714806" />
+      <entry key="M30" value="69.52024136635973" />
+      <entry key="H1" value="137.6660375768734" />
+      <entry key="H2" value="228.33064095391026" />
+      <entry key="H4" value="404.1938865673288" />
+      <entry key="D1" value="1168.305867118272" />
+      <entry key="W1" value="1501.1937331269728" />
     </decayedShown>
   </component>
   <component name="ProjectColorInfo">{
@@ -101,7 +107,7 @@
     "RunOnceActivity.git.unshallow": "true",
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
     "codeWithMe.voiceChat.enabledByDefault": "false",
-    "git-widget-placeholder": "Merging Menghor",
+    "git-widget-placeholder": "Menghor",
     "ignore.virus.scanning.warn.message": "true",
     "javascript.preferred.runtime.type.id": "node",
     "js.debugger.nextJs.config.created.client": "true",
@@ -173,7 +179,7 @@
       <workItem from="1787305423507" duration="372000" />
       <workItem from="1787555883943" duration="18007000" />
       <workItem from="1787642035091" duration="4323000" />
-      <workItem from="1787647739860" duration="952000" />
+      <workItem from="1787647739860" duration="4518000" />
     </task>
     <servers />
   </component>

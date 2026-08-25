@@ -157,20 +157,6 @@ export default function Navbar() {
 
             {/* icon buttons & User profile */}
             <div className="flex flex-shrink-0 items-center gap-1.5 sm:gap-2">
-              {/* Seller Dashboard Shortcut if user is a seller */}
-              {isSeller && (
-                <Link
-                  href="/seller-dashboard/home"
-                  aria-label="Seller Dashboard"
-                  title={storeName ? `Seller Dashboard (${storeName})` : "Seller Dashboard"}
-                  className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold text-white transition hover:brightness-105 shadow-xs"
-                  style={{ background: "linear-gradient(90deg, #6C4CD8, #4F35A5)" }}
-                >
-                  <Store size={14} />
-                  <span className="hidden md:inline">{storeName || "My Store"}</span>
-                </Link>
-              )}
-
               {isPendingSeller && !isSeller && (
                 <Link
                   href="/account/seller-application"
@@ -201,25 +187,6 @@ export default function Navbar() {
                         {savedCount}
                       </span>
                     )}
-                  </Link>
-
-                  <Link
-                    href="/messages"
-                    aria-label="Messages"
-                    title="Messages"
-                    className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9 transition hover:scale-105"
-                    style={{ background: "#F1EFFA" }}
-                  >
-                    <MessageSquare size={15} color={BRAND} />
-                  </Link>
-
-                  <Link
-                    href="/orders"
-                    aria-label="Orders"
-                    className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9 transition hover:scale-105"
-                    style={{ background: "#F1EFFA" }}
-                  >
-                    <ShoppingBag size={15} color={BRAND} />
                   </Link>
 
                   <Link
@@ -263,50 +230,59 @@ export default function Navbar() {
                       )}
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56 p-2 rounded-2xl shadow-xl bg-white border border-[#E2DFEC] mt-2">
-                    <DropdownMenuLabel className="font-normal p-2">
-                      <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-bold text-gray-900 truncate">
-                          {session?.user?.name || "My Account"}
-                        </p>
-                        {session?.user?.email && (
-                          <p className="text-xs text-gray-500 truncate">
-                            {session.user.email}
+                  <DropdownMenuContent align="end" sideOffset={10} className="w-72 rounded-2xl border border-[#E2DFEC] bg-white p-2.5 text-[#1A1330] shadow-2xl">
+                    <DropdownMenuLabel className="p-3 font-normal">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-primary/10 text-primary">
+                          {userAvatar ? <img src={userAvatar} alt="" className="size-full object-cover" /> : <User className="size-5" />}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="truncate text-base font-bold text-[#1A1330]">
+                            {session?.user?.name || "My Account"}
                           </p>
-                        )}
+                          {session?.user?.email && <p className="mt-0.5 truncate text-xs text-muted-foreground">{session.user.email}</p>}
+                        </div>
                       </div>
                     </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuGroup>
-                      <DropdownMenuItem asChild className="rounded-xl cursor-pointer">
-                        <Link href="/account" className="flex items-center gap-2 py-2">
-                          <User size={16} className="text-[#6C4CD8]" />
-                          <span>Account Details</span>
+                    <DropdownMenuSeparator className="my-1" />
+                    <DropdownMenuGroup className="space-y-1 py-1">
+                      <DropdownMenuItem asChild className="h-12 cursor-pointer rounded-xl px-3 text-sm font-semibold text-[#1A1330] focus:bg-[#F1EFFA] focus:text-[#6C4CD8]">
+                        <Link href="/account" className="flex w-full items-center gap-3">
+                          <User className="size-[18px] text-primary" />
+                          <span className="text-current">Account Details</span>
                         </Link>
                       </DropdownMenuItem>
 
-                      <DropdownMenuItem asChild className="rounded-xl cursor-pointer">
-                        <Link href="/messages" className="flex items-center gap-2 py-2">
-                          <MessageSquare size={16} className="text-[#6C4CD8]" />
-                          <span>Messages</span>
+                      <DropdownMenuItem asChild className="h-12 cursor-pointer rounded-xl px-3 text-sm font-semibold text-[#1A1330] focus:bg-[#F1EFFA] focus:text-[#6C4CD8]">
+                        <Link href="/messages" className="flex w-full items-center gap-3">
+                          <MessageSquare className="size-[18px] text-primary" />
+                          <span className="text-current">Messages</span>
+                        </Link>
+                      </DropdownMenuItem>
+
+                      <DropdownMenuItem asChild className="h-12 cursor-pointer rounded-xl px-3 text-sm font-semibold text-[#1A1330] focus:bg-[#F1EFFA] focus:text-[#6C4CD8]">
+                        <Link href="/orders" className="flex w-full items-center gap-3">
+                          <ShoppingBag className="size-[18px] text-primary" />
+                          <span className="text-current">Orders</span>
                         </Link>
                       </DropdownMenuItem>
 
                       {isSeller && (
-                        <DropdownMenuItem asChild className="rounded-xl cursor-pointer">
-                          <Link href="/seller-dashboard/home" className="flex items-center gap-2 py-2 text-[#6C4CD8] font-bold">
-                            <Store size={16} />
-                            <span>Seller Dashboard</span>
+                        <DropdownMenuItem asChild className="h-12 cursor-pointer rounded-xl bg-primary/5 px-3 text-sm font-bold text-primary focus:bg-primary/15 focus:text-primary">
+                          <Link href="/seller-dashboard/home" className="flex w-full items-center gap-3">
+                            <Store className="size-[18px]" />
+                            <span className="text-current">Seller Dashboard</span>
                           </Link>
                         </DropdownMenuItem>
                       )}
                     </DropdownMenuGroup>
-                    <DropdownMenuSeparator />
+                    <DropdownMenuSeparator className="my-1" />
                     <DropdownMenuItem
                       onClick={() => logoutFromKeycloak("/")}
-                      className="rounded-xl cursor-pointer py-2 text-rose-600 font-semibold focus:bg-rose-50 focus:text-rose-700"
+                      variant="destructive"
+                      className="h-12 cursor-pointer rounded-xl px-3 text-sm font-bold"
                     >
-                      <LogOut size={16} className="mr-2" />
+                      <LogOut className="mr-1 size-[18px]" />
                       <span>Log Out</span>
                     </DropdownMenuItem>
                   </DropdownMenuContent>

@@ -3,8 +3,9 @@
 import * as React from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, Package, Sparkles } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CURATED_PRODUCTS } from "@/lib/curated-products";
 import { useGetListingsQuery } from "@/lib/api/homeApi";
 import ProductCard from "../ProductCard";
 

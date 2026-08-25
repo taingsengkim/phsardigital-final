@@ -285,4 +285,32 @@
   .dark [data-seller-dashboard] select {
     color: var(--foreground);
   }
+
+  /* The buyer inbox mirrors the seller message center while keeping its
+     buyer-specific conversation logic and store identities. */
+  .dark [data-public-messages] .bg-white {
+    background-color: var(--card) !important;
+  }
+  .dark [data-public-messages] [class*="bg-[#F8F7FC]"],
+  .dark [data-public-messages] [class*="bg-[#F6F5FA]"],
+  .dark [data-public-messages] [class*="bg-[#F3F0FC]"],
+  .dark [data-public-messages] [class*="bg-[#F1EFFA]"] {
+    background-color: var(--muted) !important;
+  }
+  .dark [data-public-messages] [class*="text-[#1A1330]"] {
+    color: var(--foreground) !important;
+  }
+  .dark [data-public-messages] [class*="text-[#8B85A0]"] {
+    color: var(--muted-foreground) !important;
+  }
+  .dark [data-public-messages] [class*="border-[#EDEBF3]"],
+  .dark [data-public-messages] [class*="border-[#E2DFEC]"],
+  .dark [data-public-messages] [class*="ring-[#EDEBF3]"],
+  .dark [data-public-messages] [class*="divide-[#F0EDFB]"] > :not(:last-child) {
+    border-color: var(--border) !important;
+  }
+  .dark [data-public-messages] textarea,
+  .dark [data-public-messages] input {
+    color: var(--foreground);
+  }
 }

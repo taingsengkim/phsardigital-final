@@ -12,8 +12,6 @@ import {
   ChevronDown,
   ImagePlus,
   Info,
-  SlidersHorizontal,
-  Tags,
   Upload,
 } from "lucide-react"
 
@@ -33,7 +31,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useAppDispatch } from "@/lib/hooks"
 import { sellerApi } from "@/lib/api/sellerApi"
 import type { CategoryAttributeDefinition, SellerCategoryTree } from "@/lib/types/seller-product"
-import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 
 const productImageSchema = z.custom<File>(
@@ -195,22 +192,16 @@ function DropZone({
 }
 
 function CategoryAttributeField({ attribute, value, onChange }: { attribute: CategoryAttributeDefinition; value: string; onChange: (value: string) => void }) {
-  const label = (
-    <label className="mb-2 flex items-center gap-2 text-sm font-bold text-foreground">
-      {attribute.label}
-      {attribute.unit && <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">{attribute.unit}</span>}
-      {attribute.required ? <span className="ml-auto text-[10px] font-bold uppercase tracking-wide text-primary">Required</span> : <span className="ml-auto text-[10px] font-medium text-muted-foreground">Optional</span>}
-    </label>
-  )
-  const inputClass = "h-12 w-full rounded-xl border border-border bg-background px-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary/50 focus:ring-4 focus:ring-primary/10"
+  const label = <FieldLabel>{attribute.label}{attribute.required ? " *" : ""}{attribute.unit ? ` (${attribute.unit})` : ""}</FieldLabel>
+  const inputClass = "h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
 
-  if (attribute.dataType === "BOOLEAN") return <div className="rounded-2xl border border-border bg-card p-4">{label}<div className="grid grid-cols-2 gap-2">{[["true", "Yes"], ["false", "No"]].map(([optionValue, optionLabel]) => <button key={optionValue} type="button" onClick={() => onChange(optionValue)} className={cn("h-11 rounded-xl border text-sm font-bold transition", value === optionValue ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground")}>{optionLabel}</button>)}</div></div>
-  if (attribute.dataType === "SELECT") return <div className="rounded-2xl border border-border bg-card p-4">{label}<select value={value} onChange={(event) => onChange(event.target.value)} className={inputClass}><option value="">Select {attribute.label.toLowerCase()}</option>{(attribute.options ?? []).map((option) => <option key={option.uuid ?? option.value} value={option.value}>{option.label || option.value}</option>)}</select></div>
+  if (attribute.dataType === "BOOLEAN") return <div>{label}<select value={value} onChange={(event) => onChange(event.target.value)} className={inputClass}><option value="">Select an option</option><option value="true">Yes</option><option value="false">No</option></select></div>
+  if (attribute.dataType === "SELECT") return <div>{label}<select value={value} onChange={(event) => onChange(event.target.value)} className={inputClass}><option value="">Select {attribute.label.toLowerCase()}</option>{(attribute.options ?? []).map((option) => <option key={option.uuid ?? option.value} value={option.value}>{option.label || option.value}</option>)}</select></div>
   if (attribute.dataType === "MULTI_SELECT") {
     const selected = new Set(value.split(",").filter(Boolean))
-    return <fieldset className="rounded-2xl border border-border bg-card p-4"><legend className="sr-only">{attribute.label}</legend>{label}<div className="flex min-h-12 flex-wrap gap-2">{(attribute.options ?? []).map((option) => <label key={option.uuid ?? option.value} className={cn("cursor-pointer rounded-xl border px-3 py-2 text-sm font-semibold transition", selected.has(option.value) ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground")}><input type="checkbox" checked={selected.has(option.value)} onChange={(event) => { const next = new Set(selected); if (event.target.checked) next.add(option.value); else next.delete(option.value); onChange([...next].join(",")) }} className="sr-only" />{option.label || option.value}</label>)}</div></fieldset>
+    return <fieldset><legend className="mb-2 text-sm font-semibold text-slate-700">{attribute.label}{attribute.required ? " *" : ""}</legend><div className="flex min-h-12 flex-wrap gap-2 rounded-xl border border-slate-200 p-2">{(attribute.options ?? []).map((option) => <label key={option.uuid ?? option.value} className={`cursor-pointer rounded-lg px-3 py-2 text-sm transition ${selected.has(option.value) ? "bg-primary text-primary-foreground" : "bg-slate-100 text-slate-700"}`}><input type="checkbox" checked={selected.has(option.value)} onChange={(event) => { const next = new Set(selected); if (event.target.checked) next.add(option.value); else next.delete(option.value); onChange([...next].join(",")) }} className="sr-only" />{option.label || option.value}</label>)}</div></fieldset>
   }
-  return <div className="rounded-2xl border border-border bg-card p-4">{label}<div className="relative"><input type={attribute.dataType === "NUMBER" ? "number" : "text"} value={value} onChange={(event) => onChange(event.target.value)} placeholder={`Enter ${attribute.label.toLowerCase()}`} className={cn(inputClass, attribute.unit && "pr-16")} />{attribute.unit && <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground">{attribute.unit}</span>}</div></div>
+  return <div>{label}<input type={attribute.dataType === "NUMBER" ? "number" : "text"} value={value} onChange={(event) => onChange(event.target.value)} placeholder={`Enter ${attribute.label.toLowerCase()}`} className={inputClass} /></div>
 }
 
 function CategoryDropdown({ label, placeholder, options, value, disabled, onChange }: { label: string; placeholder: string; options: SellerCategoryTree[]; value?: string; disabled?: boolean; onChange: (uuid: string) => void }) {
@@ -287,14 +278,6 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
     const attributes = grouped.length ? grouped : (attributeSchema?.attributes ?? [])
     return [...attributes].sort((a, b) => (a.groupSortOrder ?? 0) - (b.groupSortOrder ?? 0) || (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
   }, [attributeSchema])
-  const attributeGroups = React.useMemo(() => {
-    const groups = new Map<string, CategoryAttributeDefinition[]>()
-    for (const attribute of categoryAttributes) {
-      const name = attribute.group?.trim() || "Product details"
-      groups.set(name, [...(groups.get(name) ?? []), attribute])
-    }
-    return [...groups.entries()].map(([name, attributes]) => ({ name, attributes }))
-  }, [categoryAttributes])
   const isSubmitting = isCreating || isUpdating
 
   React.useEffect(() => {
@@ -552,53 +535,27 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
           </div>
         </Section>
 
-        <Section title="Category & attributes" color="bg-violet-200">
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.7fr)]">
-            <div>
-              <div className="rounded-2xl border border-border bg-muted/40 p-4">
-                <div className="mb-4 flex items-start gap-3">
-                  <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary"><Tags className="size-5" /></span>
-                  <div><h3 className="text-sm font-bold text-foreground">Product category</h3><p className="mt-1 text-xs leading-5 text-muted-foreground">Choose the closest match. Attributes update automatically.</p></div>
-                </div>
-                <CategoryDropdown label="Category" placeholder={categoriesLoading ? "Loading categories..." : categoriesError ? "Could not load categories" : "Select category"} options={categoryOptions} value={categoryUuid} disabled={categoriesLoading || categoriesError} onChange={(uuid) => { setAttributeValues({}); setValue("categoryUuid", uuid, { shouldDirty: true, shouldValidate: true }) }} />
-                <FieldError message={errors.categoryUuid?.message} />
-              </div>
-            </div>
-
-            <div className="min-w-0">
-              <div className="mb-5 flex items-start justify-between gap-3">
-                <div className="flex items-start gap-3">
-                  <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400"><SlidersHorizontal className="size-5" /></span>
-                  <div><h3 className="text-sm font-bold text-foreground">Product attributes</h3><p className="mt-1 text-xs leading-5 text-muted-foreground">Help buyers filter and understand your product.</p></div>
-                </div>
-                {categoryAttributes.length > 0 && <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold text-primary">{categoryAttributes.length} fields</span>}
-              </div>
-
-              {!attributeCategoryUuid ? (
-                <div className="grid min-h-40 place-items-center rounded-2xl border border-dashed border-border bg-muted/30 px-6 text-center">
-                  <div><SlidersHorizontal className="mx-auto size-7 text-muted-foreground/60" /><p className="mt-3 text-sm font-bold text-foreground">Select a category first</p><p className="mt-1 text-xs text-muted-foreground">Relevant attributes such as brand, material, color, or size will appear here.</p></div>
-                </div>
-              ) : attributesLoading ? (
-                <div className="flex min-h-40 items-center justify-center gap-3 rounded-2xl bg-muted/40 px-4 text-sm text-muted-foreground"><span className="size-4 animate-spin rounded-full border-2 border-primary/25 border-t-primary" />Loading attributes...</div>
-              ) : attributesError ? (
-                <div className="flex min-h-40 flex-col items-center justify-center gap-3 rounded-2xl border border-amber-500/25 bg-amber-500/10 px-4 text-center text-sm text-amber-700 dark:text-amber-300"><span>We could not load attributes for this category.</span><button type="button" onClick={() => refetchAttributes()} className="rounded-lg bg-amber-700 px-4 py-2 font-semibold text-white hover:bg-amber-800">Try again</button></div>
-              ) : attributeGroups.length === 0 ? (
-                <div className="grid min-h-40 place-items-center rounded-2xl border border-dashed border-border bg-muted/30 px-6 text-center"><div><p className="text-sm font-bold text-foreground">No extra attributes needed</p><p className="mt-1 text-xs text-muted-foreground">This category only requires the basic product details.</p></div></div>
-              ) : (
-                <div className="space-y-6">
-                  {attributeGroups.map((group) => (
-                    <fieldset key={group.name}>
-                      <legend className="mb-3 text-xs font-black uppercase tracking-[0.14em] text-muted-foreground">{group.name}</legend>
-                      <div className="grid gap-3 md:grid-cols-2">
-                        {group.attributes.map((attribute) => <CategoryAttributeField key={attribute.uuid || attribute.code} attribute={attribute} value={attributeValues[attribute.code] ?? ""} onChange={(value) => setAttributeValues((current) => ({ ...current, [attribute.code]: value }))} />)}
-                      </div>
-                    </fieldset>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+        <Section title="Category" color="bg-violet-200">
+          <CategoryDropdown label="Category" placeholder={categoriesLoading ? "Loading categories..." : categoriesError ? "Could not load categories" : "Select category"} options={categoryOptions} value={categoryUuid} disabled={categoriesLoading || categoriesError} onChange={(uuid) => { setAttributeValues({}); setValue("categoryUuid", uuid, { shouldDirty: true, shouldValidate: true }) }} />
+          <p className="mt-3 text-xs text-slate-500">Choose the most specific category so the correct product attributes can load.</p>
+          <FieldError message={errors.categoryUuid?.message} />
         </Section>
+
+        {attributeCategoryUuid && (attributesLoading || attributesError || categoryAttributes.length > 0) && (
+          <Section title={`${attributeSchema?.categoryName || "Category"} attributes`} color="bg-fuchsia-200">
+            {attributesLoading ? (
+              <div className="flex items-center gap-3 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-500"><span className="size-4 animate-spin rounded-full border-2 border-primary/25 border-t-primary" />Loading category attributes...</div>
+            ) : attributesError ? (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"><span>The category service is taking too long to respond.</span><button type="button" onClick={() => refetchAttributes()} className="rounded-lg bg-amber-700 px-4 py-2 font-semibold text-white hover:bg-amber-800">Try again</button></div>
+            ) : (
+              <div className="grid gap-5 md:grid-cols-2">
+                {categoryAttributes.map((attribute) => (
+                  <CategoryAttributeField key={attribute.uuid || attribute.code} attribute={attribute} value={attributeValues[attribute.code] ?? ""} onChange={(value) => setAttributeValues((current) => ({ ...current, [attribute.code]: value }))} />
+                ))}
+              </div>
+            )}
+          </Section>
+        )}
 
         {isEditing && (
           <Section title="Product status" color="bg-amber-200">

@@ -28,6 +28,7 @@ import {
   useSendConversationMessageMutation,
 } from "@/lib/redux/service/sellerMessageApi"
 import { useMessageWebSocket } from "@/lib/hooks/use-message-websocket"
+import { useStoreProfiles } from "@/lib/hooks/use-store-profiles"
 import type { ConversationMessage } from "@/lib/types/seller-message"
 
 const PAGE_SIZE = 30
@@ -160,7 +161,7 @@ function CustomerAvatar({
   )
 }
 
-export function MessageCenter() {
+export function MessageCenter({ audience = "seller" }: { audience?: "seller" | "buyer" }) {
   const connectionState = useMessageWebSocket()
   const {
     data: conversations = [],
@@ -176,6 +177,7 @@ export function MessageCenter() {
   const [query, setQuery] = React.useState("")
   const [draft, setDraft] = React.useState("")
   const [attachment, setAttachment] = React.useState<File | null>(null)
+  const [ownSenderIds, setOwnSenderIds] = React.useState<Set<string>>(() => new Set())
   const [isUploading, setIsUploading] = React.useState(false)
   const [isRecording, setIsRecording] = React.useState(false)
   const [recordingSeconds, setRecordingSeconds] = React.useState(0)
@@ -324,11 +326,14 @@ export function MessageCenter() {
     setDraft("")
     stickToBottom.current = true
     try {
-      if (body) await sendMessage({ conversationUuid: activeId, body }).unwrap()
+      if (body) {
+        const sent = await sendMessage({ conversationUuid: activeId, body }).unwrap()
+        if (sent.senderId) setOwnSenderIds((current) => new Set(current).add(sent.senderId))
+      }
       if (pendingFile) {
         setIsUploading(true)
         const url = await uploadAttachment(pendingFile)
-        await sendMessage({
+        const sent = await sendMessage({
           conversationUuid: activeId,
           body: `${ATTACHMENT_PREFIX}${JSON.stringify({
             name: pendingFile.name,
@@ -336,6 +341,7 @@ export function MessageCenter() {
             mimeType: pendingFile.type,
           })}`,
         }).unwrap()
+        if (sent.senderId) setOwnSenderIds((current) => new Set(current).add(sent.senderId))
       }
       setAttachment(null)
     } catch (error) {
@@ -348,24 +354,34 @@ export function MessageCenter() {
     }
   }
 
+  const otherUserIds = React.useMemo(() => conversations.map((conversation) => conversation.otherUserId), [conversations])
+  const storeProfiles = useStoreProfiles(audience === "buyer" ? otherUserIds : [])
+  const identityOf = React.useCallback((conversation?: (typeof conversations)[number]) => {
+    const store = conversation && audience === "buyer" ? storeProfiles[conversation.otherUserId] : undefined
+    return {
+      name: store?.businessName || conversation?.otherUserName || (audience === "buyer" ? "Store" : "Customer"),
+      avatar: store?.logoUri || conversation?.otherUserAvatar,
+    }
+  }, [audience, storeProfiles])
+
   const needle = query.trim().toLowerCase()
   const visibleConversations = needle
     ? conversations.filter((item) =>
-        (item.otherUserName ?? "").toLowerCase().includes(needle),
+        identityOf(item).name.toLowerCase().includes(needle),
       )
     : conversations
 
-  const customerName = active?.otherUserName || "Customer"
+  const customerName = identityOf(active).name
   const showThread = mobilePane === "thread"
   const composerBusy = !activeId || isUploading || isRecording
 
   return (
     <div className="min-h-screen bg-background p-4 sm:p-6">
-      <div className="relative flex h-[calc(100dvh-8.5rem)] min-h-[460px] w-full overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      <div className="relative flex h-[calc(100dvh-8.5rem)] min-h-[460px] w-full min-w-0 overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
         {/* ── LEFT: customer threads ── */}
         <aside
           className={cn(
-            "h-full w-full shrink-0 flex-col overflow-hidden border-border md:flex md:w-[320px] md:border-r",
+            "h-full min-h-0 w-full shrink-0 flex-col overflow-hidden border-border md:flex md:w-[320px] md:border-r",
             showThread ? "hidden" : "flex",
           )}
         >
@@ -384,13 +400,13 @@ export function MessageCenter() {
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search customers…"
+                placeholder={audience === "buyer" ? "Search stores…" : "Search customers…"}
                 className="h-10 w-full rounded-xl bg-muted pl-9 pr-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/25"
               />
             </label>
           </div>
 
-          <div className="flex-1 divide-y divide-border overflow-y-auto">
+          <div className="min-h-0 flex-1 divide-y divide-border overflow-y-auto overscroll-contain">
             {conversationsLoading ? (
               <div className="flex justify-center py-14">
                 <Loader2 className="size-5 animate-spin text-primary" />
@@ -409,8 +425,10 @@ export function MessageCenter() {
             ) : visibleConversations.length === 0 ? (
               <p className="px-6 py-14 text-center text-xs leading-relaxed text-muted-foreground">
                 {conversations.length === 0
-                  ? "No messages yet. When a buyer contacts your shop, the conversation appears here."
-                  : "No customers match your search."}
+                  ? audience === "buyer"
+                    ? "No messages yet. Open a store or product to contact a seller."
+                    : "No messages yet. When a buyer contacts your shop, the conversation appears here."
+                  : audience === "buyer" ? "No stores match your search." : "No customers match your search."}
               </p>
             ) : (
               visibleConversations.map((conversation) => {
@@ -426,8 +444,8 @@ export function MessageCenter() {
                     )}
                   >
                     <CustomerAvatar
-                      name={conversation.otherUserName}
-                      avatar={conversation.otherUserAvatar}
+                      name={identityOf(conversation).name}
+                      avatar={identityOf(conversation).avatar}
                       size={40}
                     />
                     <div className="min-w-0 flex-1">
@@ -438,7 +456,7 @@ export function MessageCenter() {
                             isActive ? "text-primary" : "text-foreground",
                           )}
                         >
-                          {conversation.otherUserName || "Customer"}
+                          {identityOf(conversation).name}
                         </strong>
                         <span className="shrink-0 text-[10px] text-muted-foreground">
                           {threadStamp(conversation.lastMessageAt)}
@@ -470,7 +488,7 @@ export function MessageCenter() {
         {/* ── RIGHT: active conversation ── */}
         <div
           className={cn(
-            "h-full w-full min-w-0 flex-1 flex-col overflow-hidden bg-muted/30 md:flex",
+            "h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden bg-muted/30 md:flex",
             showThread ? "flex" : "hidden",
           )}
         >
@@ -487,8 +505,8 @@ export function MessageCenter() {
             {active && (
               <>
                 <CustomerAvatar
-                  name={active.otherUserName}
-                  avatar={active.otherUserAvatar}
+                  name={identityOf(active).name}
+                  avatar={identityOf(active).avatar}
                   size={40}
                 />
                 <div className="min-w-0">
@@ -530,7 +548,7 @@ export function MessageCenter() {
           <div
             ref={logRef}
             onScroll={handleLogScroll}
-            className="flex-1 space-y-3 overflow-y-auto p-4 sm:p-6"
+            className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4 sm:p-6"
           >
             {!activeId ? (
               <p className="pt-24 text-center text-sm text-muted-foreground">
@@ -568,8 +586,14 @@ export function MessageCenter() {
                 )}
 
                 {messages.map((message, index) => {
-                  const fromCustomer = message.senderId === active?.otherUserId
                   const isPending = message.senderId === PENDING_SENDER_ID
+                  const sentByKnownCurrentUser = ownSenderIds.has(message.senderId)
+                  const sentByOtherParticipant = message.senderId === active?.otherUserId
+                  // Alignment is relative to the viewer: their own messages
+                  // are right, and the conversation's other participant is left.
+                  const alignLeft = isPending || sentByKnownCurrentUser
+                    ? false
+                    : sentByOtherParticipant
                   const file = parseAttachment(message.body)
                   const isImage = Boolean(file?.mimeType.startsWith("image/"))
                   const showDay =
@@ -589,7 +613,7 @@ export function MessageCenter() {
                       <div
                         className={cn(
                           "flex max-w-[85%] flex-col sm:max-w-[70%]",
-                          fromCustomer
+                          alignLeft
                             ? "mr-auto items-start"
                             : "ml-auto items-end",
                         )}
@@ -602,7 +626,7 @@ export function MessageCenter() {
                               ? "overflow-hidden"
                               : cn(
                                   "px-4 py-2.5 shadow-sm",
-                                  fromCustomer
+                                  alignLeft
                                     ? "rounded-tl-none border border-border bg-card text-foreground"
                                     : "rounded-tr-none bg-primary text-primary-foreground",
                                 ),
@@ -804,8 +828,8 @@ export function MessageCenter() {
 
             <div className="flex flex-col items-center text-center">
               <CustomerAvatar
-                name={active.otherUserName}
-                avatar={active.otherUserAvatar}
+                name={identityOf(active).name}
+                avatar={identityOf(active).avatar}
                 size={88}
               />
               <h3 className="mt-4 text-lg font-bold text-foreground">
@@ -824,7 +848,7 @@ export function MessageCenter() {
                   <UserRound className="size-4" />
                 </span>
                 <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">Customer ID</p>
+                  <p className="text-xs text-muted-foreground">{audience === "buyer" ? "Store ID" : "Customer ID"}</p>
                   <p
                     className="truncate text-sm font-medium text-foreground"
                     title={active.otherUserId}
@@ -840,7 +864,7 @@ export function MessageCenter() {
                 <div>
                   <p className="text-xs text-muted-foreground">Connection</p>
                   <p className="text-sm font-medium text-foreground">
-                    Phsar Digital customer
+                    {audience === "buyer" ? "Phsar Digital seller" : "Phsar Digital customer"}
                   </p>
                 </div>
               </div>

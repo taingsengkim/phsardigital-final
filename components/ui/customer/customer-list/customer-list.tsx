@@ -54,9 +54,9 @@ export function CustomerList() {
         <div className="min-w-[720px]">
           <div className="grid grid-cols-[42px_minmax(220px,1.25fr)_minmax(230px,1.3fr)_120px_120px_100px_70px] items-center border-b border-[#eceef0] pb-[14px] text-[11px] font-medium text-[#777f89]"><Checkbox checked={allSelected} onChange={toggleAll} label="Select all customers" /><span>Name</span><span>Email</span><span>Purchase</span><span>Comments</span><span>Likes</span><span className="text-center">Actions</span></div>
           {visible.map((customer) => (
-            <div key={customer.id} className={cn("grid min-h-[76px] grid-cols-[42px_minmax(220px,1.25fr)_minmax(230px,1.3fr)_120px_120px_100px_70px] items-center border-b border-border px-0 py-2 last:border-0", selected.has(customer.id) && "my-1 rounded-[9px] border-b-0 bg-primary/10 px-[10px] text-foreground")}>
+            <div key={customer.id} className={cn("grid min-h-[64px] grid-cols-[42px_minmax(220px,1.25fr)_minmax(230px,1.3fr)_120px_120px_100px_70px] items-center border-b border-border px-0 py-1 last:border-0", selected.has(customer.id) && "my-1 rounded-[9px] border-b-0 bg-primary/10 px-[10px] text-foreground")}>
               <Checkbox checked={selected.has(customer.id)} onChange={() => toggle(customer.id)} label={`Select ${customer.name}`} />
-              <div className="flex items-center gap-[14px]"><Image src={customer.avatar} alt="" width={48} height={48} className="size-[48px] rounded-full object-cover" /><div><p className="text-[13px] font-semibold">{customer.name}</p><p className="mt-[3px] text-[11px] text-[#858c95]">{customer.phone}</p></div></div>
+              <div className="flex items-center gap-3"><Image src={customer.avatar} alt="" width={40} height={40} className="size-10 rounded-full object-cover" /><div><p className="text-[13px] font-semibold">{customer.name}</p><p className="mt-0.5 text-[11px] text-[#858c95]">{customer.phone}</p></div></div>
               <p className="truncate pr-[16px] text-[12px] text-[#66707a]">{customer.email}</p>
               <span><b className="rounded-[6px] bg-secondary px-[8px] py-[5px] text-[12px] text-secondary-foreground">4</b></span><b className="text-[12px] text-primary">8</b><b className="text-[12px] text-primary">16</b>
               <DropdownMenu>

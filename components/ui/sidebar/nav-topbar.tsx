@@ -300,9 +300,9 @@ export function NavTopbar() {
             <Button
               variant="ghost"
               aria-label="Open seller account menu"
-              className="h-11 gap-1 rounded-full px-1.5 hover:bg-primary/10"
+              className="h-12 gap-1.5 rounded-full px-2 hover:bg-primary/10"
             >
-              <Avatar className="size-9 border border-[#e4dacd]">
+              <Avatar className="size-10 border border-[#e4dacd]">
                 {userAvatar ? (
                   <AvatarImage src={userAvatar} alt={displayName} />
                 ) : null}
@@ -315,41 +315,41 @@ export function NavTopbar() {
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="end"
-            className="w-60 rounded-2xl p-2 shadow-xl"
+            className="w-72 rounded-2xl p-3 shadow-xl"
           >
-            <DropdownMenuLabel className="p-2 font-normal">
-              <p className="text-sm font-bold leading-none">{displayName}</p>
+            <DropdownMenuLabel className="px-3 py-2.5 font-normal">
+              <p className="text-base font-bold leading-none">{displayName}</p>
               {userEmail && (
-                <p className="mt-1 truncate text-xs text-muted-foreground">
+                <p className="mt-1.5 truncate text-sm text-muted-foreground">
                   {userEmail}
                 </p>
               )}
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild className="cursor-pointer rounded-xl">
+            <DropdownMenuItem asChild className="h-11 cursor-pointer rounded-xl px-3 text-sm">
               <Link href="/account">
-                <User className="mr-2 size-4" />
+                <User className="mr-2.5 size-[18px]" />
                 Profile Details
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem asChild className="cursor-pointer rounded-xl">
+            <DropdownMenuItem asChild className="h-11 cursor-pointer rounded-xl px-3 text-sm">
               <Link href="/subscriptions">
-                <Sparkles className="mr-2 size-4 text-yellow-500" />
+                <Sparkles className="mr-2.5 size-[18px] text-yellow-500" />
                 Subscription Plans
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem asChild className="cursor-pointer rounded-xl">
+            <DropdownMenuItem asChild className="h-11 cursor-pointer rounded-xl px-3 text-sm">
               <Link href="/seller-dashboard/shop">
-                <Settings className="mr-2 size-4" />
+                <Settings className="mr-2.5 size-[18px]" />
                 Settings
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => logoutFromKeycloak("/")}
-              className="cursor-pointer rounded-xl font-semibold text-red-600 focus:bg-red-50 focus:text-red-700"
+              className="h-11 cursor-pointer rounded-xl px-3 text-sm font-semibold text-red-600 focus:bg-red-50 focus:text-red-700"
             >
-              <LogOut className="mr-2 size-4" />
+              <LogOut className="mr-2.5 size-[18px]" />
               Log out
             </DropdownMenuItem>
           </DropdownMenuContent>
