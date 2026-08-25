@@ -129,16 +129,6 @@ export function SellerSidebar() {
             </button>
             {inventoryOpen && <Submenu links={inventory} />}
             <Link
-              href="/seller-dashboard/shop"
-              className={cn(
-                itemClass,
-                active("/seller-dashboard/shop") && activeClass,
-              )}
-            >
-              <Store strokeWidth={1.8} />
-              <span className="min-w-0 group-data-[collapsible=icon]:hidden"><span className="block text-[15px] font-semibold leading-5">Shop</span><span className="block truncate text-[11px] font-medium text-[#94a4bc]">Store settings</span></span>
-            </Link>
-            <Link
               href="/seller-dashboard/quick-order"
               className={cn(
                 itemClass,
@@ -187,6 +177,16 @@ export function SellerSidebar() {
                   {unreadMessages > 99 ? "99+" : unreadMessages}
                 </span>
               )}
+            </Link>
+            <Link
+              href="/seller-dashboard/shop"
+              className={cn(
+                itemClass,
+                active("/seller-dashboard/shop") && activeClass,
+              )}
+            >
+              <Store strokeWidth={1.8} />
+              <span className="min-w-0 group-data-[collapsible=icon]:hidden"><span className="block text-[15px] font-semibold leading-5">Shop</span><span className="block truncate text-[11px] font-medium text-[#94a4bc]">Store settings</span></span>
             </Link>
           </nav>
         </SidebarContent>

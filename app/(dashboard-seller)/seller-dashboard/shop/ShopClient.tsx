@@ -13,6 +13,7 @@ import {
   MapPin,
   MessageCircle,
   Package,
+  Phone,
   ShieldAlert,
   Star,
   Store,
@@ -29,11 +30,11 @@ import ShopLocationSection from "./sections/ShopLocationSection";
 
 type Tab = "details" | "contact" | "location";
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: "details", label: "Shop details" },
-  { id: "contact", label: "Contact" },
-  { id: "location", label: "Location" },
-];
+const TABS = [
+  { id: "details", label: "Shop details", description: "Brand and description", icon: Store },
+  { id: "contact", label: "Contact", description: "Phone and social links", icon: Phone },
+  { id: "location", label: "Location", description: "Address and map pin", icon: MapPin },
+] satisfies { id: Tab; label: string; description: string; icon: typeof Store }[];
 
 const BUSINESS_TYPE_LABELS: Record<string, string> = {
   INDIVIDUAL: "Individual seller",
@@ -120,10 +121,17 @@ export default function ShopClient() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl">
+    <main className="min-h-[calc(100vh-70px)] bg-[#f7f8fb] px-4 py-6 dark:bg-background sm:px-6 lg:px-8 lg:py-8">
+      <div className="mx-auto w-full max-w-7xl">
+        <div className="mb-6">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Storefront settings</p>
+          <h1 className="mt-1.5 text-2xl font-bold tracking-tight text-[#1A1330] dark:text-foreground sm:text-3xl">Manage your shop</h1>
+          <p className="mt-1.5 text-sm text-[#77728a] dark:text-muted-foreground">Keep your public shop information accurate and up to date.</p>
+        </div>
       {/* ── overview header ── */}
-      <header className="overflow-hidden rounded-2xl border border-[#EDEBF3] bg-white">
-        <div className="flex flex-col gap-5 p-6 sm:flex-row sm:items-start">
+      <header className="overflow-hidden rounded-[24px] border border-[#e8e5f0] bg-white shadow-[0_12px_35px_rgba(43,35,74,0.06)] dark:bg-card">
+        <div className="h-2 bg-gradient-to-r from-[#6C4CD8] via-[#8c68f5] to-[#c4b3ff]" />
+        <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:p-7">
           {profile.logoUri ? (
             <Image
               src={profile.logoUri}
@@ -131,11 +139,11 @@ export default function ShopClient() {
               width={80}
               height={80}
               unoptimized
-              className="size-20 shrink-0 rounded-2xl border border-[#E2DFEC] object-cover"
+              className="size-24 shrink-0 rounded-[22px] border-4 border-white object-cover shadow-lg ring-1 ring-[#E2DFEC]"
             />
           ) : (
             <div
-              className="flex size-20 shrink-0 items-center justify-center rounded-2xl text-3xl font-black text-white"
+              className="flex size-24 shrink-0 items-center justify-center rounded-[22px] border-4 border-white text-4xl font-black text-white shadow-lg ring-1 ring-[#E2DFEC]"
               style={{ background: "linear-gradient(135deg,#8267E8,#6C4CD8)" }}
               aria-hidden="true"
             >
@@ -145,9 +153,9 @@ export default function ShopClient() {
 
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2.5">
-              <h1 className="text-2xl font-bold text-[#1A1330]">
+              <h2 className="text-2xl font-bold text-[#1A1330] dark:text-foreground sm:text-[28px]">
                 {profile.businessName || "Untitled shop"}
-              </h1>
+              </h2>
               {suspended ? (
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FEF2F2] px-3 py-1 text-xs font-bold text-red-600">
                   <ShieldAlert size={13} />
@@ -199,7 +207,7 @@ export default function ShopClient() {
 
           <Link
             href={`/stores/${profile.id}`}
-            className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-[#E2DFEC] px-4 py-2.5 text-sm font-bold text-[#6C4CD8] transition hover:bg-[#F1EFFA]"
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#f2effc] px-4 py-3 text-sm font-bold text-[#6C4CD8] transition hover:bg-[#e9e3fb]"
           >
             <ExternalLink size={15} />
             View public page
@@ -224,7 +232,7 @@ export default function ShopClient() {
         )}
 
         {/* stats */}
-        <div className="grid grid-cols-3 divide-x divide-[#EDEBF3] border-t border-[#EDEBF3]">
+        <div className="grid grid-cols-1 divide-y divide-[#EDEBF3] border-t border-[#EDEBF3] sm:grid-cols-3 sm:divide-x sm:divide-y-0">
           <Stat
             icon={Package}
             tone="bg-[#F1EFFA] text-[#6C4CD8]"
@@ -248,11 +256,13 @@ export default function ShopClient() {
 
       {/* ── tabs ── */}
       <div
-        className="mt-6 flex gap-1 rounded-2xl bg-[#F0EDFB] p-1.5"
+        className="mt-6 grid gap-2 rounded-[20px] border border-[#e8e5f0] bg-white p-2 shadow-sm dark:bg-card sm:grid-cols-3"
         role="tablist"
         aria-label="Shop settings"
       >
-        {TABS.map((t) => (
+        {TABS.map((t) => {
+          const Icon = t.icon;
+          return (
           <button
             key={t.id}
             type="button"
@@ -260,15 +270,22 @@ export default function ShopClient() {
             aria-selected={tab === t.id}
             onClick={() => setTab(t.id)}
             className={cn(
-              "flex-1 rounded-xl px-2 py-2.5 text-sm font-bold transition-all duration-200",
+              "flex items-center gap-3 rounded-2xl px-4 py-3 text-left transition-all duration-200",
               tab === t.id
-                ? "bg-white text-[#6C4CD8] shadow-sm"
-                : "text-[#8B85A0] hover:text-[#6C4CD8]"
+                ? "bg-[#6C4CD8] text-white shadow-md shadow-[#6C4CD8]/20"
+                : "text-[#676178] hover:bg-[#f6f3fd] hover:text-[#6C4CD8]"
             )}
           >
-            {t.label}
+            <span className={cn("grid size-10 shrink-0 place-items-center rounded-xl", tab === t.id ? "bg-white/15" : "bg-[#f1edfb] text-[#6C4CD8]")}>
+              <Icon size={18} />
+            </span>
+            <span>
+              <span className="block text-sm font-bold">{t.label}</span>
+              <span className={cn("mt-0.5 block text-xs font-normal", tab === t.id ? "text-white/75" : "text-[#9690a6]")}>{t.description}</span>
+            </span>
           </button>
-        ))}
+          );
+        })}
       </div>
 
       <div className="mt-6">
@@ -276,7 +293,8 @@ export default function ShopClient() {
         {tab === "contact" && <ShopContactSection />}
         {tab === "location" && <ShopLocationSection />}
       </div>
-    </div>
+      </div>
+    </main>
   );
 }
 
