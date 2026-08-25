@@ -174,6 +174,7 @@
     background-color: var(--muted) !important;
   }
   .dark [data-seller-dashboard] .text-gray-900,
+  .dark [data-seller-dashboard] .text-gray-950,
   .dark [data-seller-dashboard] .text-slate-900,
   .dark [data-seller-dashboard] .text-slate-950,
   .dark [data-seller-dashboard] .text-black {
@@ -213,12 +214,20 @@
   }
   .dark [data-seller-dashboard] [class*="bg-[#f4f4f5]"],
   .dark [data-seller-dashboard] [class*="bg-[#f5f5f6]"],
+  .dark [data-seller-dashboard] [class*="bg-[#f5f6f7]"],
+  .dark [data-seller-dashboard] [class*="bg-[#F0EDFB]"],
+  .dark [data-seller-dashboard] [class*="bg-[#F1EFFA]"],
+  .dark [data-seller-dashboard] [class*="bg-[#F4F2FA]"],
+  .dark [data-seller-dashboard] [class*="bg-[#F8F7FB]"],
   .dark [data-seller-dashboard] [class*="bg-[#f0f0f0]"] {
     background-color: var(--muted) !important;
   }
   .dark [data-seller-dashboard] [class*="text-[#27282b]"],
   .dark [data-seller-dashboard] [class*="text-[#25272a]"],
-  .dark [data-seller-dashboard] [class*="text-[#34383d]"] {
+  .dark [data-seller-dashboard] [class*="text-[#34383d]"],
+  .dark [data-seller-dashboard] [class*="text-[#1A1330]"],
+  .dark [data-seller-dashboard] [class*="text-[#292522]"],
+  .dark [data-seller-dashboard] [class*="text-[#352b27]"] {
     color: var(--foreground) !important;
   }
   .dark [data-seller-dashboard] [class*="text-[#777f89]"],
@@ -229,14 +238,45 @@
   .dark [data-seller-dashboard] [class*="text-[#69727c]"],
   .dark [data-seller-dashboard] [class*="text-[#75808a]"],
   .dark [data-seller-dashboard] [class*="text-[#757d87]"],
-  .dark [data-seller-dashboard] [class*="text-[#7b858e]"] {
+  .dark [data-seller-dashboard] [class*="text-[#7b858e]"],
+  .dark [data-seller-dashboard] [class*="text-[#515761]"],
+  .dark [data-seller-dashboard] [class*="text-[#59534c]"],
+  .dark [data-seller-dashboard] [class*="text-[#596273]"],
+  .dark [data-seller-dashboard] [class*="text-[#5A5470]"],
+  .dark [data-seller-dashboard] [class*="text-[#5e5851]"],
+  .dark [data-seller-dashboard] [class*="text-[#657184]"],
+  .dark [data-seller-dashboard] [class*="text-[#68717d]"],
+  .dark [data-seller-dashboard] [class*="text-[#6B6580]"],
+  .dark [data-seller-dashboard] [class*="text-[#77746f]"],
+  .dark [data-seller-dashboard] [class*="text-[#89847e]"],
+  .dark [data-seller-dashboard] [class*="text-[#8B85A0]"],
+  .dark [data-seller-dashboard] [class*="text-[#8D86A8]"],
+  .dark [data-seller-dashboard] [class*="text-[#B5B0CA]"] {
+    color: var(--muted-foreground) !important;
+  }
+  .dark [data-seller-dashboard] [class*="placeholder:text-[#8d877f]"]::placeholder,
+  .dark [data-seller-dashboard] [class*="placeholder:text-[#B5B0CA]"]::placeholder {
     color: var(--muted-foreground) !important;
   }
   .dark [data-seller-dashboard] [class*="border-[#eceef0]"],
   .dark [data-seller-dashboard] [class*="border-[#e1e3e6]"],
   .dark [data-seller-dashboard] [class*="border-[#e4e5e7]"],
   .dark [data-seller-dashboard] [class*="border-[#dfe2e5]"],
-  .dark [data-seller-dashboard] [class*="border-[#c7ccd1]"] {
+  .dark [data-seller-dashboard] [class*="border-[#c7ccd1]"],
+  .dark [data-seller-dashboard] [class*="border-[#d9dde2]"],
+  .dark [data-seller-dashboard] [class*="border-[#dde1e6]"],
+  .dark [data-seller-dashboard] [class*="border-[#e3e5e8]"],
+  .dark [data-seller-dashboard] [class*="border-[#e4dacd]"],
+  .dark [data-seller-dashboard] [class*="border-[#e4e7eb]"],
+  .dark [data-seller-dashboard] [class*="border-[#eadfd3]"],
+  .dark [data-seller-dashboard] [class*="border-[#ece6db]"],
+  .dark [data-seller-dashboard] [class*="border-[#E2DFEC]"],
+  .dark [data-seller-dashboard] [class*="border-[#EDEBF3]"],
+  .dark [data-seller-dashboard] [class*="border-[#eeeeee]"],
+  .dark [data-seller-dashboard] [class*="border-[#f0f0f0]"] {
+    border-color: var(--border) !important;
+  }
+  .dark [data-seller-dashboard] [class*="divide-[#EDEBF3]"] > :not(:last-child) {
     border-color: var(--border) !important;
   }
   .dark [data-seller-dashboard] input,
