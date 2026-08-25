@@ -582,7 +582,6 @@ export default function DashboardSeller() {
                 src={profile.logoUri}
                 alt={profile.businessName || "Store"}
                 fill
-                unoptimized
                 className="object-cover"
               />
             ) : (
@@ -744,7 +743,6 @@ export default function DashboardSeller() {
                             alt={review.buyer.displayName || "Buyer"}
                             width={36}
                             height={36}
-                            unoptimized
                             className="size-9 rounded-full object-cover"
                           />
                         ) : (

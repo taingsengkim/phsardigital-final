@@ -99,7 +99,6 @@ function ProductRailCard({ item }: { item: RailItem }) {
               alt=""
               width={320}
               height={320}
-              unoptimized
               className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.06]"
             />
           ) : (

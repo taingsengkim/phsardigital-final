@@ -1701,7 +1701,7 @@ export default function CheckoutClient() {
                           alt={item.title}
                           fill
                           className="object-cover"
-                          unoptimized={item.image.startsWith("http")}
+
                         />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center bg-[#1A1330] text-[#6C4CD8]">
@@ -1897,7 +1897,7 @@ export default function CheckoutClient() {
                             alt={item.title}
                             fill
                             className="object-cover"
-                            unoptimized={item.image.startsWith("http")}
+
                           />
                         ) : (
                           <div className="flex h-full w-full items-center justify-center text-[#6C4CD8]">

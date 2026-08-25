@@ -121,7 +121,7 @@ export default function CartPageClient() {
                   <div className="flex items-center gap-3">
                     {logoUri ? (
                       <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-[#EDEBF3]">
-                        <Image src={logoUri} alt={storeName} fill className="object-cover" unoptimized={logoUri.startsWith("http")} />
+                        <Image src={logoUri} alt={storeName} fill className="object-cover" />
                       </div>
                     ) : (
                       <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#6C4CD8] text-white shadow-xs">
@@ -153,7 +153,7 @@ export default function CartPageClient() {
                     return (
                       <div key={item.uuid || itemIdx} className="flex items-center gap-5 pt-4 first:pt-0">
                         <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-[#F5F3FA] border border-[#EDEBF3]">
-                          <Image src={img} alt={item.title || "Product"} fill className="object-cover" unoptimized={img.startsWith("http")} />
+                          <Image src={img} alt={item.title || "Product"} fill className="object-cover" />
                         </div>
 
                         <div className="flex-1 min-w-0">

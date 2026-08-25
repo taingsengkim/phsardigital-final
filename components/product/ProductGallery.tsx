@@ -138,7 +138,6 @@ export default function ProductGallery({
           src={active.url}
           alt={active.alt}
           fill
-          unoptimized
           priority
           sizes="(max-width: 1024px) 100vw, 480px"
           className="object-contain transition-transform duration-500 group-hover:scale-[1.04]"
@@ -209,7 +208,6 @@ export default function ProductGallery({
                 src={image.url}
                 alt=""
                 fill
-                unoptimized
                 sizes="80px"
                 className="object-cover"
               />
@@ -237,7 +235,6 @@ export default function ProductGallery({
                 alt={active.alt}
                 width={1200}
                 height={1200}
-                unoptimized
                 className="max-h-[88vh] w-auto object-contain"
               />
   

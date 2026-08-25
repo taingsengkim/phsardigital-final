@@ -195,7 +195,7 @@ export default function ProductsClient() {
                       alt={title}
                       fill
                       className="object-cover object-center transition-transform duration-300 group-hover:scale-105"
-                      unoptimized={Boolean(image?.startsWith("http"))}
+
                     />
                     {discountPercent && (
                       <span className="absolute left-1.5 top-1.5 rounded bg-[#6C4CD8] px-1.5 py-0.5 text-[9px] font-bold text-white">

@@ -138,7 +138,6 @@ export default function ShopClient() {
               alt={`${profile.businessName} logo`}
               width={80}
               height={80}
-              unoptimized
               className="size-24 shrink-0 rounded-[22px] border-4 border-white object-cover shadow-lg ring-1 ring-[#E2DFEC]"
             />
           ) : (
