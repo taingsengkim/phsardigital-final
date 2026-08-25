@@ -101,16 +101,16 @@ export function RecommendedSection() {
         </p>
 
         {/* Tab Pills */}
-        <div className="mt-6 inline-flex flex-wrap justify-center gap-2 p-1.5 rounded-full bg-gray-100 dark:bg-zinc-800/80 border border-gray-200/60 dark:border-zinc-700">
+        <div className="mt-6 inline-flex flex-wrap justify-center gap-2.5 p-2 rounded-full bg-gray-100 dark:bg-zinc-800/80 border border-gray-200/60 dark:border-zinc-700">
           {TABS.map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={cn(
-                "relative rounded-full px-5 py-2 text-xs sm:text-sm font-semibold transition-all duration-200 cursor-pointer",
+                "relative rounded-full px-6 py-2.5 text-sm sm:text-base font-bold transition-all duration-200 cursor-pointer",
                 activeTab === tab
                   ? "bg-[#6C4CD8] text-white shadow-sm"
-                  : "text-gray-600 dark:text-zinc-300 hover:text-[#111827] dark:hover:text-white",
+                  : "text-gray-700 dark:text-zinc-300 hover:text-[#111827] dark:hover:text-white",
               )}
             >
               {tab}
@@ -148,7 +148,7 @@ export function RecommendedSection() {
       <div className="mt-10 flex justify-center">
         <Link
           href="/products"
-          className="inline-flex items-center gap-2 rounded-xl bg-white dark:bg-zinc-800 border-2 border-[#6C4CD8] px-6 py-2.5 text-xs sm:text-sm font-bold text-[#6C4CD8] dark:text-[#A78BFA] hover:bg-[#6C4CD8] hover:text-white dark:hover:bg-[#6C4CD8] dark:hover:text-white transition-all shadow-xs"
+          className="inline-flex items-center gap-2 rounded-xl bg-white dark:bg-zinc-800 border-2 border-[#6C4CD8] px-7 py-3 text-sm sm:text-base font-bold text-[#6C4CD8] dark:text-[#A78BFA] hover:bg-[#6C4CD8] hover:text-white dark:hover:bg-[#6C4CD8] dark:hover:text-white transition-all shadow-xs"
         >
           <span>Explore All Products</span>
         </Link>

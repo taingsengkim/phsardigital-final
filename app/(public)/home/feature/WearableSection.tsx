@@ -80,15 +80,15 @@ export function WearableSection() {
         </div>
 
         {/* Tab Buttons */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.slug)}
-              className={`rounded-full px-4 py-1.5 text-xs font-semibold whitespace-nowrap transition-all ${
+              className={`rounded-full px-5 py-2.5 text-sm sm:text-base font-semibold whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === tab.slug
-                  ? "bg-[#6C4CD8] text-white shadow-xs"
-                  : "bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-zinc-300 hover:bg-gray-200 dark:hover:bg-zinc-700"
+                  ? "bg-[#6C4CD8] text-white shadow-sm"
+                  : "bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-zinc-300 hover:bg-gray-200 dark:hover:bg-zinc-700"
               }`}
             >
               {tab.label}
@@ -110,7 +110,7 @@ export function WearableSection() {
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
 
           <div className="relative z-10">
-            <span className="inline-block rounded-full bg-white/20 backdrop-blur-md px-3 py-1 text-[11px] font-bold text-white uppercase tracking-wider">
+            <span className="inline-block rounded-full bg-white/20 backdrop-blur-md px-3 py-1 text-xs font-bold text-white uppercase tracking-wider">
               SPOTLIGHT
             </span>
           </div>
@@ -119,15 +119,15 @@ export function WearableSection() {
             <h3 className="text-2xl font-black text-white leading-tight">
               Artisanal Fashion &amp; Dresses
             </h3>
-            <p className="text-xs text-white/80">
+            <p className="text-xs sm:text-sm text-white/80">
               Discover unique hand-picked styles from trusted boutique sellers.
             </p>
             <Link
               href={`/products?category=${activeTab}`}
-              className="inline-flex items-center gap-1.5 rounded-full bg-white text-[#111827] px-4 py-2 text-xs font-bold transition-all hover:bg-[#6C4CD8] hover:text-white"
+              className="inline-flex items-center gap-2 rounded-full bg-white text-[#111827] px-5 py-2.5 text-sm font-bold transition-all hover:bg-[#6C4CD8] hover:text-white"
             >
               <span>View All</span>
-              <ArrowRight className="size-3.5" />
+              <ArrowRight className="size-4" />
             </Link>
           </div>
         </div>
