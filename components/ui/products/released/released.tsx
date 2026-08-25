@@ -15,8 +15,8 @@ import {
 } from "lucide-react";
 import {
   useGetMyListingsQuery,
+  useUpdateListingStatusMutation,
 } from "@/lib/api/sellerApi";
-import { useDeleteSellerListingMutation } from "@/lib/redux/service/sellerProductApi";
 import { cn } from "@/lib/utils";
 import {
   Table,
@@ -30,6 +30,8 @@ import { ProductTableToolbar } from "@/components/ui/products/product-table-tool
 import { ProductTablePagination } from "@/components/ui/products/product-table-pagination";
 import { ProductDetailModal } from "@/components/ui/products/product-detail-modal";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { toast } from "sonner";
 
 type ApiProduct = {
   uuid?: string;
@@ -138,7 +140,7 @@ export function Released() {
     pageNumber: 0,
     pageSize: 100,
   });
-  const [deleteListing, { isLoading: isDeleting }] = useDeleteSellerListingMutation();
+  const [archiveListing, { isLoading: isDeleting }] = useUpdateListingStatusMutation();
   const products = React.useMemo<Product[]>(
     () =>
       responseItems(data).map((item, index) => {
@@ -183,7 +185,9 @@ export function Released() {
   const [page, setPage] = React.useState(0);
   const [view] = React.useState<"list" | "grid">("list");
   const releasedProducts = products.filter(
-    (p) => !removedIds.has(p.id) && p.status.toUpperCase() !== "DRAFT",
+    (p) =>
+      !removedIds.has(p.id) &&
+      !["DRAFT", "ARCHIVED"].includes(p.status.toUpperCase()),
   );
   const filteredProducts = releasedProducts.filter(
     (p) =>
@@ -218,24 +222,26 @@ export function Released() {
       else next.add(key);
       return next;
     });
-  const [actionMessage, setActionMessage] = React.useState("");
+  const [deleteError, setDeleteError] = React.useState("");
   const [pendingDelete, setPendingDelete] = React.useState<Product | null>(null);
   const [viewProductUuid, setViewProductUuid] = React.useState<string | null>(null);
 
   async function deleteProduct() {
     if (!pendingDelete) return;
     const { id: uuid } = pendingDelete;
-    setActionMessage("");
+    setDeleteError("");
     setRemovedIds((current) => new Set(current).add(uuid));
     try {
-      await deleteListing({ uuid }).unwrap();
+      // Listings use a soft-delete lifecycle. Archiving removes the product
+      // from the released catalogue without triggering the upstream DELETE 500.
+      await archiveListing({ uuid, status: "ARCHIVED" }).unwrap();
       await refetch();
       setSelected((current) => {
         const next = new Set(current);
         next.delete(uuid);
         return next;
       });
-      setActionMessage("Product deleted successfully.");
+      toast.success("Product removed successfully.");
       setPendingDelete(null);
     } catch (error) {
       setRemovedIds((current) => {
@@ -244,7 +250,7 @@ export function Released() {
         return next;
       });
       const apiError = error as { data?: { message?: string } };
-      setActionMessage(apiError.data?.message ?? "Could not delete the product.");
+      setDeleteError(apiError.data?.message ?? "Could not remove the product. Please try again.");
     }
   }
 
@@ -256,14 +262,6 @@ export function Released() {
           <Plus className="size-4" /> Add new product
         </Link>
       </div>
-      {actionMessage && (
-        <div
-          role="status"
-          className="mb-4 rounded-xl border border-[#ddd7fb] bg-white px-4 py-3 text-sm text-[#5944bd] shadow-sm"
-        >
-          {actionMessage}
-        </div>
-      )}
       <div className="rounded-xl bg-white p-5">
         <ProductTableToolbar
           query={query}
@@ -314,8 +312,8 @@ export function Released() {
               <col className="w-[12.6%]" />
             </colgroup>
             <TableHeader>
-              <TableRow className="h-14 hover:bg-transparent">
-                <TableHead className="px-6">
+              <TableRow className="h-12 hover:bg-transparent">
+                <TableHead className="px-4">
                   <Checkbox
                     checked={allSelected}
                     onChange={toggleAll}
@@ -377,9 +375,9 @@ export function Released() {
                 <TableRow
                   key={p.id}
                   data-state={selected.has(p.id) ? "selected" : undefined}
-                  className="h-24"
+                  className="h-20"
                 >
-                  <TableCell className="px-6">
+                  <TableCell className="px-4">
                     <Checkbox
                       checked={selected.has(p.id)}
                       onChange={() => toggle(p.id)}
@@ -450,7 +448,7 @@ export function Released() {
                       <DropdownMenuContent align="end" sideOffset={6} className="w-44 p-1.5">
                         <DropdownMenuItem onSelect={() => setViewProductUuid(p.id)} className="cursor-pointer rounded-lg"><Eye className="size-4" />View</DropdownMenuItem>
                         <DropdownMenuItem asChild className="cursor-pointer rounded-lg"><Link href={`/seller-dashboard/products/new?edit=${p.id}`}><Pencil className="size-4" />Edit</Link></DropdownMenuItem>
-                        <DropdownMenuItem disabled={isDeleting} onClick={() => setPendingDelete(p)} className="cursor-pointer rounded-lg text-red-600 focus:bg-red-50 focus:text-red-600"><Trash2 className="size-4" />{isDeleting ? "Deleting..." : "Delete"}</DropdownMenuItem>
+                        <DropdownMenuItem disabled={isDeleting} onClick={() => { setDeleteError(""); setPendingDelete(p); }} className="cursor-pointer rounded-lg text-red-600 focus:bg-red-50 focus:text-red-600"><Trash2 className="size-4" />{isDeleting ? "Removing..." : "Delete"}</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -526,6 +524,13 @@ export function Released() {
             <p id="delete-product-description" className="mx-auto mt-3 max-w-sm text-sm leading-6 text-slate-500">
               You&apos;re about to permanently delete <strong className="font-semibold text-slate-800">“{pendingDelete.title}”</strong>. This action cannot be undone.
             </p>
+            {deleteError && (
+              <Alert variant="destructive" className="mt-4 border-red-200 bg-red-50 text-left">
+                <AlertTriangle className="size-4" />
+                <AlertTitle>Unable to remove product</AlertTitle>
+                <AlertDescription>{deleteError}</AlertDescription>
+              </Alert>
+            )}
             <div className="mt-7 grid grid-cols-2 gap-3">
               <button
                 type="button"
@@ -542,7 +547,7 @@ export function Released() {
                 className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isDeleting ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
-                {isDeleting ? "Deleting..." : "Yes, delete"}
+                {isDeleting ? "Removing..." : "Yes, delete"}
               </button>
             </div>
           </div>

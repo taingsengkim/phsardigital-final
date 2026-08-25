@@ -1,6 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { HOME_BAND_INNER } from "../section";
+import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 import { SellerProfileCard } from "@/app/(public)/home/SellerProfileCard";
 import { SectionHeader } from "../SectionHeader";
@@ -21,8 +23,8 @@ export function TopSellersSection() {
   const sellers = apiSellers || [];
 
   return (
-    <section className="bg-[#F1EFFA]/60 dark:bg-zinc-950/40 py-10 font-sans">
-      <div className="mx-auto max-w-[1380px] space-y-6 px-4 sm:px-6">
+    <section className="bg-[#F1EFFA]/60 py-8 font-sans dark:bg-zinc-950/40 sm:py-10">
+      <div className={cn(HOME_BAND_INNER, "space-y-6")}>
         <SectionHeader title="Top Sellers" href="/stores" />
 
         {isLoading && sellers.length === 0 ? (

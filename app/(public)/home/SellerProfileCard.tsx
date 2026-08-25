@@ -38,7 +38,7 @@ export function SellerProfileCard({ seller }: { seller: any }) {
               alt={`${sellerName} cover`}
               fill
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
-              unoptimized={Boolean(coverImage?.startsWith("http"))}
+              quality={90}
               className="object-cover transition-transform duration-500 group-hover:scale-105"
             />
           </div>
@@ -50,9 +50,9 @@ export function SellerProfileCard({ seller }: { seller: any }) {
                 <Image
                   src={logoImage}
                   alt={sellerName}
-                  width={64}
-                  height={64}
-                  unoptimized={Boolean(logoImage?.startsWith("http"))}
+                  width={128}
+                  height={128}
+                  quality={90}
                   className="size-full object-cover"
                 />
               ) : (

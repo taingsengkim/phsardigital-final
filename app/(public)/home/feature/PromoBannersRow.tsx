@@ -1,13 +1,14 @@
 "use client";
 
 import Image from "next/image";
+import { HOME_SECTION } from "../section";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles, Tag } from "lucide-react";
 
 export function PromoBannersRow() {
   return (
-    <section className="mx-auto w-full max-w-[1380px] px-4 sm:px-6 py-6 font-sans">
+    <section className={HOME_SECTION}>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
         
         {/* Banner 1: Fashion & Dresses Promo */}

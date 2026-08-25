@@ -114,8 +114,8 @@ export function ProductCard({ listing, className, sellerName, onRemove }: Props)
               alt={listing.title || "Product image"}
               fill
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              quality={90}
               className="object-cover transition-transform duration-500 group-hover:scale-[1.06]"
-              unoptimized={Boolean(imgSrc.startsWith("http"))}
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-[#C4B5FD]">

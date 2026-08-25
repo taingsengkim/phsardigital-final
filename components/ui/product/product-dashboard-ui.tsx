@@ -2,15 +2,16 @@
 
 import React from "react";
 import Link from "next/link";
-import { ChevronsUpDown, Activity, ShoppingBag, Loader2, Plus, Sparkles } from "lucide-react";
+import { ChevronsUpDown, Activity, ShoppingBag, Loader2, Plus } from "lucide-react";
 import { OverviewCard } from "./overview-card";
 import { ProductActivity } from "./product-activity";
 import { ProductViews } from "./product-views";
 import { ProductTable, ProductRow } from "./product-table";
 import { useGetListingsQuery } from "@/lib/api/homeApi";
 import { useGetSellerOrdersQuery, useGetMyListingsQuery } from "@/lib/api/sellerApi";
+import { toast } from "sonner";
 
-export const ProductDashboardUI: React.FC = () => {
+export const ProductDashboardUI: React.FC<{ successMessage?: string }> = ({ successMessage }) => {
   const { data: myListingsData, isLoading: isLoadingMyListings } = useGetMyListingsQuery({ pageNumber: 0, pageSize: 100 });
   const { data: publicListingsData, isLoading: isLoadingPublicListings } = useGetListingsQuery();
   const { data: ordersData, isLoading: isLoadingOrders } = useGetSellerOrdersQuery();
@@ -24,6 +25,10 @@ export const ProductDashboardUI: React.FC = () => {
   const rawListings = myListings.length > 0 ? myListings : publicListings;
   const isLoadingListings = isLoadingMyListings && isLoadingPublicListings;
   const ordersList = ordersData?.content || [];
+
+  React.useEffect(() => {
+    if (successMessage) toast.success(successMessage, { id: "product-save-success" });
+  }, [successMessage]);
 
   // Calculate live dynamic metrics
   const totalOrdersCount = ordersList.length > 0 ? String(ordersList.length) : "512";

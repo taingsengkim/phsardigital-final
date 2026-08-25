@@ -352,8 +352,8 @@ export function Drafts({
             <col className="w-[12.6%]" />
           </colgroup>
           <TableHeader>
-            <TableRow className="h-14 hover:bg-transparent">
-              <TableHead className="px-6">
+            <TableRow className="h-12 hover:bg-transparent">
+              <TableHead className="px-4">
                 <Checkbox
                   checked={allVisibleSelected}
                   onChange={toggleAll}
@@ -415,9 +415,9 @@ export function Drafts({
               <TableRow
                 key={product.id}
                 data-state={selected.has(product.id) ? "selected" : undefined}
-                className="h-24"
+                className="h-20"
               >
-                <TableCell className="px-6">
+                <TableCell className="px-4">
                   <Checkbox
                     checked={selected.has(product.id)}
                     onChange={() => toggle(product.id)}

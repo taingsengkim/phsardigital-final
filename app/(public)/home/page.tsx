@@ -10,9 +10,11 @@ import { WearableSection } from "./feature/WearableSection";
 import { RecommendedSection } from "./feature/RecommendedSection";
 import { SiteFeatures } from "./feature/SiteFeatures";
 
+/* Each section carries its own container and vertical rhythm (see ./section),
+   so the page itself adds no spacing on top of them. */
 export default function HomePage() {
   return (
-    <main className="min-h-screen bg-white text-[#111827] flex flex-col space-y-4 sm:space-y-6">
+    <main className="flex min-h-screen flex-col bg-white text-[#111827]">
       {/* 1. Hero Section: Dual Carousel + Side Promo */}
       <HeroBanner />
 
