@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { HOME_SECTION } from "../section";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -66,7 +67,7 @@ export function WearableSection() {
   const listings = apiListings || [];
 
   return (
-    <section className="mx-auto w-full max-w-[1380px] px-4 sm:px-6 py-6 font-sans">
+    <section className={HOME_SECTION}>
       {/* Header & Tabs */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div>

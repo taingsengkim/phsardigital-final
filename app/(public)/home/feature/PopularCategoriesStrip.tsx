@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { HOME_SECTION } from "../section";
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -64,7 +65,7 @@ export function PopularCategoriesStrip() {
   };
 
   return (
-    <section className="mx-auto w-full max-w-[1280px] px-4 sm:px-6 py-5 font-sans">
+    <section className={HOME_SECTION}>
       {/* Section Header */}
       <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100 dark:border-zinc-800">
         <div>

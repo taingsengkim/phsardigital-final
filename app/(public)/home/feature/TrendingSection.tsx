@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { HOME_SECTION } from "../section";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
@@ -25,7 +26,7 @@ export function TrendingSection() {
   const listings = apiListings ? apiListings.slice(0, 4) : [];
 
   return (
-    <section className="mx-auto w-full max-w-[1380px] px-4 sm:px-6 py-6 font-sans">
+    <section className={HOME_SECTION}>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold text-[#111827] dark:text-white tracking-tight">

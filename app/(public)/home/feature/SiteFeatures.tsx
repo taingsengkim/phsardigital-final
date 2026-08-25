@@ -1,6 +1,7 @@
 "use client";
 
 import { Truck, ShieldCheck, Headphones, Gift } from "lucide-react";
+import { HOME_SECTION } from "../section";
 import { motion } from "framer-motion";
 
 const FEATURES = [
@@ -32,7 +33,7 @@ const FEATURES = [
 
 export function SiteFeatures() {
   return (
-    <section className="mx-auto w-full max-w-[1380px] px-4 sm:px-6 py-6 font-sans">
+    <section className={HOME_SECTION}>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
         {FEATURES.map((feature, idx) => {
           const Icon = feature.icon;

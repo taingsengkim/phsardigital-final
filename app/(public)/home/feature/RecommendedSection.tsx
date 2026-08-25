@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { HOME_SECTION } from "../section";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, Sparkles } from "lucide-react";
@@ -53,7 +54,7 @@ export function RecommendedSection() {
   }, [rawListings, activeTab]);
 
   return (
-    <section className="mx-auto w-full max-w-[1280px] px-4 sm:px-6 py-8 font-sans">
+    <section className={HOME_SECTION}>
       <div className="mb-8 text-center space-y-3">
         <div className="inline-flex items-center gap-1.5 rounded-full bg-[#6C4CD8]/10 px-3.5 py-1 text-xs font-bold text-[#6C4CD8] dark:text-[#A78BFA] uppercase tracking-wider">
           <Sparkles className="size-3.5" />

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { HOME_SECTION } from "../section";
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -129,7 +130,7 @@ export function FlashDealsSection() {
       : featuredDeal?.image || "";
 
   return (
-    <section className="mx-auto w-full max-w-[1280px] px-4 sm:px-6 py-5 font-sans">
+    <section className={HOME_SECTION}>
       {/* Section Header with Countdown Timer */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-5 pb-3.5 border-b border-gray-100 dark:border-zinc-800">
         <div className="flex items-center gap-2.5">

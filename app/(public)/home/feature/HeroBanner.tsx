@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { HOME_SECTION } from "../section";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -127,7 +128,7 @@ export function HeroBanner() {
 
   if (isLoadingFeatured && slides.length === 0) {
     return (
-      <section className="mx-auto w-full max-w-[1380px] px-4 sm:px-6 py-4 lg:py-6 font-sans">
+      <section className={HOME_SECTION}>
         <div className="grid grid-cols-1 lg:grid-cols-[2.35fr_1fr] gap-4 sm:gap-5 items-stretch">
           <div className="relative min-h-[380px] sm:min-h-[420px] md:min-h-[460px] lg:min-h-[480px] rounded-[24px] sm:rounded-[32px] overflow-hidden bg-slate-100 dark:bg-zinc-900 animate-pulse flex items-center justify-center">
             <Loader2 className="size-8 animate-spin text-[#6C4CD8]" />
@@ -143,7 +144,7 @@ export function HeroBanner() {
   }
 
   return (
-    <section className="mx-auto w-full max-w-[1380px] px-4 sm:px-6 py-4 lg:py-6 font-sans">
+    <section className={HOME_SECTION}>
       <div className="grid grid-cols-1 lg:grid-cols-[2.35fr_1fr] gap-4 sm:gap-5 items-stretch">
         
         {/* ================= LEFT / MAIN CAROUSEL BANNER ================= */}
