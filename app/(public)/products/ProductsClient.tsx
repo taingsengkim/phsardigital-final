@@ -7,7 +7,6 @@ import { useSearchParams } from "next/navigation";
 import { LayoutGrid, List, ChevronsUpDown, Heart, Star, Loader2, PackageX } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGetListingsQuery } from "@/lib/api/homeApi";
-import { MOCK_PRODUCTS } from "@/lib/mock-products";
 import { ProductCard } from "@/app/(public)/home/ProductCard";
 import { getPrimaryImage } from "@/app/(public)/home/listing-helpers";
 
@@ -44,7 +43,7 @@ export default function ProductsClient() {
 
   const apiListings = (apiData?.content || apiData?.data || []) as any[];
   const pageObj = typeof apiData?.page === "object" ? apiData.page : null;
-  const totalElements = pageObj?.totalElements ?? apiData?.total ?? apiListings.length ?? MOCK_PRODUCTS.length;
+  const totalElements = pageObj?.totalElements ?? apiData?.total ?? apiListings.length ?? 0;
   const totalPages = pageObj?.totalPages ?? apiData?.totalPages ?? Math.ceil(totalElements / 20) ?? 1;
 
   async function toggleFavorite(uuid: string, currentFav: boolean) {
@@ -63,20 +62,8 @@ export default function ProductsClient() {
     }
   }
 
-  // Display items: use real API listings if available, else fallback to MOCK_PRODUCTS filtered by category
-  const displayItems =
-    apiListings.length > 0
-      ? apiListings
-      : !isLoading
-        ? categorySlug
-          ? MOCK_PRODUCTS.filter((p) => {
-            const raw = categorySlug.toLowerCase();
-            const cSlug = (p.category?.slug || "").toLowerCase();
-            const cName = (p.category?.name || "").toLowerCase();
-            return cSlug.includes(raw) || raw.includes(cSlug) || cName.includes(raw);
-          })
-          : MOCK_PRODUCTS
-        : [];
+  // Display items: use real API listings
+  const displayItems = apiListings;
 
 
   const start = (page - 1) * 20 + 1;
@@ -156,9 +143,10 @@ export default function ProductsClient() {
         /* ── product list view ── */
         <div className="flex flex-col gap-3 font-sans">
           {displayItems.map((item: any, index: number) => {
-            const itemUuid = item.uuid || item.id || String(index);
+            const itemUuid = item.uuid || item.id || item.slug || String(index);
             const title = item.title || "Untitled Product";
             const slug = item.slug || itemUuid;
+            const targetUuid = item.uuid || item.id || slug;
             const fullPrice = item.fullPrice ?? item.price ?? 0;
             const discountPrice = item.discountPrice;
             const price = discountPrice ?? fullPrice;
@@ -188,7 +176,7 @@ export default function ProductsClient() {
                 key={itemUuid}
                 className="group relative flex gap-3 overflow-hidden rounded-xl bg-white shadow-[0_1px_4px_rgba(36,31,53,0.08)] transition hover:shadow-md"
               >
-                <Link href={`/products/${itemUuid || slug}`} className="flex flex-1 gap-3">
+                <Link href={`/products/${targetUuid}`} className="flex flex-1 gap-3">
                   <div className="relative h-28 w-28 flex-shrink-0 overflow-hidden bg-[#F5F3FA]">
                     <Image
                       src={image}
