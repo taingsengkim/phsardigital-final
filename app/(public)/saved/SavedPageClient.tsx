@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, Trash2, ShoppingCart, Check, ShoppingBag, Loader2 } from "lucide-react";
+import { Heart, Trash2, ShoppingCart, Check, ShoppingBag, Loader2, AlertTriangle, X } from "lucide-react";
 import { ProductCard } from "@/app/(public)/home/ProductCard";
 import { getFavorites, removeFavorites } from "@/app/api/favorites";
 
@@ -12,6 +12,8 @@ export default function SavedPageClient() {
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [showClearModal, setShowClearModal] = useState(false);
+  const [clearing, setClearing] = useState(false);
 
   async function fetchSavedItems() {
     setLoading(true);
@@ -52,14 +54,24 @@ export default function SavedPageClient() {
     showToast(`Removed "${itemToRemove?.title || "Product"}" from your saved items.`);
   }
 
-  async function handleClearAll() {
-    if (confirm("Are you sure you want to remove all saved items?")) {
+  function handleClearAll() {
+    setShowClearModal(true);
+  }
+
+  async function confirmClearAll() {
+    setClearing(true);
+    try {
       const allUuids = listings.map((i) => i.uuid || i.slug || i.id).filter(Boolean);
       setListings([]);
+      setShowClearModal(false);
       if (allUuids.length > 0) {
         await removeFavorites(allUuids);
       }
       showToast("Cleared all saved items.");
+    } catch {
+      showToast("Failed to clear saved items.");
+    } finally {
+      setClearing(false);
     }
   }
 
@@ -94,6 +106,86 @@ export default function SavedPageClient() {
             <Check size={18} className="text-emerald-400" />
             <span className="text-sm font-semibold">{toastMessage}</span>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Clear All Confirmation Modal */}
+      <AnimatePresence>
+        {showClearModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => !clearing && setShowClearModal(false)}
+              className="fixed inset-0 bg-black/60 backdrop-blur-xs"
+            />
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ type: "spring", stiffness: 400, damping: 28 }}
+              className="relative z-10 w-full max-w-md overflow-hidden rounded-3xl bg-white p-7 sm:p-8 shadow-2xl border border-[#EDEBF3]"
+            >
+              <button
+                type="button"
+                disabled={clearing}
+                onClick={() => setShowClearModal(false)}
+                className="absolute right-5 top-5 grid size-9 place-items-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition cursor-pointer disabled:opacity-50"
+                aria-label="Close modal"
+              >
+                <X size={18} />
+              </button>
+
+              <div className="flex items-center gap-4 border-b border-[#F0EDFB] pb-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-rose-50 border border-rose-100 text-rose-600">
+                  <AlertTriangle size={24} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-extrabold text-[#1A1330]">
+                    Clear All Saved Items?
+                  </h3>
+                  <p className="text-xs font-semibold text-[#8B85A0]">
+                    {listings.length} {listings.length === 1 ? "item" : "items"} selected
+                  </p>
+                </div>
+              </div>
+
+              <p className="mt-4 text-sm sm:text-base text-[#5A5470] leading-relaxed font-medium">
+                Are you sure you want to remove all <strong className="text-[#1A1330]">{listings.length} item(s)</strong> from your saved collection? This action cannot be undone.
+              </p>
+
+              <div className="mt-6 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  disabled={clearing}
+                  onClick={() => setShowClearModal(false)}
+                  className="flex-1 rounded-xl border border-[#EDEBF3] bg-white px-5 py-3 text-sm font-bold text-[#5A5470] transition hover:bg-slate-50 cursor-pointer disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={clearing}
+                  onClick={confirmClearAll}
+                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-rose-600 px-5 py-3 text-sm font-extrabold text-white shadow-md transition hover:bg-rose-700 disabled:opacity-50 cursor-pointer"
+                >
+                  {clearing ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      Clearing…
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={16} />
+                      Clear All
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 

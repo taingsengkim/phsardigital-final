@@ -43,6 +43,7 @@ import {
   useCreateAddressMutation,
   useGetAddressesQuery,
   type Address,
+  type CreateAddressRequest,
 } from "@/lib/api/addressApi";
 import type { Listing } from "@/lib/types";
 
@@ -712,6 +713,22 @@ export default function CheckoutClient() {
     }
     setError(null);
     setShowConfirmModal(true);
+  }
+
+  function toAddressRequest(): CreateAddressRequest {
+    return {
+      type: locationType === "city" ? "CITY" : "PROVINCE",
+      label: newLabel.trim() || locationTitle,
+      recipient: fullName,
+      phone: phone,
+      locationName: googleMapLink,
+      streetNo: streetNo,
+      province: locationType === "province" ? province : undefined,
+      district: locationType === "province" ? district : khan,
+      commune: locationType === "province" ? commune : sangkat,
+      village: village,
+      isDefault: false,
+    };
   }
 
   // Step 2: Confirm Order & Issue Invoice to Seller

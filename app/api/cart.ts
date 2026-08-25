@@ -132,11 +132,19 @@ export async function getCart(): Promise<Cart> {
   };
 }
 
+function notifyCartUpdated() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("cart-updated"));
+  }
+}
+
 export async function addToCart(
   listingId: number | string,
   quantity = 1,
   slug?: string
 ): Promise<CartItem> {
+  let resultItem: CartItem;
+
   try {
     const res = await fetch("/api/carts/items", {
       method: "POST",
@@ -149,8 +157,10 @@ export async function addToCart(
 
     if (res.ok) {
       const data = await res.json();
-      // If backend returns a cart item, return it
-      if (data && (data.id || data.cart_id)) return data;
+      if (data && (data.id || data.cart_id)) {
+        notifyCartUpdated();
+        return data;
+      }
     }
   } catch (err) {
     console.warn("Cart route handler call error, falling back locally:", err);
@@ -162,25 +172,28 @@ export async function addToCart(
   );
   if (existing) {
     existing.quantity += quantity;
-    return existing;
+    resultItem = existing;
+  } else {
+    const listingSlug = slug ?? "poco-smart-phone";
+    const listing = generateDynamicMockListing(listingSlug);
+    if (typeof listingId === "number") {
+      listing.id = listingId;
+    }
+
+    const newItem: CartItem = {
+      id: mockCartItems.length + 1,
+      cart_id: 1,
+      listing_id: typeof listingId === "number" ? listingId : mockCartItems.length + 1,
+      quantity,
+      listing,
+    };
+
+    mockCartItems.push(newItem);
+    resultItem = newItem;
   }
 
-  const listingSlug = slug ?? "poco-smart-phone";
-  const listing = generateDynamicMockListing(listingSlug);
-  if (typeof listingId === "number") {
-    listing.id = listingId;
-  }
-
-  const newItem: CartItem = {
-    id: mockCartItems.length + 1,
-    cart_id: 1,
-    listing_id: typeof listingId === "number" ? listingId : mockCartItems.length + 1,
-    quantity,
-    listing,
-  };
-
-  mockCartItems.push(newItem);
-  return newItem;
+  notifyCartUpdated();
+  return resultItem;
 }
 
 export async function updateCartItem(
@@ -195,7 +208,11 @@ export async function updateCartItem(
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ quantity }),
       });
-      if (res.ok) return await res.json();
+      if (res.ok) {
+        const data = await res.json();
+        notifyCartUpdated();
+        return data;
+      }
     } catch {
       // Fallback
     }
@@ -204,6 +221,7 @@ export async function updateCartItem(
   const item = mockCartItems.find((i) => i.id === itemId || i.listing_id === itemId);
   if (item) {
     item.quantity = quantity;
+    notifyCartUpdated();
     return item;
   }
   throw new Error("Item not found");
@@ -216,13 +234,17 @@ export async function removeCartItem(itemId: number): Promise<void> {
         method: "DELETE",
         credentials: "include",
       });
-      if (res.ok) return;
+      if (res.ok) {
+        notifyCartUpdated();
+        return;
+      }
     } catch {
       // Fallback
     }
   }
 
   mockCartItems = mockCartItems.filter((i) => i.id !== itemId && i.listing_id !== itemId);
+  notifyCartUpdated();
 }
 
 export async function updateCartItemQty(
@@ -240,11 +262,14 @@ export async function updateCartItemQty(
       }
     );
     if (res.ok) {
-      return await res.json();
+      const data = await res.json();
+      notifyCartUpdated();
+      return data;
     }
   } catch (err) {
     console.warn("Failed to update cart item quantity via route handler:", err);
   }
+  notifyCartUpdated();
 }
 
 export async function deleteCartItem(
@@ -259,11 +284,14 @@ export async function deleteCartItem(
       }
     );
     if (res.ok) {
-      return await res.json();
+      const data = await res.json();
+      notifyCartUpdated();
+      return data;
     }
   } catch (err) {
     console.warn("Failed to delete cart item via route handler:", err);
   }
+  notifyCartUpdated();
 }
 
 export async function deleteSellerCart(sellerId: string): Promise<any> {
@@ -272,9 +300,12 @@ export async function deleteSellerCart(sellerId: string): Promise<any> {
       method: "DELETE",
     });
     if (res.ok) {
-      return await res.json();
+      const data = await res.json();
+      notifyCartUpdated();
+      return data;
     }
   } catch (err) {
     console.warn("Failed to delete seller cart via route handler:", err);
   }
+  notifyCartUpdated();
 }

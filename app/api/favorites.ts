@@ -1,3 +1,9 @@
+function notifyFavoritesUpdated() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("favorites-updated"));
+  }
+}
+
 export async function getFavorites(): Promise<any[]> {
   try {
     const res = await fetch("/api/favorites", { cache: "no-store" });
@@ -19,11 +25,15 @@ export async function addFavorite(listingUuid: string): Promise<boolean> {
     const res = await fetch(`/api/favorites/${listingUuid}`, {
       method: "POST",
     });
-    return res.ok;
+    if (res.ok) {
+      notifyFavoritesUpdated();
+      return true;
+    }
   } catch (err) {
     console.warn("Failed to add favorite:", err);
-    return false;
   }
+  notifyFavoritesUpdated();
+  return false;
 }
 
 export async function removeFavorites(uuids: string[]): Promise<boolean> {
@@ -33,9 +43,13 @@ export async function removeFavorites(uuids: string[]): Promise<boolean> {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(uuids),
     });
-    return res.ok;
+    if (res.ok) {
+      notifyFavoritesUpdated();
+      return true;
+    }
   } catch (err) {
     console.warn("Failed to remove favorite(s):", err);
-    return false;
   }
+  notifyFavoritesUpdated();
+  return false;
 }

@@ -43,6 +43,10 @@ export default function AddToCartButton({
 
       if (!res.ok) throw new Error(`${res.status}`);
 
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("cart-updated"));
+      }
+
       setState("added");
       setTimeout(() => setState("idle"), 2500);
     } catch {

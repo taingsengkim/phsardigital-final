@@ -1,6 +1,7 @@
 import { ThemeProvider } from "@/components/theme-provider";
 import { Inter, Playfair_Display } from "next/font/google";
 import StoreProvider from "@/app/StoreProvider";
+import { CartFavoritesProvider } from "@/lib/context/cart-favorites-context";
 import "./globals.css";
 import { Metadata } from "next";
 import { Toaster } from "@/components/ui/sonner";
@@ -45,8 +46,10 @@ export default function RootLayout({
             enableSystem={false}
             disableTransitionOnChange
           >
-            {children}
-            <Toaster />
+            <CartFavoritesProvider>
+              {children}
+              <Toaster />
+            </CartFavoritesProvider>
           </ThemeProvider>
         </StoreProvider>
       </body>

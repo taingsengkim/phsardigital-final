@@ -34,6 +34,7 @@ import { useSession, logoutFromKeycloak } from "@/lib/auth-client";
 import { useGetMeQuery } from "@/lib/api/authApi";
 import { useGetSellerApplicationQuery } from "@/lib/api/sellerApi";
 import { useGetCategoriesQuery } from "@/lib/api/homeApi";
+import { useCartFavorites } from "@/lib/context/cart-favorites-context";
 
 const BRAND = "#6C4CD8";
 
@@ -63,8 +64,7 @@ function getInitials(name?: string | null, email?: string | null): string {
 
 export default function Navbar() {
   const [search, setSearch] = useState("");
-  const savedCount = 2;
-  const cartCount = 2;
+  const { cartCount, savedCount } = useCartFavorites();
   const messageCount = 1;
 
   const { data: session, isPending } = useSession();
@@ -148,8 +148,8 @@ export default function Navbar() {
             >
               <Heart size={18} className="text-[#6C4CD8] transition-transform group-hover:scale-110" />
               {savedCount > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#6C4CD8] text-[10px] font-bold text-white shadow-sm animate-in zoom-in">
-                  {savedCount}
+                <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 bg-[#6C4CD8] text-[10px] font-bold text-white shadow-sm animate-in zoom-in">
+                  {savedCount > 99 ? "99+" : savedCount}
                 </span>
               )}
             </Link>
@@ -283,8 +283,8 @@ export default function Navbar() {
           >
             <ShoppingCart size={18} className="text-[#6C4CD8] transition-transform group-hover:scale-110" />
             {cartCount > 0 && (
-              <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#6C4CD8] text-[10px] font-bold text-white shadow-sm animate-in zoom-in">
-                {cartCount}
+              <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 bg-[#6C4CD8] text-[10px] font-bold text-white shadow-sm animate-in zoom-in">
+                {cartCount > 99 ? "99+" : cartCount}
               </span>
             )}
           </Link>

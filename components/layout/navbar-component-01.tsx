@@ -35,6 +35,7 @@ import LoginButton from "@/components/auth/LoginButton";
 import RegisterButton from "@/components/auth/RegisterButton";
 import { NAV_PILL, NAV_RAIL_PILL } from "@/components/layout/nav-pill";
 import { cn, displayImageUrl } from "@/lib/utils";
+import { useCartFavorites } from "@/lib/context/cart-favorites-context";
 
 const BRAND = "#6C4CD8";
 const NAV_LINKS = ["Home", "Offers", "Brands", "Stores", "All Products"];
@@ -53,8 +54,7 @@ const CATEGORIES = [
 export default function Navbar() {
   const [search, setSearch] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const savedCount = 2;
-  const cartCount = 2;
+  const { cartCount, savedCount } = useCartFavorites();
 
   const { data: session } = useSession();
   const { data: profile } = useGetMeQuery(undefined, {
@@ -183,10 +183,10 @@ export default function Navbar() {
                     <Heart size={15} color={BRAND} />
                     {savedCount > 0 && (
                       <span
-                        className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white"
+                        className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white shadow-xs animate-in zoom-in"
                         style={{ background: BRAND }}
                       >
-                        {savedCount}
+                        {savedCount > 99 ? "99+" : savedCount}
                       </span>
                     )}
                   </Link>
@@ -200,10 +200,10 @@ export default function Navbar() {
                     <ShoppingCart size={15} color={BRAND} />
                     {cartCount > 0 && (
                       <span
-                        className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white"
+                        className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white shadow-xs animate-in zoom-in"
                         style={{ background: BRAND }}
                       >
-                        {cartCount}
+                        {cartCount > 99 ? "99+" : cartCount}
                       </span>
                     )}
                   </Link>
