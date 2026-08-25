@@ -1,21 +1,13 @@
 "use client"
 
 import * as React from "react"
-import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm, useWatch } from "react-hook-form"
 import type { FieldErrors } from "react-hook-form"
 import { z } from "zod"
-import {
-  ArrowLeft,
-  ChevronDown,
-  ImagePlus,
-  Info,
-  Upload,
-  X,
-} from "lucide-react"
+import { ArrowLeft, ChevronDown, Info } from "lucide-react"
 
 import {
   useCreateSellerListingMutation,
@@ -30,6 +22,7 @@ import {
 } from "@/lib/redux/service/sellerProductApi"
 import { readSellerDrafts, writeSellerDrafts } from "@/lib/seller-drafts"
 import { ListingGalleryManager } from "@/components/ui/seller/listing-gallery-manager"
+import { NewListingImages, type PickedImage } from "@/components/ui/seller/new-listing-images"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useAppDispatch } from "@/lib/hooks"
 import { sellerApi } from "@/lib/api/sellerApi"
@@ -164,124 +157,6 @@ function Section({ title, color, children }: { title: string; color: string; chi
   )
 }
 
-function DropZone({
-  accept,
-  multiple,
-  label,
-  files,
-  onFiles,
-  onRemove,
-  coverLabel,
-}: {
-  accept: string
-  multiple?: boolean
-  label: string
-  files: File[]
-  onFiles: (files: File[]) => void
-  onRemove?: (index: number) => void
-  /** Badge for the first pick, which is the one that becomes the cover. */
-  coverLabel?: string
-}) {
-  const inputRef = React.useRef<HTMLInputElement>(null)
-  const [dragging, setDragging] = React.useState(false)
-
-  /* A picked file is only viewable through an object URL, and every one of
-     them has to be handed back or it leaks for the life of the page. */
-  const previews = React.useMemo(
-    () =>
-      files.map((file) => ({
-        key: `${file.name}-${file.size}-${file.lastModified}`,
-        name: file.name,
-        url: file.type.startsWith("image/") ? URL.createObjectURL(file) : "",
-      })),
-    [files],
-  )
-  React.useEffect(
-    () => () =>
-      previews.forEach((preview) => {
-        if (preview.url) URL.revokeObjectURL(preview.url)
-      }),
-    [previews],
-  )
-
-  return (
-    <div>
-      <button
-        type="button"
-        onClick={() => inputRef.current?.click()}
-        onDragOver={(event) => { event.preventDefault(); setDragging(true) }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={(event) => {
-          event.preventDefault()
-          setDragging(false)
-          onFiles(Array.from(event.dataTransfer.files))
-        }}
-        className={`flex min-h-44 w-full flex-col items-center justify-center gap-3 rounded-xl border border-dashed transition-colors ${dragging ? "border-violet-400 bg-violet-50" : "border-slate-200 bg-slate-50 hover:border-violet-300"}`}
-      >
-        <span className="grid size-11 place-items-center rounded-xl bg-white text-slate-500 shadow-sm">
-          {accept.startsWith("image") ? <ImagePlus className="size-5" /> : <Upload className="size-5" />}
-        </span>
-        <span className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm">
-          <Upload className="mr-2 inline size-4" />{label}
-        </span>
-        <span className="text-xs text-slate-400">or drag and drop here</span>
-      </button>
-      <input
-        ref={inputRef}
-        type="file"
-        accept={accept}
-        multiple={multiple}
-        className="hidden"
-        onChange={(event) => onFiles(Array.from(event.target.files ?? []))}
-      />
-      {previews.length > 0 && (
-        <ul className="mt-3 flex flex-wrap gap-3">
-          {previews.map((preview, index) => (
-            <li key={preview.key} className="w-24">
-              <figure className="group relative size-24 overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
-                {preview.url ? (
-                  <Image
-                    src={preview.url}
-                    alt={preview.name}
-                    fill
-                    unoptimized
-                    sizes="96px"
-                    className="object-cover"
-                  />
-                ) : (
-                  <span className="grid size-full place-items-center px-1 text-center text-[10px] text-slate-500">
-                    {preview.name}
-                  </span>
-                )}
-
-                {coverLabel && index === 0 && (
-                  <figcaption className="absolute inset-x-0 bottom-0 bg-violet-600/85 py-0.5 text-center text-[10px] font-bold uppercase tracking-wide text-white">
-                    {coverLabel}
-                  </figcaption>
-                )}
-
-                {onRemove && (
-                  <button
-                    type="button"
-                    onClick={() => onRemove(index)}
-                    aria-label={`Remove ${preview.name}`}
-                    className="absolute right-1 top-1 grid size-6 place-items-center rounded-full bg-slate-900/70 text-white opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100"
-                  >
-                    <X className="size-3.5" />
-                  </button>
-                )}
-              </figure>
-              <p className="mt-1 truncate text-[11px] text-slate-500" title={preview.name}>
-                {preview.name}
-              </p>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  )
-}
-
 function CategoryAttributeField({ attribute, value, onChange }: { attribute: CategoryAttributeDefinition; value: string; onChange: (value: string) => void }) {
   const label = <FieldLabel>{attribute.label}{attribute.required ? " *" : ""}{attribute.unit ? ` (${attribute.unit})` : ""}</FieldLabel>
   const inputClass = "h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
@@ -357,8 +232,12 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
       images: [],
     },
   })
-  const images = useWatch({ control, name: "images" })
   const categoryUuid = useWatch({ control, name: "categoryUuid" })
+  /* The picked photos in the order and with the cover the seller chose. The
+     form field above still holds the raw Files so the existing validation
+     (type, size, count) keeps applying unchanged. */
+  const [picked, setPicked] = React.useState<PickedImage[]>([])
+  const [coverId, setCoverId] = React.useState("")
   const [attributeValues, setAttributeValues] = React.useState<Record<string, string>>({})
   const categoryOptions = React.useMemo(() => flattenCategoryTree(categoryTree), [categoryTree])
   const selectedCategory = categoryOptions.find((category) => category.uuid === categoryUuid)
@@ -439,6 +318,14 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
       const uploadedImages = await Promise.all(
         data.images.map((file) => uploadProductFile(file).unwrap()),
       )
+      /* `data.images` is kept in the picked order, so the cover's position in
+         that list is its position among the uploads. */
+      const coverIndex = Math.max(
+        picked.findIndex((image) => image.id === coverId),
+        0,
+      )
+      const coverObjectName =
+        uploadedImages[coverIndex]?.objectName ?? uploadedImages[0]?.objectName
       const listingAttributes = categoryAttributes
         .map((attribute, index) => ({ key: attribute.code, value: attributeValues[attribute.code]?.trim() ?? "", sortOrder: attribute.sortOrder ?? index }))
         .filter((attribute) => attribute.value)
@@ -471,7 +358,12 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
           }).unwrap()))
         }
       } else {
-        await createSellerListing({
+        /* The cover is its own field on the listing; the gallery is attached
+           per image afterwards. Sending an `images` array on create does not
+           persist — every listing on the API comes back with images: [] — so
+           the documented POST /listings/{uuid}/images endpoint does that work,
+           which is also what editing uses. */
+        const created = await createSellerListing({
           categoryUuid: data.categoryUuid,
           title: data.title,
           description: data.description,
@@ -479,14 +371,21 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
           discountPrice: data.discountPrice,
           stockQty: data.stockQty,
           isFeatured: false,
-          thumbnailObjectName: uploadedImages[0]?.objectName,
-          images: uploadedImages.map((image, index) => ({
-            objectName: image.objectName,
-            sortOrder: index,
-            isPrimary: index === 0,
-          })),
+          thumbnailObjectName: coverObjectName,
           listingAttributes,
         }).unwrap()
+
+        const createdUuid = created?.uuid
+        if (createdUuid) {
+          // Sequential: the gallery order is the order they were attached in.
+          for (const [index, image] of uploadedImages.entries()) {
+            await addListingImage({
+              uuid: createdUuid,
+              objectName: image.objectName,
+              sortOrder: index,
+            }).unwrap()
+          }
+        }
       }
 
       dispatch(sellerApi.util.invalidateTags(["SellerListings"]))
@@ -586,15 +485,19 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
             <ListingGalleryManager listing={listing} listingUuid={editUuid} />
           ) : (
             <>
-              <FieldLabel>Cover images</FieldLabel>
-              <DropZone
-                accept="image/*"
-                multiple
-                label="Click to add images"
-                files={images}
-                coverLabel="Cover"
-                onFiles={(files) => setValue("images", [...images, ...files], { shouldDirty: true, shouldValidate: true })}
-                onRemove={(index) => setValue("images", images.filter((_, i) => i !== index), { shouldDirty: true, shouldValidate: true })}
+              <FieldLabel>Product photos</FieldLabel>
+              <NewListingImages
+                images={picked}
+                coverId={coverId}
+                max={8}
+                onChange={(next, nextCoverId) => {
+                  setPicked(next)
+                  setCoverId(nextCoverId)
+                  setValue("images", next.map((image) => image.file), {
+                    shouldDirty: true,
+                    shouldValidate: true,
+                  })
+                }}
               />
               <FieldError message={errors.images?.message} />
             </>

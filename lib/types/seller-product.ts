@@ -73,7 +73,12 @@ export interface CreateListingRequest {
   stockQty: number
   isFeatured: boolean
   thumbnailObjectName?: string
-  images: ListingImageInput[]
+  /**
+   * Optional, and in practice ignored by the API — listings created with it
+   * still come back with `images: []`. Attach the gallery with
+   * POST /listings/{uuid}/images instead.
+   */
+  images?: ListingImageInput[]
   listingAttributes: ListingAttributeInput[]
 }
 
