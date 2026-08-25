@@ -363,6 +363,11 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
            persist — every listing on the API comes back with images: [] — so
            the documented POST /listings/{uuid}/images endpoint does that work,
            which is also what editing uses. */
+        const galleryImages = uploadedImages.map((image, index) => ({
+          objectName: image.objectName,
+          sortOrder: index,
+        }))
+
         const created = await createSellerListing({
           categoryUuid: data.categoryUuid,
           title: data.title,
@@ -372,19 +377,38 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
           stockQty: data.stockQty,
           isFeatured: false,
           thumbnailObjectName: coverObjectName,
+          images: galleryImages,
           listingAttributes,
         }).unwrap()
 
         const createdUuid = created?.uuid
-        if (createdUuid) {
-          // Sequential: the gallery order is the order they were attached in.
-          for (const [index, image] of uploadedImages.entries()) {
-            await addListingImage({
-              uuid: createdUuid,
-              objectName: image.objectName,
-              sortOrder: index,
-            }).unwrap()
-          }
+        if (!createdUuid) {
+          throw new Error(
+            "The product was created but the API did not return its id, so the photos could not be attached to it.",
+          )
+        }
+
+        /* Belt and braces. `images` is part of the documented create contract,
+           but listings have been coming back from it with images: [] — so
+           attach whatever the create did not keep, via the per-image endpoint
+           the editing view uses. Whichever mechanism the API honours, the
+           gallery ends up complete and nothing is attached twice. */
+        const persisted = new Set(
+          (created.images ?? [])
+            .map((image) => image.objectName)
+            .filter((objectName): objectName is string => Boolean(objectName)),
+        )
+        const unattached = galleryImages.filter(
+          (image) => !persisted.has(image.objectName),
+        )
+
+        // Sequential, so the gallery order is the order they were attached in.
+        for (const image of unattached) {
+          await addListingImage({
+            uuid: createdUuid,
+            objectName: image.objectName,
+            sortOrder: image.sortOrder,
+          }).unwrap()
         }
       }
 

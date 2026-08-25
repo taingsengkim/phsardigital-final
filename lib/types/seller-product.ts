@@ -52,10 +52,10 @@ export interface UploadedFile {
   url?: string
 }
 
+/** Mirrors ListingImageRequest: the API takes an objectName and a position. */
 export interface ListingImageInput {
   objectName: string
   sortOrder: number
-  isPrimary: boolean
 }
 
 export interface ListingAttributeInput {
@@ -74,9 +74,9 @@ export interface CreateListingRequest {
   isFeatured: boolean
   thumbnailObjectName?: string
   /**
-   * Optional, and in practice ignored by the API — listings created with it
-   * still come back with `images: []`. Attach the gallery with
-   * POST /listings/{uuid}/images instead.
+   * Part of the documented create contract, but listings created with it have
+   * been coming back with `images: []`. Creation sends it and then attaches
+   * anything the response did not keep via POST /listings/{uuid}/images.
    */
   images?: ListingImageInput[]
   listingAttributes: ListingAttributeInput[]
