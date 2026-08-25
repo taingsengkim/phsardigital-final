@@ -1,54 +1,49 @@
-import type { Listing } from "@/lib/types";
-import { getListingPrice } from "@/lib/api/listing-price";
+import { getFileUrl } from "@/lib/utils";
 
-export function getPrimaryImage(listing: any): string {
-  if (!listing) return "/picture/pic1.jpg";
-  if (typeof listing === "string") return listing;
+/**
+ * Safely resolves the primary display image for a product/listing item.
+ * Supports live API shapes (thumbnailUri, images array), ERD Listing shapes,
+ * and mock product fallback objects.
+ */
+export function getPrimaryImage(item: any): string {
+  if (!item) return "/picture/product_dress_blue_floral.jpg";
+  if (typeof item === "string") return getFileUrl(item);
 
-  const primary =
-    listing.thumbnailUri?.uri ||
-    listing.thumbnail_url ||
-    listing.images?.find((img: any) => img.is_primary || img.isPrimary)?.url ||
-    listing.images?.find((img: any) => img.is_primary || img.isPrimary)?.uri ||
-    listing.images?.[0]?.url ||
-    listing.images?.[0]?.uri;
-
-  return primary ?? "/picture/pic1.jpg";
-}
-
-export function getAverageRating(listing: any): number {
-  if (!listing) return 4.8;
-  const reviews = listing.reviews ?? [];
-  if (reviews.length === 0) return listing.rating || 4.8;
-  const sum = reviews.reduce((acc: number, r: any) => acc + (r.rating || 5), 0);
-  return Math.round((sum / reviews.length) * 10) / 10;
-}
-
-export function getActiveDiscountPercent(listing: any): number | null {
-  if (!listing) return null;
-  if (listing.discountPercent || listing.discount_percent) {
-    return listing.discountPercent || listing.discount_percent;
+  if (typeof item.thumbnailUri === "string" && item.thumbnailUri) {
+    return getFileUrl(item.thumbnailUri);
   }
-  const now = Date.now();
-  const active = listing.discounts?.find(
-    (d: any) =>
-      new Date(d.starts_at || d.startsAt).getTime() <= now &&
-      new Date(d.ends_at || d.endsAt).getTime() >= now
-  );
-  return active?.discount_percent ?? active?.discountPercent ?? null;
+  if (item.thumbnailUri?.uri) {
+    return getFileUrl(item.thumbnailUri.uri);
+  }
+  if (item.thumbnailObjectName) {
+    return getFileUrl(item.thumbnailObjectName);
+  }
+
+  if (Array.isArray(item.images) && item.images.length > 0) {
+    const primary =
+      item.images.find((img: any) => img?.isPrimary || img?.is_primary) ??
+      item.images[0];
+    const url = primary?.uri ?? primary?.url ?? primary?.objectName;
+    if (url) return getFileUrl(url);
+  }
+
+  if (item.image && typeof item.image === "string") {
+    return getFileUrl(item.image);
+  }
+
+  return "/picture/product_dress_blue_floral.jpg";
 }
 
-export function getDiscountedPrice(listing: any): number {
-  if (!listing) return 0;
-  // New responses contain a server-calculated discountPrice. Legacy responses
-  // contain price plus a discounts collection.
-  if (typeof listing.discountPrice === "number") return listing.discountPrice;
-  const price = getListingPrice(listing);
-  const pct = getActiveDiscountPercent(listing);
-  if (!pct) return price;
-  return Math.round(price * (1 - pct / 100) * 100) / 100;
+export function getEffectivePrice(item: any): number {
+  if (!item) return 0;
+  const val = item.discountPrice ?? item.price ?? item.fullPrice ?? 0;
+  return typeof val === "number" && Number.isFinite(val) ? val : 0;
 }
 
-export function formatPrice(value: number): string {
-  return `$${(value || 0).toFixed(2)}`;
+export function getOriginalPrice(item: any): number | null {
+  if (!item) return null;
+  if (item.discountPrice && (item.fullPrice || item.price)) {
+    return item.fullPrice ?? item.price;
+  }
+  return null;
 }

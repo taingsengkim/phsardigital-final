@@ -4,8 +4,8 @@ import type {
   Listing,
   ListingsQuery,
   PaginatedListings,
+  Seller,
 } from "@/lib/types";
-import type { Seller } from "@/app/(public)/home/seller-mock-types";
 
 /**
  * Public/browse endpoints (categories, listings, sellers) — no auth needed,
@@ -50,10 +50,16 @@ export const homeApi = createApi({
       }),
       providesTags: ["Listing"],
     }),
-    getTopRatedListings: builder.query<PaginatedListings, void>({
+    /**
+     * Sorted by units sold. `averageRating` is NOT a sortable field upstream —
+     * asking for it returns 400 and the section renders empty. The API reports
+     * the allowed set: createdAt, discountPrice, fullPrice, lastModifiedAt,
+     * price, sold, title.
+     */
+    getBestSellingListings: builder.query<PaginatedListings, void>({
       query: () => ({
         url: "/listings",
-        params: { sort: "averageRating,desc", pageSize: 5 },
+        params: { sort: "sold,desc", pageSize: 5 },
       }),
       providesTags: ["Listing"],
     }),
@@ -65,8 +71,17 @@ export const homeApi = createApi({
       providesTags: ["Listing"],
     }),
 
+    /**
+     * `period` defaults to LAST_30_DAYS upstream, which returns nothing on a
+     * marketplace that has not traded this month — the homepage then fell back
+     * to placeholder stores. ALL_TIME is the honest window for a top-sellers
+     * rail until volume justifies a rolling one.
+     */
     getTopSellers: builder.query<any[], void>({
-      query: () => "/sellers/top",
+      query: () => ({
+        url: "/sellers/top",
+        params: { period: "ALL_TIME", limit: 8 },
+      }),
       transformResponse: (response: any) => {
         if (Array.isArray(response)) return response;
         if (Array.isArray(response?.content)) return response.content;
@@ -81,7 +96,7 @@ export const {
   useGetCategoriesQuery,
   useGetListingsQuery,
   useGetFeaturedListingsQuery,
-  useGetTopRatedListingsQuery,
+  useGetBestSellingListingsQuery,
   useGetListingsByCategoryQuery,
   useGetTopSellersQuery,
 } = homeApi;

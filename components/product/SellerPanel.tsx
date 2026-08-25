@@ -235,7 +235,11 @@ export default function SellerPanel({
             </Link>
 
             <Link
-              href={`/messages?seller=${encodeURIComponent(sellerId ?? "")}`}
+              href={
+                sellerId
+                  ? `/messages?seller=${encodeURIComponent(sellerId)}`
+                  : "/messages"
+              }
               className="inline-flex items-center gap-2 rounded-xl border border-[#E2DFEC] bg-white px-6 py-3 text-[15px] font-bold text-[#6C4CD8] transition hover:bg-[#F1EFFA]"
             >
               <MessageCircle size={16} />

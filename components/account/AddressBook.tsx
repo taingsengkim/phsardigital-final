@@ -2,646 +2,669 @@
 
 import { useState } from "react";
 import {
+  Building,
+  Camera,
   Check,
-  Loader2,
+  Eye,
+  Home,
+  Link2,
   MapPin,
-  Pencil,
   Plus,
-  Star,
   Trash2,
   X,
 } from "lucide-react";
-import {
-  useCreateAddressMutation,
-  useDeleteAddressMutation,
-  useGetAddressesQuery,
-  useMakeAddressDefaultMutation,
-  useUpdateAddressMutation,
-  type Address,
-  type CreateAddressRequest,
-} from "@/lib/api/addressApi";
-import { buildMapLinks } from "@/lib/maps";
 import { cn } from "@/lib/utils";
 
+export type AddressItem = {
+  id: string;
+  label: string;
+  isDefault?: boolean;
+  fullName: string;
+  phone: string;
+  locationType: "city" | "province";
+  khan?: string;
+  sangkat?: string;
+  village?: string;
+  streetNo?: string;
+  province?: string;
+  district?: string;
+  commune?: string;
+  googleMapLink?: string;
+  photos?: string[];
+  city: string;
+  address: string;
+};
+
+const INITIAL_MOCK_ADDRESSES: AddressItem[] = [
+  {
+    id: "home",
+    label: "Home (Phnom Penh)",
+    isDefault: true,
+    fullName: "Vanneth Sok",
+    phone: "012 345 6789",
+    locationType: "city",
+    khan: "Ruessei Kaev",
+    sangkat: "Tuol Sangkae 2",
+    village: "Phum 1",
+    streetNo: "House #42B, Street 271",
+    city: "Phnom Penh",
+    address: "House #42B, Street 271, Phum 1, Sangkat Tuol Sangkae 2, Khan Ruessei Kaev",
+    googleMapLink: "https://maps.google.com/?q=11.5833,104.9167",
+  },
+  {
+    id: "office",
+    label: "Office / Work",
+    isDefault: false,
+    fullName: "Vanneth Sok",
+    phone: "012 345 6789",
+    locationType: "city",
+    khan: "Daun Penh",
+    sangkat: "Wat Phnom",
+    village: "Phum 1",
+    streetNo: "Canadia Tower, 18th Floor, Monivong Blvd",
+    city: "Phnom Penh",
+    address: "Canadia Tower, 18th Floor, Monivong Blvd, Phum 1, Sangkat Wat Phnom, Khan Daun Penh",
+  },
+  {
+    id: "siemreap",
+    label: "Siem Reap House",
+    isDefault: false,
+    fullName: "Vanneth Sok",
+    phone: "012 345 6789",
+    locationType: "province",
+    province: "Siem Reap",
+    district: "Svay Dangkum",
+    commune: "Sala Kamreuk",
+    village: "Phum Wat Bo",
+    city: "Siem Reap",
+    address: "House #12, National Road 06, Phum Wat Bo, Khum Sala Kamreuk, Srok Svay Dangkum",
+  },
+];
+
 type Props = {
-  /** prefilled on a brand-new address so the user types less */
   defaultRecipient?: string;
   defaultPhone?: string;
   onToast?: (toast: { type: "success" | "error"; message: string }) => void;
 };
 
-type FormState = {
-  label: string;
-  recipient: string;
-  phone: string;
-  line1: string;
-  line2: string;
-  city: string;
-  province: string;
-  latitude: string;
-  longitude: string;
-  isDefault: boolean;
-};
+export default function AddressBook({ defaultRecipient, defaultPhone, onToast }: Props) {
+  const [addresses, setAddresses] = useState<AddressItem[]>(INITIAL_MOCK_ADDRESSES);
+  const [selectedAddressId, setSelectedAddressId] = useState<string>("home");
 
-const EMPTY_FORM: FormState = {
-  label: "",
-  recipient: "",
-  phone: "",
-  line1: "",
-  line2: "",
-  city: "",
-  province: "",
-  latitude: "",
-  longitude: "",
-  isDefault: false,
-};
+  // Form Input State
+  const [locationType, setLocationType] = useState<"city" | "province">("city");
+  const [locationTitle, setLocationTitle] = useState("Home (Phnom Penh)");
+  const [fullName, setFullName] = useState(defaultRecipient || "Vanneth Sok");
+  const [phone, setPhone] = useState(defaultPhone || "012 345 6789");
 
-/** Field caps come straight from the API's AddressRequest schema. */
-const MAX = {
-  label: 50,
-  recipient: 255,
-  phone: 30,
-  line1: 2000,
-  line2: 2000,
-  city: 100,
-  province: 100,
-};
+  // City User Fields (Phnom Penh)
+  const [khan, setKhan] = useState("Daun Penh");
+  const [sangkat, setSangkat] = useState("Wat Phnom");
+  const [village, setVillage] = useState("Phum 1");
+  const [streetNo, setStreetNo] = useState("Canadia Tower, 18th Floor, Monivong Blvd");
 
-function toForm(address: Address): FormState {
-  return {
-    label: address.label ?? "",
-    recipient: address.recipient ?? "",
-    phone: address.phone ?? "",
-    line1: address.line1 ?? "",
-    line2: address.line2 ?? "",
-    city: address.city ?? "",
-    province: address.province ?? "",
-    latitude: address.latitude != null ? String(address.latitude) : "",
-    longitude: address.longitude != null ? String(address.longitude) : "",
-    isDefault: Boolean(address.isDefault),
-  };
-}
+  // Province User Fields
+  const [province, setProvince] = useState("Siem Reap");
+  const [district, setDistrict] = useState("Svay Dangkum");
+  const [commune, setCommune] = useState("Sala Kamreuk");
 
-function parseCoord(value: string): number | undefined {
-  const trimmed = value.trim();
-  if (!trimmed) return undefined;
-  const n = Number(trimmed);
-  return Number.isFinite(n) ? n : undefined;
-}
+  // Shared Optional Fields
+  const [googleMapLink, setGoogleMapLink] = useState("https://maps.google.com/?q=11.5564,104.9282");
+  const [housePhotos, setHousePhotos] = useState<string[]>([]);
+  const [viewPhotoUrl, setViewPhotoUrl] = useState<string | null>(null);
 
-function apiMessage(err: unknown, fallback: string): string {
-  const data = (err as { data?: { message?: string; errorDetails?: { fieldMessage?: string }[] } })
-    ?.data;
-  return data?.errorDetails?.[0]?.fieldMessage || data?.message || fallback;
-}
+  // Formatted address string
+  const fullAddressString =
+    locationType === "city"
+      ? `${streetNo ? `Street ${streetNo}, ` : ""}${village ? `Phum ${village}, ` : ""}${sangkat ? `Sangkat ${sangkat}, ` : ""}${khan ? `Khan ${khan}, ` : ""}Phnom Penh`
+      : `${village ? `Phum ${village}, ` : ""}${commune ? `Khum/Commune ${commune}, ` : ""}${district ? `Srok/District ${district}, ` : ""}${province || "Province"}`;
 
-export default function AddressBook({
-  defaultRecipient,
-  defaultPhone,
-  onToast,
-}: Props) {
-  const { data: addresses = [], isLoading, isError, refetch } =
-    useGetAddressesQuery();
-
-  const [createAddress, { isLoading: isCreating }] = useCreateAddressMutation();
-  const [updateAddress, { isLoading: isUpdating }] = useUpdateAddressMutation();
-  const [deleteAddress] = useDeleteAddressMutation();
-  const [makeDefault] = useMakeAddressDefaultMutation();
-
-  /** null = closed, "new" = create form, otherwise the id being edited */
-  const [editing, setEditing] = useState<string | null>(null);
-  const [form, setForm] = useState<FormState>(EMPTY_FORM);
-  const [pendingId, setPendingId] = useState<string | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
-
-  const saving = isCreating || isUpdating;
-
-  function openCreate() {
-    setForm({
-      ...EMPTY_FORM,
-      recipient: defaultRecipient ?? "",
-      phone: defaultPhone ?? "",
-      isDefault: addresses.length === 0,
-    });
-    setEditing("new");
+  // Handle selecting a saved address card
+  function handleSelectSavedAddress(addr: AddressItem) {
+    setSelectedAddressId(addr.id);
+    setLocationTitle(addr.label);
+    setFullName(addr.fullName);
+    setPhone(addr.phone);
+    setLocationType(addr.locationType);
+    if (addr.locationType === "city") {
+      setKhan(addr.khan || "Daun Penh");
+      setSangkat(addr.sangkat || "Wat Phnom");
+      setVillage(addr.village || "Phum 1");
+      setStreetNo(addr.streetNo || addr.address || "");
+    } else {
+      setProvince(addr.province || "Siem Reap");
+      setDistrict(addr.district || "Svay Dangkum");
+      setCommune(addr.commune || "Sala Kamreuk");
+      setVillage(addr.village || addr.address || "");
+    }
+    setGoogleMapLink(addr.googleMapLink || "");
+    setHousePhotos(addr.photos || []);
   }
 
-  function openEdit(address: Address) {
-    setForm(toForm(address));
-    setEditing(address.id);
+  // Handle clicking + New Location
+  function handleAddNewAddressClick() {
+    setSelectedAddressId("new");
+    setLocationTitle("");
+    setFullName(defaultRecipient || "Vanneth Sok");
+    setPhone(defaultPhone || "012 345 6789");
+    setLocationType("city");
+    setKhan("");
+    setSangkat("");
+    setVillage("");
+    setStreetNo("");
+    setProvince("Siem Reap");
+    setDistrict("");
+    setCommune("");
+    setGoogleMapLink("");
+    setHousePhotos([]);
   }
 
-  function close() {
-    setEditing(null);
-    setForm(EMPTY_FORM);
-  }
-
-  function set<K extends keyof FormState>(key: K, value: FormState[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }));
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
+  // Handle Save / Update Address
+  function handleSaveAddress(e: React.FormEvent) {
     e.preventDefault();
-
-    if (!form.line1.trim()) {
-      onToast?.({ type: "error", message: "Street address is required." });
+    if (!locationTitle.trim()) {
+      onToast?.({ type: "error", message: "Please enter a location title." });
+      return;
+    }
+    if (!fullName.trim() || !phone.trim()) {
+      onToast?.({ type: "error", message: "Please enter full name and phone number." });
       return;
     }
 
-    const payload: CreateAddressRequest = {
-      label: form.label.trim() || undefined,
-      recipient: form.recipient.trim() || undefined,
-      phone: form.phone.trim() || undefined,
-      line1: form.line1.trim(),
-      line2: form.line2.trim() || undefined,
-      city: form.city.trim() || undefined,
-      province: form.province.trim() || undefined,
-      latitude: parseCoord(form.latitude),
-      longitude: parseCoord(form.longitude),
-    };
-
-    try {
-      if (editing === "new") {
-        await createAddress({ ...payload, isDefault: form.isDefault }).unwrap();
-        onToast?.({ type: "success", message: "Delivery address added." });
-      } else if (editing) {
-        await updateAddress({
-          id: editing,
-          body: { ...payload, isDefault: form.isDefault },
-        }).unwrap();
-        onToast?.({ type: "success", message: "Delivery address updated." });
-      }
-      close();
-    } catch (err) {
-      onToast?.({
-        type: "error",
-        message: apiMessage(err, "Could not save this address. Please try again."),
-      });
+    if (selectedAddressId === "new") {
+      const newAddr: AddressItem = {
+        id: `addr_${Date.now()}`,
+        label: locationTitle.trim(),
+        fullName: fullName.trim(),
+        phone: phone.trim(),
+        locationType,
+        khan,
+        sangkat,
+        village,
+        streetNo,
+        province,
+        district,
+        commune,
+        googleMapLink,
+        photos: housePhotos,
+        city: locationType === "city" ? "Phnom Penh" : province,
+        address: fullAddressString,
+      };
+      setAddresses((prev) => [...prev, newAddr]);
+      setSelectedAddressId(newAddr.id);
+      onToast?.({ type: "success", message: "New delivery address saved!" });
+    } else {
+      setAddresses((prev) =>
+        prev.map((a) =>
+          a.id === selectedAddressId
+            ? {
+                ...a,
+                label: locationTitle.trim(),
+                fullName: fullName.trim(),
+                phone: phone.trim(),
+                locationType,
+                khan,
+                sangkat,
+                village,
+                streetNo,
+                province,
+                district,
+                commune,
+                googleMapLink,
+                photos: housePhotos,
+                city: locationType === "city" ? "Phnom Penh" : province,
+                address: fullAddressString,
+              }
+            : a
+        )
+      );
+      onToast?.({ type: "success", message: "Address updated successfully!" });
     }
   }
 
-  async function handleDelete(id: string) {
-    setPendingId(id);
-    try {
-      await deleteAddress(id).unwrap();
-      onToast?.({ type: "success", message: "Delivery address removed." });
-      setConfirmDelete(null);
-    } catch (err) {
-      onToast?.({
-        type: "error",
-        message: apiMessage(err, "Could not remove this address."),
-      });
-    } finally {
-      setPendingId(null);
+  // Handle Delete Address
+  function handleDeleteAddress(id: string) {
+    setAddresses((prev) => prev.filter((a) => a.id !== id));
+    if (selectedAddressId === id) {
+      handleAddNewAddressClick();
     }
-  }
-
-  async function handleMakeDefault(id: string) {
-    setPendingId(id);
-    try {
-      await makeDefault(id).unwrap();
-      onToast?.({ type: "success", message: "Default delivery address updated." });
-    } catch (err) {
-      onToast?.({
-        type: "error",
-        message: apiMessage(err, "Could not set the default address."),
-      });
-    } finally {
-      setPendingId(null);
-    }
-  }
-
-  /* ── loading ── */
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center rounded-2xl bg-white py-16 shadow-sm ring-1 ring-black/5">
-        <Loader2 size={22} className="animate-spin text-[#6C4CD8]" />
-      </div>
-    );
-  }
-
-  /* ── the request failed outright ── */
-  if (isError) {
-    return (
-      <div className="rounded-2xl bg-white p-8 text-center shadow-sm ring-1 ring-black/5">
-        <MapPin size={22} className="mx-auto text-[#B5B0CA]" />
-        <p className="mt-3 text-base font-semibold text-[#1A1330]">
-          Could not load your addresses
-        </p>
-        <p className="mt-1 text-sm text-[#6B6580]">
-          Check your connection and try again.
-        </p>
-        <button
-          type="button"
-          onClick={() => refetch()}
-          className="mt-4 rounded-xl bg-[#6C4CD8] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#5C3DC8]"
-        >
-          Retry
-        </button>
-      </div>
-    );
+    onToast?.({ type: "success", message: "Location removed." });
   }
 
   return (
-    <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-black/5 sm:p-8">
-      <div className="flex flex-col gap-4 border-b border-[#EAE7F3] pb-5 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-[#1A1330]">Delivery Addresses</h2>
-          <p className="mt-1 text-sm text-[#6B6580]">
-            Saved addresses are offered at checkout. Your default is selected
-            automatically.
-          </p>
+    <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-black/5 sm:p-8">
+      {/* ── Header ── */}
+      <div className="flex items-center gap-3.5 border-b border-[#F0EDFB] pb-5">
+        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#F1EFFA] text-[#6C4CD8]">
+          <MapPin size={22} />
         </div>
-        {editing === null && (
-          <button
-            type="button"
-            onClick={openCreate}
-            className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-[#6C4CD8] px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-[#6C4CD8]/20 transition hover:bg-[#5C3DC8] active:scale-95"
-          >
-            <Plus size={16} />
-            Add address
-          </button>
-        )}
+        <div>
+          <h2 className="text-xl font-extrabold text-[#1A1330]">Delivery Address</h2>
+          <p className="text-xs font-medium text-[#8B85A0]">Select a saved location or enter a new shipping address</p>
+        </div>
       </div>
 
-      {/* ── editor ── */}
-      {editing !== null && (
-        <form
-          onSubmit={handleSubmit}
-          className="mt-6 rounded-2xl border border-[#E2DFEC] bg-[#FAFAFE] p-5 sm:p-6"
-        >
-          <div className="flex items-center justify-between">
-            <h3 className="text-base font-bold text-[#1A1330]">
-              {editing === "new" ? "New delivery address" : "Edit address"}
-            </h3>
-            <button
-              type="button"
-              onClick={close}
-              aria-label="Close"
-              className="rounded-lg p-1.5 text-[#8D86A8] transition hover:bg-white hover:text-[#6C4CD8]"
-            >
-              <X size={18} />
-            </button>
-          </div>
-
-          <div className="mt-5 grid gap-4 sm:grid-cols-2">
-            <Field
-              id="addr-label"
-              label="Label"
-              hint="Home, Office, …"
-              value={form.label}
-              maxLength={MAX.label}
-              onChange={(v) => set("label", v)}
-            />
-            <Field
-              id="addr-recipient"
-              label="Recipient name"
-              value={form.recipient}
-              maxLength={MAX.recipient}
-              onChange={(v) => set("recipient", v)}
-            />
-            <Field
-              id="addr-phone"
-              label="Contact phone"
-              type="tel"
-              placeholder="012 345 678"
-              value={form.phone}
-              maxLength={MAX.phone}
-              onChange={(v) => set("phone", v)}
-            />
-            <Field
-              id="addr-city"
-              label="City / District"
-              value={form.city}
-              maxLength={MAX.city}
-              onChange={(v) => set("city", v)}
-            />
-            <Field
-              id="addr-province"
-              label="Province"
-              value={form.province}
-              maxLength={MAX.province}
-              onChange={(v) => set("province", v)}
-            />
-            <Field
-              id="addr-line2"
-              label="Apartment, floor (optional)"
-              value={form.line2}
-              maxLength={MAX.line2}
-              onChange={(v) => set("line2", v)}
-            />
-          </div>
-
-          <div className="mt-4">
-            <Field
-              id="addr-line1"
-              label="Street address"
-              required
-              placeholder="House #42B, Street 271, Sangkat Tuol Sangkae"
-              value={form.line1}
-              maxLength={MAX.line1}
-              onChange={(v) => set("line1", v)}
-            />
-          </div>
-
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <Field
-              id="addr-lat"
-              label="Latitude (optional)"
-              placeholder="11.5564"
-              value={form.latitude}
-              onChange={(v) => set("latitude", v)}
-            />
-            <Field
-              id="addr-lng"
-              label="Longitude (optional)"
-              placeholder="104.9282"
-              value={form.longitude}
-              onChange={(v) => set("longitude", v)}
-            />
-          </div>
-          <p className="mt-2 text-xs text-[#8D86A8]">
-            Coordinates let the courier open your exact pin in Google Maps. Copy
-            them from a Google Maps pin if you have one.
-          </p>
-
-          <label className="mt-5 flex cursor-pointer items-center gap-3">
-            <input
-              type="checkbox"
-              checked={form.isDefault}
-              onChange={(e) => set("isDefault", e.target.checked)}
-              className="h-4 w-4 rounded border-[#E2DFEC] text-[#6C4CD8] focus:ring-[#6C4CD8]"
-            />
-            <span className="text-sm font-medium text-[#1A1330]">
-              Use as my default delivery address
-            </span>
+      <form onSubmit={handleSaveAddress} className="mt-6 space-y-6">
+        {/* ── SAVED LOCATIONS CARDS ── */}
+        <div>
+          <label className="mb-3 block text-[13px] font-extrabold text-[#1A1330] uppercase tracking-wide">
+            Saved Locations
           </label>
+          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
+            {addresses.map((addr) => {
+              const isSelected = selectedAddressId === addr.id;
+              return (
+                <div
+                  key={addr.id}
+                  onClick={() => handleSelectSavedAddress(addr)}
+                  className={cn(
+                    "relative flex cursor-pointer flex-col justify-between rounded-2xl border-2 p-4 transition-all",
+                    isSelected
+                      ? "border-[#6C4CD8] bg-[#F8F7FC] shadow-sm"
+                      : "border-[#EDEBF3] bg-white hover:border-[#C4B5FD]"
+                  )}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[14px] font-extrabold text-[#1A1330] flex items-center gap-1.5 truncate">
+                      {addr.id === "home" ? (
+                        <Home size={15} className="text-[#6C4CD8] shrink-0" />
+                      ) : (
+                        <Building size={15} className="text-[#6C4CD8] shrink-0" />
+                      )}
+                      <span className="truncate">{addr.label}</span>
+                    </span>
+                    {isSelected && (
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#6C4CD8] text-white shadow-xs">
+                        <Check size={12} />
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[12px] text-[#8B85A0] line-clamp-2 leading-relaxed">
+                    {addr.address || `${addr.streetNo || ""}, ${addr.city}`}
+                  </p>
+                </div>
+              );
+            })}
 
-          <div className="mt-6 flex items-center justify-end gap-3 border-t border-[#EAE7F3] pt-5">
+            {/* + New Location Card */}
+            <div
+              onClick={handleAddNewAddressClick}
+              className={cn(
+                "flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed p-4 text-center transition-all min-h-[90px]",
+                selectedAddressId === "new"
+                  ? "border-[#6C4CD8] bg-[#F8F7FC] text-[#6C4CD8]"
+                  : "border-[#DCD7EC] bg-white text-[#8B85A0] hover:border-[#6C4CD8] hover:text-[#6C4CD8]"
+              )}
+            >
+              <Plus size={18} />
+              <span className="text-[13.5px] font-extrabold">+ New Location</span>
+            </div>
+          </div>
+        </div>
+
+        {/* ── LOCATION TYPE SELECTOR ── */}
+        <div className="pt-2 border-t border-[#F0EDFB]">
+          <label className="mb-2.5 block text-[13px] font-extrabold text-[#1A1330] uppercase tracking-wide">
+            Location Type *
+          </label>
+          <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={close}
-              className="rounded-xl border border-[#E2DFEC] px-5 py-2.5 text-sm font-semibold text-[#5A5470] transition hover:bg-white active:scale-95"
+              onClick={() => setLocationType("city")}
+              className={cn(
+                "flex-1 rounded-xl py-3 px-4 text-sm font-extrabold border-2 transition-all flex items-center justify-center gap-2 cursor-pointer",
+                locationType === "city"
+                  ? "border-[#6C4CD8] bg-[#F8F7FC] text-[#6C4CD8] shadow-xs"
+                  : "border-[#EDEBF3] bg-white text-[#7C7596] hover:bg-[#F8F7FC]"
+              )}
             >
-              Cancel
+              <Building size={16} />
+              City User (Phnom Penh)
             </button>
+            <button
+              type="button"
+              onClick={() => setLocationType("province")}
+              className={cn(
+                "flex-1 rounded-xl py-3 px-4 text-sm font-extrabold border-2 transition-all flex items-center justify-center gap-2 cursor-pointer",
+                locationType === "province"
+                  ? "border-[#6C4CD8] bg-[#F8F7FC] text-[#6C4CD8] shadow-xs"
+                  : "border-[#EDEBF3] bg-white text-[#7C7596] hover:bg-[#F8F7FC]"
+              )}
+            >
+              <MapPin size={16} />
+              Province User
+            </button>
+          </div>
+        </div>
+
+        {/* ── FORM FIELDS GRID ── */}
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+          {/* Location Title / Name */}
+          <div className="sm:col-span-2">
+            <label htmlFor="locationTitle" className="mb-1.5 flex items-center justify-between text-[13px] font-bold text-[#1A1330]">
+              <span className="flex items-center gap-1.5">
+                <Building size={15} className="text-[#6C4CD8]" />
+                Location Title / Name *
+              </span>
+              <span className="text-[12px] font-normal text-[#8B85A0]">e.g. Home, Office, Condo, Parents' House</span>
+            </label>
+            <input
+              id="locationTitle"
+              type="text"
+              value={locationTitle}
+              onChange={(e) => setLocationTitle(e.target.value)}
+              required
+              placeholder="e.g. Home (Phnom Penh), Work Office, Siem Reap Villa, Condo"
+              className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="fullName" className="mb-1.5 block text-[13px] font-bold text-[#1A1330]">
+              Full Name *
+            </label>
+            <input
+              id="fullName"
+              type="text"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              required
+              placeholder="Enter your full name"
+              className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="phone" className="mb-1.5 block text-[13px] font-bold text-[#1A1330]">
+              Phone Number (Cambodia) *
+            </label>
+            <input
+              id="phone"
+              type="text"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              required
+              placeholder="012 345 6789"
+              className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
+            />
+          </div>
+
+          {/* CITY USER FIELDS */}
+          {locationType === "city" && (
+            <>
+              <div>
+                <label htmlFor="khan" className="mb-1.5 block text-[13px] font-bold text-[#1A1330]">
+                  Khan *
+                </label>
+                <input
+                  id="khan"
+                  type="text"
+                  value={khan}
+                  onChange={(e) => setKhan(e.target.value)}
+                  required
+                  placeholder="e.g. Daun Penh, Tuol Kork, Ruessei Kaev"
+                  className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="sangkat" className="mb-1.5 block text-[13px] font-bold text-[#1A1330]">
+                  Sangkat *
+                </label>
+                <input
+                  id="sangkat"
+                  type="text"
+                  value={sangkat}
+                  onChange={(e) => setSangkat(e.target.value)}
+                  required
+                  placeholder="e.g. Wat Phnom, Tuol Sangkae 2"
+                  className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="village" className="mb-1.5 block text-[13px] font-bold text-[#1A1330]">
+                  Village *
+                </label>
+                <input
+                  id="village"
+                  type="text"
+                  value={village}
+                  onChange={(e) => setVillage(e.target.value)}
+                  required
+                  placeholder="e.g. Phum 1, Phum 4"
+                  className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="streetNo" className="mb-1.5 block text-[13px] font-bold text-[#1A1330]">
+                  Street No. *
+                </label>
+                <input
+                  id="streetNo"
+                  type="text"
+                  value={streetNo}
+                  onChange={(e) => setStreetNo(e.target.value)}
+                  required
+                  placeholder="e.g. Street 271, House #42B"
+                  className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
+                />
+              </div>
+            </>
+          )}
+
+          {/* PROVINCE USER FIELDS */}
+          {locationType === "province" && (
+            <>
+              <div>
+                <label htmlFor="province" className="mb-1.5 block text-[13px] font-bold text-[#1A1330]">
+                  Province *
+                </label>
+                <select
+                  id="province"
+                  value={province}
+                  onChange={(e) => setProvince(e.target.value)}
+                  className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition cursor-pointer"
+                >
+                  <option value="Siem Reap">Siem Reap (សៀមរាប)</option>
+                  <option value="Battambang">Battambang (បាត់ដំបង)</option>
+                  <option value="Kampong Cham">Kampong Cham (កំពង់ចាម)</option>
+                  <option value="Sihanoukville">Sihanoukville (ព្រះសីហនុ)</option>
+                  <option value="Kampot">Kampot (កំពត)</option>
+                  <option value="Kandal">Kandal (កណ្តាល)</option>
+                  <option value="Takeo">Takeo (តាកែវ)</option>
+                  <option value="Prey Veng">Prey Veng (ព្រៃវែង)</option>
+                  <option value="Svay Rieng">Svay Rieng (ស្វាយរៀង)</option>
+                  <option value="Kratie">Kratie (ក្រចេះ)</option>
+                  <option value="Ratanakiri">Ratanakiri (រតនគិរី)</option>
+                  <option value="Mondulkiri">Mondulkiri (មណ្ឌលគិរី)</option>
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="district" className="mb-1.5 block text-[13px] font-bold text-[#1A1330]">
+                  District (Srok) *
+                </label>
+                <input
+                  id="district"
+                  type="text"
+                  value={district}
+                  onChange={(e) => setDistrict(e.target.value)}
+                  required
+                  placeholder="e.g. Svay Dangkum, Prasat Bakong"
+                  className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="commune" className="mb-1.5 block text-[13px] font-bold text-[#1A1330]">
+                  Commune (Khum) *
+                </label>
+                <input
+                  id="commune"
+                  type="text"
+                  value={commune}
+                  onChange={(e) => setCommune(e.target.value)}
+                  required
+                  placeholder="e.g. Sala Kamreuk, Svay Dangkum"
+                  className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="villageProvince" className="mb-1.5 block text-[13px] font-bold text-[#1A1330]">
+                  Village *
+                </label>
+                <input
+                  id="villageProvince"
+                  type="text"
+                  value={village}
+                  onChange={(e) => setVillage(e.target.value)}
+                  required
+                  placeholder="e.g. Phum Wat Bo, Phum Mondul 1"
+                  className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
+                />
+              </div>
+            </>
+          )}
+
+          {/* GOOGLE MAP LINK (OPTIONAL) */}
+          <div className="sm:col-span-2">
+            <label htmlFor="googleMapLink" className="mb-1.5 flex items-center justify-between text-[13px] font-bold text-[#1A1330]">
+              <span className="flex items-center gap-1.5">
+                <Link2 size={15} className="text-[#6C4CD8]" />
+                GoogleMap (Link)
+              </span>
+              <span className="text-[12px] font-normal text-[#8B85A0]">Optional</span>
+            </label>
+            <input
+              id="googleMapLink"
+              type="url"
+              value={googleMapLink}
+              onChange={(e) => setGoogleMapLink(e.target.value)}
+              placeholder="https://maps.google.com/?q=11.5564,104.9282"
+              className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
+            />
+          </div>
+
+          {/* HOUSE OR OFFICE PHOTOS */}
+          <div className="sm:col-span-2">
+            <label className="mb-1.5 flex items-center justify-between text-[13px] font-bold text-[#1A1330]">
+              <span className="flex items-center gap-1.5">
+                <Camera size={15} className="text-[#6C4CD8]" />
+                House or Office Photos
+              </span>
+              <span className="text-[12px] font-normal text-[#8B85A0]">Optional (Multiple)</span>
+            </label>
+
+            <div className="space-y-3">
+              <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-sm font-semibold text-[#6C4CD8] transition hover:border-[#6C4CD8] hover:bg-[#F8F7FC]">
+                <Camera size={18} />
+                <span>{housePhotos.length > 0 ? `+ Add More Photos (${housePhotos.length} uploaded)` : "Upload House or Office Photos"}</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files || []);
+                    files.forEach((file) => {
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        if (reader.result) {
+                          setHousePhotos((prev) => [...prev, reader.result as string]);
+                        }
+                      };
+                      reader.readAsDataURL(file);
+                    });
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+
+              {housePhotos.length > 0 && (
+                <div className="flex flex-wrap items-center gap-3 pt-1">
+                  {housePhotos.map((photo, idx) => (
+                    <div
+                      key={idx}
+                      className="group relative h-16 w-16 cursor-pointer overflow-hidden rounded-2xl border-2 border-[#EDEBF3] shadow-xs transition-transform hover:scale-105 hover:border-[#6C4CD8]"
+                      onClick={() => setViewPhotoUrl(photo)}
+                      title="Click to view full image"
+                    >
+                      <img src={photo} alt={`House photo ${idx + 1}`} className="h-full w-full object-cover" />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Eye size={16} className="text-white drop-shadow-md" />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setHousePhotos((prev) => prev.filter((_, i) => i !== idx));
+                        }}
+                        className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-white shadow-md hover:bg-rose-600 transition"
+                        title="Delete photo"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ── ACTION BUTTONS ── */}
+        <div className="flex items-center justify-between pt-4 border-t border-[#F0EDFB]">
+          {selectedAddressId !== "new" && (
+            <button
+              type="button"
+              onClick={() => handleDeleteAddress(selectedAddressId)}
+              className="flex items-center gap-1.5 text-sm font-semibold text-rose-500 hover:text-rose-700 transition"
+            >
+              <Trash2 size={16} />
+              Remove Location
+            </button>
+          )}
+
+          <div className="flex items-center gap-3 ml-auto">
             <button
               type="submit"
-              disabled={saving || !form.line1.trim()}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#6C4CD8] px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-[#6C4CD8]/20 transition hover:bg-[#5C3DC8] active:scale-95 disabled:opacity-50"
+              className="rounded-xl bg-[#6C4CD8] px-6 py-3 text-sm font-bold text-white shadow-md shadow-[#6C4CD8]/25 transition hover:bg-[#5B3DC0] cursor-pointer"
             >
-              {saving ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" />
-                  Saving…
-                </>
-              ) : (
-                <>
-                  <Check size={16} />
-                  {editing === "new" ? "Add address" : "Save changes"}
-                </>
-              )}
+              {selectedAddressId === "new" ? "Save New Address" : "Update Saved Address"}
             </button>
           </div>
-        </form>
-      )}
-
-      {/* ── list ── */}
-      {addresses.length === 0 && editing === null ? (
-        <div className="mt-6 rounded-2xl border border-dashed border-[#E2DFEC] bg-[#FAFAFE] py-14 text-center">
-          <MapPin size={24} className="mx-auto text-[#C4BCDA]" />
-          <p className="mt-3 text-base font-semibold text-[#1A1330]">
-            No delivery addresses yet
-          </p>
-          <p className="mx-auto mt-1 max-w-sm text-sm text-[#6B6580]">
-            Add one now and it will be ready to pick at checkout.
-          </p>
-          <button
-            type="button"
-            onClick={openCreate}
-            className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#6C4CD8] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#5C3DC8]"
-          >
-            <Plus size={16} />
-            Add your first address
-          </button>
         </div>
-      ) : (
-        <ul className="mt-6 space-y-4">
-          {addresses.map((address) => (
-            <AddressRow
-              key={address.id}
-              address={address}
-              busy={pendingId === address.id}
-              confirming={confirmDelete === address.id}
-              onEdit={() => openEdit(address)}
-              onMakeDefault={() => handleMakeDefault(address.id)}
-              onAskDelete={() => setConfirmDelete(address.id)}
-              onCancelDelete={() => setConfirmDelete(null)}
-              onConfirmDelete={() => handleDelete(address.id)}
+      </form>
+
+      {/* ── FULL-SIZE PHOTO PREVIEW LIGHTBOX MODAL ── */}
+      {viewPhotoUrl && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-xs animate-in fade-in"
+          onClick={() => setViewPhotoUrl(null)}
+        >
+          <div
+            className="relative max-h-[90vh] max-w-4xl overflow-hidden rounded-3xl bg-white p-2 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setViewPhotoUrl(null)}
+              className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-black/60 text-white transition hover:bg-black cursor-pointer"
+              title="Close full view"
+            >
+              <X size={20} />
+            </button>
+            <img
+              src={viewPhotoUrl}
+              alt="House Photo Full View"
+              className="max-h-[85vh] w-auto max-w-full rounded-2xl object-contain"
             />
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-/* ── pieces ─────────────────────────────────────────────────────────────── */
-
-function Field({
-  id,
-  label,
-  value,
-  onChange,
-  type = "text",
-  placeholder,
-  hint,
-  required,
-  maxLength,
-}: {
-  id: string;
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  type?: string;
-  placeholder?: string;
-  hint?: string;
-  required?: boolean;
-  maxLength?: number;
-}) {
-  return (
-    <div>
-      <label
-        htmlFor={id}
-        className="mb-2 block text-sm font-semibold text-[#1A1330]"
-      >
-        {label}
-        {required && <span className="ml-1 text-rose-500">*</span>}
-        {hint && (
-          <span className="ml-2 font-normal text-[#8D86A8]">{hint}</span>
-        )}
-      </label>
-      <input
-        id={id}
-        type={type}
-        value={value}
-        required={required}
-        maxLength={maxLength}
-        placeholder={placeholder}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-xl border border-[#E2DFEC] bg-white px-4 py-3 text-sm text-[#1A1330] placeholder:text-[#B5B0CA] focus:border-[#6C4CD8] focus:outline-none focus:ring-2 focus:ring-[#6C4CD8]/15"
-      />
-    </div>
-  );
-}
-
-function AddressRow({
-  address,
-  busy,
-  confirming,
-  onEdit,
-  onMakeDefault,
-  onAskDelete,
-  onCancelDelete,
-  onConfirmDelete,
-}: {
-  address: Address;
-  busy: boolean;
-  confirming: boolean;
-  onEdit: () => void;
-  onMakeDefault: () => void;
-  onAskDelete: () => void;
-  onCancelDelete: () => void;
-  onConfirmDelete: () => void;
-}) {
-  const isDefault = Boolean(address.isDefault);
-
-  const lines = [address.line1, address.line2].filter(Boolean).join(", ");
-  const region = [address.city, address.province].filter(Boolean).join(", ");
-
-  const { linkUrl } = buildMapLinks({
-    latitude: address.latitude,
-    longitude: address.longitude,
-    address: address.line1,
-    city: address.city,
-    province: address.province,
-  });
-
-  return (
-    <li
-      className={cn(
-        "rounded-2xl border p-5 transition",
-        isDefault
-          ? "border-[#6C4CD8]/40 bg-[#F8F6FF] ring-1 ring-[#6C4CD8]/10"
-          : "border-[#EDEBF3] hover:bg-[#FAFAFE]"
-      )}
-    >
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-base font-bold text-[#1A1330]">
-              {address.label?.trim() || "Delivery address"}
-            </p>
-            {isDefault && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-[#6C4CD8] px-2.5 py-0.5 text-[11px] font-bold text-white">
-                <Star size={10} fill="white" />
-                Default
-              </span>
-            )}
-          </div>
-
-          {address.recipient && (
-            <p className="mt-1.5 text-sm font-semibold text-[#5A5470]">
-              {address.recipient}
-              {address.phone && (
-                <span className="font-normal text-[#8D86A8]">
-                  {" · "}
-                  {address.phone}
-                </span>
-              )}
-            </p>
-          )}
-
-          <p className="mt-1 text-sm leading-relaxed text-[#6B6580]">
-            {lines || "No street address on file"}
-            {region && (
-              <>
-                <br />
-                {region}
-              </>
-            )}
-          </p>
-
-          {linkUrl && (
-            <a
-              href={linkUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-[#6C4CD8] hover:underline"
-            >
-              <MapPin size={13} />
-              View on Google Maps
-            </a>
-          )}
-        </div>
-
-        {/* actions */}
-        <div className="flex shrink-0 items-center gap-2">
-          {!isDefault && (
-            <button
-              type="button"
-              onClick={onMakeDefault}
-              disabled={busy}
-              className="rounded-lg border border-[#E2DFEC] px-3 py-2 text-xs font-bold text-[#6C4CD8] transition hover:bg-white disabled:opacity-50"
-            >
-              Set default
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={onEdit}
-            aria-label="Edit address"
-            className="rounded-lg border border-[#E2DFEC] p-2 text-[#5A5470] transition hover:bg-white hover:text-[#6C4CD8]"
-          >
-            <Pencil size={15} />
-          </button>
-          <button
-            type="button"
-            onClick={onAskDelete}
-            aria-label="Delete address"
-            className="rounded-lg border border-[#E2DFEC] p-2 text-[#5A5470] transition hover:bg-rose-50 hover:text-rose-600"
-          >
-            <Trash2 size={15} />
-          </button>
-        </div>
-      </div>
-
-      {/* delete confirmation */}
-      {confirming && (
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-rose-50 px-4 py-3">
-          <p className="text-sm font-medium text-rose-700">
-            Remove this address? This cannot be undone.
-          </p>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onCancelDelete}
-              className="rounded-lg px-3 py-1.5 text-xs font-bold text-[#5A5470] transition hover:bg-white"
-            >
-              Keep it
-            </button>
-            <button
-              type="button"
-              onClick={onConfirmDelete}
-              disabled={busy}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-rose-700 disabled:opacity-50"
-            >
-              {busy && <Loader2 size={12} className="animate-spin" />}
-              Delete
-            </button>
           </div>
         </div>
       )}
-    </li>
+    </div>
   );
 }

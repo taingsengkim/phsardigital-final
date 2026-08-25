@@ -3,34 +3,84 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { LayoutGrid, List, ChevronsUpDown, Heart, Star } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { LayoutGrid, List, ChevronsUpDown, Heart, Star, Loader2, PackageX } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useGetListingsQuery } from "@/lib/api/homeApi";
 import { MOCK_PRODUCTS } from "@/lib/mock-products";
-
-const TOTAL    = 17;
-const PER_PAGE = 10;
-const PAGES    = Math.ceil(TOTAL / PER_PAGE);
+import { ProductCard } from "@/app/(public)/home/ProductCard";
+import { getPrimaryImage } from "@/app/(public)/home/listing-helpers";
 
 function usd(n: number) {
-  return n.toLocaleString("en-US", { style: "currency", currency: "USD" });
+  return (n || 0).toLocaleString("en-US", { style: "currency", currency: "USD" });
 }
 
 export default function ProductsClient() {
-  const [view,  setView]  = useState<"grid" | "list">("grid");
-  const [sort,  setSort]  = useState("popular");
-  const [page,  setPage]  = useState(1);
-  const [saved, setSaved] = useState<Set<number>>(new Set());
+  const searchParams = useSearchParams();
+  const categorySlug = searchParams.get("category") || searchParams.get("categorySlug") || "";
+  const initialSort = searchParams.get("sort") || "popular";
 
-  function toggleSave(id: number) {
-    setSaved((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
+  const [view, setView] = useState<"grid" | "list">("grid");
+  const [sort, setSort] = useState(initialSort);
+  const [page, setPage] = useState(1);
+  const [favoriteMap, setFavoriteMap] = useState<Record<string, boolean>>({});
+
+  // Map sort UI selection to backend query
+  const mappedSort =
+    sort === "price_asc" || sort === "priceAsc"
+      ? "fullPrice,asc"
+      : sort === "price_desc" || sort === "priceDesc"
+        ? "fullPrice,desc"
+        : sort === "newest"
+          ? "createdAt,desc"
+          : undefined;
+
+  const { data: apiData, isLoading } = useGetListingsQuery({
+    categorySlug: categorySlug || undefined,
+    sort: mappedSort,
+    pageNumber: page - 1,
+    pageSize: 20,
+  });
+
+  const apiListings = (apiData?.content || apiData?.data || []) as any[];
+  const pageObj = typeof apiData?.page === "object" ? apiData.page : null;
+  const totalElements = pageObj?.totalElements ?? apiData?.total ?? apiListings.length ?? MOCK_PRODUCTS.length;
+  const totalPages = pageObj?.totalPages ?? apiData?.totalPages ?? Math.ceil(totalElements / 20) ?? 1;
+
+  async function toggleFavorite(uuid: string, currentFav: boolean) {
+    const nextStatus = !currentFav;
+    setFavoriteMap((prev) => ({ ...prev, [uuid]: nextStatus }));
+
+    try {
+      if (nextStatus) {
+        await fetch(`/api/favorites/${uuid}`, { method: "POST" });
+      } else {
+        await fetch(`/api/favorites/${uuid}`, { method: "DELETE" });
+      }
+    } catch (err) {
+      console.error("Failed to update favorite status:", err);
+      setFavoriteMap((prev) => ({ ...prev, [uuid]: currentFav }));
+    }
   }
 
-  const start = (page - 1) * PER_PAGE + 1;
-  const end   = Math.min(page * PER_PAGE, TOTAL);
+  // Display items: use real API listings if available, else fallback to MOCK_PRODUCTS filtered by category
+  const displayItems =
+    apiListings.length > 0
+      ? apiListings
+      : !isLoading
+        ? categorySlug
+          ? MOCK_PRODUCTS.filter((p) => {
+            const raw = categorySlug.toLowerCase();
+            const cSlug = (p.category?.slug || "").toLowerCase();
+            const cName = (p.category?.name || "").toLowerCase();
+            return cSlug.includes(raw) || raw.includes(cSlug) || cName.includes(raw);
+          })
+          : MOCK_PRODUCTS
+        : [];
+
+
+  const start = (page - 1) * 20 + 1;
+  const end = Math.min(page * 20, Math.max(totalElements, displayItems.length));
 
   return (
     <>
@@ -50,10 +100,7 @@ export default function ProductsClient() {
                   : "text-[#8B85A0] hover:bg-[#F1EFFA]"
               )}
             >
-              {v === "grid"
-                ? <LayoutGrid size={14} />
-                : <List       size={14} />
-              }
+              {v === "grid" ? <LayoutGrid size={14} /> : <List size={14} />}
             </button>
           ))}
         </div>
@@ -61,17 +108,17 @@ export default function ProductsClient() {
         {/* divider */}
         <div className="h-px flex-1 bg-[#E5E2EC]" />
 
-        {/* sort */}
+        {/* sort dropdown */}
         <div className="relative">
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value)}
-            className="appearance-none rounded-lg border border-[#E2DFEC] bg-white py-2 pl-3 pr-8 text-[12px] text-[#3F3A52] outline-none focus:border-[#6C4CD8]"
+            className="appearance-none rounded-lg border border-[#E2DFEC] bg-white py-2 pl-3 pr-8 text-[12px] font-semibold text-[#3F3A52] outline-none focus:border-[#6C4CD8]"
           >
-            <option value="popular">Sort by</option>
-            <option value="priceAsc">Price: Low to High</option>
-            <option value="priceDesc">Price: High to Low</option>
-            <option value="newest">Newest</option>
+            <option value="popular">Sort by Popularity</option>
+            <option value="price_asc">Price: Low to High</option>
+            <option value="price_desc">Price: High to Low</option>
+            <option value="newest">Newest First</option>
           </select>
           <ChevronsUpDown
             size={12}
@@ -80,124 +127,101 @@ export default function ProductsClient() {
         </div>
       </div>
 
-      {/* ── product grid ── */}
-      {view === "grid" ? (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-          {MOCK_PRODUCTS.map((p) => {
-            const isSaved = saved.has(p.id);
-            return (
-              <article
-                key={p.id}
-                className="group relative overflow-hidden rounded-2xl bg-white shadow-[0_2px_12px_rgba(36,31,53,0.08)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_32px_rgba(108,76,216,0.18)]"
-              >
-                <Link href={`/products/${p.slug}`} className="block">
-                  {/* image */}
-                  <div className="relative aspect-square w-full overflow-hidden bg-[#F5F3FA]">
-                    <Image
-                      src={p.image}
-                      alt={p.title}
-                      fill
-                      sizes="(max-width:640px) 50vw, 25vw"
-                      className="object-cover object-center transition-transform duration-500 group-hover:scale-[1.06]"
-                      unoptimized={p.image.startsWith("http")}
-                    />
-                    {/* discount badge */}
-                    {p.discountPercent && (
-                      <span className="absolute left-3 top-3 rounded-lg bg-[#6C4CD8] px-2.5 py-1 text-[13px] font-bold text-white shadow-sm">
-                        -{p.discountPercent}%
-                      </span>
-                    )}
-                  </div>
-
-                  {/* info */}
-                  <div className="p-4">
-                    <h3 className="line-clamp-2 text-[15px] font-semibold leading-snug text-[#241F35] transition-colors group-hover:text-[#6C4CD8]">
-                      {p.title}
-                    </h3>
-
-                    {/* stars */}
-                    <div className="mt-2 flex items-center gap-1">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <Star key={i} size={12} fill="#F5B301" color="#F5B301" />
-                      ))}
-                      <span className="ml-1 text-[13px] text-[#8B85A0]">({p.reviewCount})</span>
-                    </div>
-
-                    {/* prices */}
-                    <div className="mt-2 flex items-baseline gap-2">
-                      <span className="text-[18px] font-extrabold text-[#6C4CD8]">{usd(p.price)}</span>
-                      <span className="text-[13px] text-[#B3ADC4] line-through">{usd(p.originalPrice)}</span>
-                    </div>
-
-                    <p className="mt-1 text-[13px] text-[#8B85A0]">{p.storeName}</p>
-                  </div>
-                </Link>
-
-                {/* save button */}
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    toggleSave(p.id);
-                  }}
-                  aria-label={isSaved ? "Remove from saved" : "Save"}
-                  className={cn(
-                    "absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full shadow-md transition-all",
-                    isSaved ? "bg-[#6C4CD8]" : "bg-white/95 hover:bg-[#F1EFFA]"
-                  )}
-                >
-                  <Heart size={16} color={isSaved ? "#fff" : "#6C4CD8"} fill={isSaved ? "#fff" : "none"} />
-                </button>
-              </article>
-            );
-          })}
+      {/* ── loading state ── */}
+      {isLoading ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <Loader2 className="size-8 animate-spin text-[#6C4CD8] mb-3" />
+          <p className="text-sm font-semibold text-[#3F3A52]">Loading products...</p>
+        </div>
+      ) : displayItems.length === 0 ? (
+        /* ── empty state ── */
+        <div className="flex flex-col items-center justify-center rounded-2xl bg-white p-12 text-center border border-[#EDEBF3]">
+          <PackageX className="size-12 text-[#6C4CD8]/40 mb-3" />
+          <h3 className="text-base font-extrabold text-[#1A1330]">No Products Found</h3>
+          <p className="mt-1 text-xs text-[#8B85A0] max-w-sm">
+            There are no active products available in this category yet. Please check back soon or try another category.
+          </p>
+        </div>
+      ) : view === "grid" ? (
+        /* ── product grid view ── */
+        <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-5 font-sans">
+          {displayItems.map((item: any, index: number) => (
+            <ProductCard
+              key={item.uuid || item.id || index}
+              listing={item}
+            />
+          ))}
         </div>
       ) : (
-        /* ── list view ── */
-        <div className="flex flex-col gap-3">
-          {MOCK_PRODUCTS.map((p) => {
-            const isSaved = saved.has(p.id);
+        /* ── product list view ── */
+        <div className="flex flex-col gap-3 font-sans">
+          {displayItems.map((item: any, index: number) => {
+            const itemUuid = item.uuid || item.id || String(index);
+            const title = item.title || "Untitled Product";
+            const slug = item.slug || itemUuid;
+            const fullPrice = item.fullPrice ?? item.price ?? 0;
+            const discountPrice = item.discountPrice;
+            const price = discountPrice ?? fullPrice;
+            const originalPrice = discountPrice ? fullPrice : item.originalPrice || null;
+            const discountPercent =
+              discountPrice && fullPrice > 0
+                ? Math.round(((fullPrice - discountPrice) / fullPrice) * 100)
+                : item.discountPercent || null;
+
+            const image = getPrimaryImage(item);
+
+            const storeName =
+              item.sellerProfile?.businessName ||
+              item.storeName ||
+              item.sellerName ||
+              "Phsar Store";
+
+            const rating = item.averageRating ?? item.rating ?? 0;
+            const reviewCount = item.reviewCount ?? item.review_count ?? 0;
+            const isSaved =
+              favoriteMap[itemUuid] !== undefined
+                ? favoriteMap[itemUuid]
+                : Boolean(item.isFavorite ?? item.is_favorite);
+
             return (
               <div
-                key={p.id}
+                key={itemUuid}
                 className="group relative flex gap-3 overflow-hidden rounded-xl bg-white shadow-[0_1px_4px_rgba(36,31,53,0.08)] transition hover:shadow-md"
               >
-                <Link href={`/products/${p.slug}`} className="flex flex-1 gap-3">
+                <Link href={`/products/${itemUuid || slug}`} className="flex flex-1 gap-3">
                   <div className="relative h-28 w-28 flex-shrink-0 overflow-hidden bg-[#F5F3FA]">
                     <Image
-                      src={p.image}
-                      alt={p.title}
+                      src={image}
+                      alt={title}
                       fill
                       className="object-cover object-center transition-transform duration-300 group-hover:scale-105"
-                      unoptimized={p.image.startsWith("http")}
+                      unoptimized={Boolean(image?.startsWith("http"))}
                     />
-                    {p.discountPercent && (
+                    {discountPercent && (
                       <span className="absolute left-1.5 top-1.5 rounded bg-[#6C4CD8] px-1.5 py-0.5 text-[9px] font-bold text-white">
-                        -{p.discountPercent}%
+                        -{discountPercent}%
                       </span>
                     )}
                   </div>
                   <div className="flex flex-1 flex-col justify-center py-3 pr-3">
                     <h3 className="text-sm font-semibold text-[#241F35] transition-colors group-hover:text-[#6C4CD8]">
-                      {p.title}
+                      {title}
                     </h3>
                     <div className="mt-1 flex items-baseline gap-1.5">
-                      <span className="text-xs text-[#B3ADC4] line-through">
-                        {usd(p.originalPrice)}
-                      </span>
-                      <span className="text-base font-bold text-[#6C4CD8]">
-                        {usd(p.price)}
-                      </span>
+                      <span className="text-base font-bold text-[#6C4CD8]">{usd(price)}</span>
+                      {originalPrice && (
+                        <span className="text-xs text-[#B3ADC4] line-through">
+                          {usd(originalPrice)}
+                        </span>
+                      )}
                     </div>
                     <div className="mt-1 flex items-center gap-0.5">
                       {Array.from({ length: 5 }).map((_, i) => (
                         <Star key={i} size={10} fill="#F5B301" color="#F5B301" />
                       ))}
-                      <span className="ml-1 text-xs text-[#8B85A0]">
-                        ({p.reviewCount})
-                      </span>
+                      <span className="ml-1 text-xs text-[#8B85A0]">({reviewCount})</span>
                     </div>
-                    <p className="mt-0.5 text-xs text-[#8B85A0]">{p.storeName}</p>
+                    <p className="mt-0.5 text-xs text-[#8B85A0]">{storeName}</p>
                   </div>
                 </Link>
 
@@ -205,7 +229,7 @@ export default function ProductsClient() {
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    toggleSave(p.id);
+                    toggleFavorite(itemUuid, isSaved);
                   }}
                   aria-label={isSaved ? "Remove from saved" : "Save"}
                   className="mr-3 self-center z-10 flex h-8 w-8 items-center justify-center rounded-full border border-[#E2DFEC] bg-white transition hover:border-[#6C4CD8]"
@@ -223,45 +247,49 @@ export default function ProductsClient() {
       )}
 
       {/* ── pagination ── */}
-      <div className="mt-6 mb-10 flex items-center justify-between text-[12px] text-[#8B85A0]">
-        <span>Showing {start}–{end} of {TOTAL} item(s)</span>
+      {!isLoading && displayItems.length > 0 && (
+        <div className="mt-8 mb-10 flex items-center justify-between text-[12px] text-[#8B85A0] font-sans">
+          <span>
+            Showing {start}–{end} of {totalElements} item(s)
+          </span>
 
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-            className="rounded-md bg-[#EDEBF3] px-3 py-1.5 text-[11px] font-medium text-[#8B85A0] transition hover:bg-[#E0DCF0] disabled:opacity-40"
-          >
-            Prev
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="rounded-md bg-[#EDEBF3] px-3 py-1.5 text-[11px] font-medium text-[#8B85A0] transition hover:bg-[#E0DCF0] disabled:opacity-40"
+            >
+              Prev
+            </button>
 
-          {Array.from({ length: PAGES }).map((_, i) => {
-            const n = i + 1;
-            return (
-              <button
-                key={n}
-                onClick={() => setPage(n)}
-                className={cn(
-                  "rounded-md px-3 py-1.5 text-[11px] font-semibold transition",
-                  page === n
-                    ? "bg-[#8FC93A] text-white"
-                    : "bg-[#EDEBF3] text-[#8B85A0] hover:bg-[#E0DCF0]"
-                )}
-              >
-                {n}
-              </button>
-            );
-          })}
+            {Array.from({ length: totalPages }).map((_, i) => {
+              const n = i + 1;
+              return (
+                <button
+                  key={n}
+                  onClick={() => setPage(n)}
+                  className={cn(
+                    "rounded-md px-3 py-1.5 text-[11px] font-semibold transition",
+                    page === n
+                      ? "bg-[#8FC93A] text-white"
+                      : "bg-[#EDEBF3] text-[#8B85A0] hover:bg-[#E0DCF0]"
+                  )}
+                >
+                  {n}
+                </button>
+              );
+            })}
 
-          <button
-            onClick={() => setPage((p) => Math.min(PAGES, p + 1))}
-            disabled={page === PAGES}
-            className="rounded-md bg-[#8FC93A] px-3 py-1.5 text-[11px] font-semibold text-white transition hover:bg-[#7AB82E] disabled:opacity-40"
-          >
-            Next
-          </button>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="rounded-md bg-[#8FC93A] px-3 py-1.5 text-[11px] font-semibold text-white transition hover:bg-[#7AB82E] disabled:opacity-40"
+            >
+              Next
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </>
   );
 }

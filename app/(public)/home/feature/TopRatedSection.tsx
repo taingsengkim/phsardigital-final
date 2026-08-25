@@ -3,15 +3,15 @@
 import { Loader2, Star } from "lucide-react";
 import { ProductCard } from "../ProductCard";
 import { SectionHeader } from "../SectionHeader";
-import { useGetTopRatedListingsQuery } from "@/lib/api/homeApi";
+import { useGetBestSellingListingsQuery } from "@/lib/api/homeApi";
 
 export function TopRatedSection() {
-  const { data: response, isLoading } = useGetTopRatedListingsQuery();
+  const { data: response, isLoading } = useGetBestSellingListingsQuery();
   const listings = response?.data || (response as any)?.content || [];
 
   return (
     <section className="bg-[#F1EFFA]/60 py-8 font-sans">
-      <div className="mx-auto max-w-7xl space-y-5 px-4">
+      <div className="mx-auto max-w-[1240px] space-y-5 px-6">
         <SectionHeader title="Top Rated Products" />
 
         {isLoading ? (

@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useState } from "react";
+import PhsarDigitalLogo from "@/assets/svg/phsardigitalLogo";
 import {
   Search,
   Heart,
@@ -16,6 +16,7 @@ import {
   Store,
   Clock,
   LogOut,
+  MessageSquare,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -31,6 +32,7 @@ import { useGetMeQuery } from "@/lib/api/authApi";
 import { useGetSellerApplicationQuery, useGetSellerProfileQuery } from "@/lib/api/sellerApi";
 import { useGetCategoriesQuery } from "@/lib/api/homeApi";
 import LoginButton from "@/components/auth/LoginButton";
+import RegisterButton from "@/components/auth/RegisterButton";
 
 const BRAND = "#6C4CD8";
 const NAV_LINKS = ["Home", "Offers", "Brands", "Stores", "All Products"];
@@ -73,7 +75,7 @@ export default function Navbar() {
   const userAvatar =
     profile?.avatarUrl || sellerProfile?.logoUri || sellerApp?.logoUri || session?.user?.image || "";
   const storeName =
-    sellerProfile?.businessName || sellerApp?.storeDisplayName || sellerApp?.businessName;
+    sellerProfile?.businessName || sellerApp?.businessName;
 
   const categoriesList =
     apiCategories && apiCategories.length > 0
@@ -125,13 +127,7 @@ export default function Navbar() {
               className="flex flex-shrink-0 items-center gap-2 no-underline"
               aria-label="Phsar Digital home"
             >
-              <Image
-                src="/picture/logo.png"
-                alt="Phsar Digital logo"
-                width={36}
-                height={36}
-                className="h-8 w-8 object-contain sm:h-9 sm:w-9 rounded-xl"
-              />
+              <PhsarDigitalLogo className="h-8 w-8 shrink-0 sm:h-9 sm:w-9" aria-hidden="true" />
               <span
                 className="hidden text-[15px] font-bold sm:inline sm:text-[17px]"
                 style={{ color: "#241F35" }}
@@ -187,34 +183,63 @@ export default function Navbar() {
                 </Link>
               )}
 
-              {/* Favorite / Saved link — only when logged in */}
+              {/* Action Icons — only when logged in */}
               {isLoggedIn && (
-                <Link
-                  href="/saved"
-                  aria-label="Saved"
-                  className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9 transition hover:scale-105"
-                  style={{ background: "#F1EFFA" }}
-                >
-                  <Heart size={15} color={BRAND} />
-                  {savedCount > 0 && (
-                    <span
-                      className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white"
-                      style={{ background: BRAND }}
-                    >
-                      {savedCount}
-                    </span>
-                  )}
-                </Link>
-              )}
+                <>
+                  <Link
+                    href="/saved"
+                    aria-label="Saved"
+                    className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9 transition hover:scale-105"
+                    style={{ background: "#F1EFFA" }}
+                  >
+                    <Heart size={15} color={BRAND} />
+                    {savedCount > 0 && (
+                      <span
+                        className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white"
+                        style={{ background: BRAND }}
+                      >
+                        {savedCount}
+                      </span>
+                    )}
+                  </Link>
 
-              <Link
-                href="/orders"
-                aria-label="Orders"
-                className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9 transition hover:scale-105"
-                style={{ background: "#F1EFFA" }}
-              >
-                <ShoppingBag size={15} color={BRAND} />
-              </Link>
+                  <Link
+                    href="/messages"
+                    aria-label="Messages"
+                    title="Messages"
+                    className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9 transition hover:scale-105"
+                    style={{ background: "#F1EFFA" }}
+                  >
+                    <MessageSquare size={15} color={BRAND} />
+                  </Link>
+
+                  <Link
+                    href="/orders"
+                    aria-label="Orders"
+                    className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9 transition hover:scale-105"
+                    style={{ background: "#F1EFFA" }}
+                  >
+                    <ShoppingBag size={15} color={BRAND} />
+                  </Link>
+
+                  <Link
+                    href="/cart"
+                    aria-label="Cart"
+                    className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9 transition hover:scale-105"
+                    style={{ background: "#F1EFFA" }}
+                  >
+                    <ShoppingCart size={15} color={BRAND} />
+                    {cartCount > 0 && (
+                      <span
+                        className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white"
+                        style={{ background: BRAND }}
+                      >
+                        {cartCount}
+                      </span>
+                    )}
+                  </Link>
+                </>
+              )}
 
               {/* Account / Login Dropdown */}
               {isLoggedIn ? (
@@ -260,6 +285,13 @@ export default function Navbar() {
                         </Link>
                       </DropdownMenuItem>
 
+                      <DropdownMenuItem asChild className="rounded-xl cursor-pointer">
+                        <Link href="/messages" className="flex items-center gap-2 py-2">
+                          <MessageSquare size={16} className="text-[#6C4CD8]" />
+                          <span>Messages</span>
+                        </Link>
+                      </DropdownMenuItem>
+
                       {isSeller && (
                         <DropdownMenuItem asChild className="rounded-xl cursor-pointer">
                           <Link href="/seller-dashboard/home" className="flex items-center gap-2 py-2 text-[#6C4CD8] font-bold">
@@ -280,25 +312,12 @@ export default function Navbar() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <LoginButton />
+                <div className="flex flex-shrink-0 items-center gap-2">
+                  {/* the drawer carries these on small screens */}
+                  <RegisterButton className="hidden sm:inline-flex" />
+                  <LoginButton />
+                </div>
               )}
-
-              <Link
-                href="/cart"
-                aria-label="Cart"
-                className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9 transition hover:scale-105"
-                style={{ background: "#F1EFFA" }}
-              >
-                <ShoppingCart size={15} color={BRAND} />
-                {cartCount > 0 && (
-                  <span
-                    className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white"
-                    style={{ background: BRAND }}
-                  >
-                    {cartCount}
-                  </span>
-                )}
-              </Link>
             </div>
           </div>
 
@@ -359,24 +378,26 @@ export default function Navbar() {
 
           <div className="flex-1" />
 
-          {/* Quick link to Seller Registration / Dashboard in nav rail */}
-          {isSeller ? (
-            <Link
-              href="/seller-dashboard/home"
-              className="flex flex-shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1 text-[12px] font-bold text-[#6C4CD8] bg-white transition hover:bg-white/90 shadow-xs"
-            >
-              <Store size={13} />
-              {storeName || "Seller Dashboard"}
-            </Link>
-          ) : (
-            <Link
-              href="/account/seller-application"
-              className="flex flex-shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-semibold text-white transition hover:bg-white/20"
-              style={{ background: "rgba(255,255,255,0.18)" }}
-            >
-              <Store size={13} />
-              Become a Seller
-            </Link>
+          {/* Quick link to Seller Registration / Dashboard in nav rail — only when logged in */}
+          {isLoggedIn && (
+            isSeller ? (
+              <Link
+                href="/seller-dashboard/home"
+                className="flex flex-shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1 text-[12px] font-bold text-[#6C4CD8] bg-white transition hover:bg-white/90 shadow-xs"
+              >
+                <Store size={13} />
+                {storeName || "Seller Dashboard"}
+              </Link>
+            ) : (
+              <Link
+                href="/account/seller-application"
+                className="flex flex-shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-semibold text-white transition hover:bg-white/20"
+                style={{ background: "rgba(255,255,255,0.18)" }}
+              >
+                <Store size={13} />
+                Become a Seller
+              </Link>
+            )
           )}
 
           <div
@@ -423,6 +444,16 @@ export default function Navbar() {
                 >
                   {isLoggedIn ? "My Account" : "Sign In"}
                 </Link>
+
+                {!isLoggedIn && (
+                  <Link
+                    href="/auth/register"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex-1 rounded-lg border border-white/60 py-1.5 text-center text-xs font-bold text-white"
+                  >
+                    Register
+                  </Link>
+                )}
                 {isSeller && (
                   <Link
                     href="/seller-dashboard/home"

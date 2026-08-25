@@ -4,18 +4,16 @@ export type DocumentType = "ID_CARD" | "BUSINESS_LICENSE" | "OTHER";
 export type ApplicationStatus = "PENDING" | "APPROVED" | "REJECTED" | "NOT_FOUND";
 
 export interface SellerDocument {
-  id: string;
-  type: DocumentType;
-  fileName: string;
+  uuid: string;
+  docType: DocumentType;
+  objectName: string;
   uri: string;
-  uploadedAt?: string;
 }
 
 export interface SellerApplication {
-  id: string;
-  userId?: string;
+  uuid: string;
+  applicantId?: string;
   businessName: string;
-  storeDisplayName?: string;
   businessType?: "INDIVIDUAL" | "SOLE_PROPRIETORSHIP" | "PARTNERSHIP" | "COMPANY";
   description?: string;
   logoObjectName?: string;
@@ -23,28 +21,26 @@ export interface SellerApplication {
   address?: string;
   city?: string;
   province?: string;
-  googleMapsUrl?: string;
+  googleMapUrl?: string;
   latitude?: number;
   longitude?: number;
   status: ApplicationStatus;
   rejectionNote?: string | null;
   missingDocuments?: DocumentType[];
   documents?: SellerDocument[];
+  reviewedAt?: string;
   createdAt?: string;
-  updatedAt?: string;
 }
 
 export interface CreateSellerApplicationPayload {
   businessName: string;
-  storeDisplayName?: string;
   businessType?: "INDIVIDUAL" | "SOLE_PROPRIETORSHIP" | "PARTNERSHIP" | "COMPANY";
   description?: string;
   logoObjectName?: string;
-  logoUri?: string;
   address?: string;
   city?: string;
   province?: string;
-  googleMapsUrl?: string;
+  googleMapUrl?: string;
   latitude?: number;
   longitude?: number;
 }
@@ -52,15 +48,13 @@ export interface CreateSellerApplicationPayload {
 export interface UploadFileResponse {
   objectName: string;
   uri?: string;
-  url?: string;
 }
 
 export interface UploadDocumentResponse {
-  id: string;
-  type?: DocumentType;
-  docType?: DocumentType;
-  fileName?: string;
-  uri?: string;
+  uuid: string;
+  docType: DocumentType;
+  objectName: string;
+  uri: string;
 }
 
 export interface AttachDocumentPayload {

@@ -1,125 +1,244 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import Link from "next/link"
-import { ArrowRight, Headphones, Mail, MapPin, Phone, ShieldCheck, Store, Truck } from "lucide-react"
-import PhsarDigitalLogo from "@/assets/svg/phsardigitalLogo"
+import { useState } from "react";
+import Link from "next/link";
+import {
+  Mail,
+  Send,
+  Phone,
+  User,
+  MapPin,
+  RefreshCw,
+  Headphones,
+  Star,
+} from "lucide-react";
+import PhsarDigitalLogo from "@/assets/svg/phsardigitalLogo";
 
-const linkGroups = [
-  {
-    title: "Marketplace",
-    links: [
-      { label: "Browse products", href: "/products" },
-      { label: "Shop by category", href: "/products" },
-      { label: "Top stores", href: "/stores" },
-      { label: "Saved products", href: "/saved" },
-    ],
-  },
-  {
-    title: "My account",
-    links: [
-      { label: "Account settings", href: "/account" },
-      { label: "My orders", href: "/orders" },
-      { label: "Shopping cart", href: "/cart" },
-      { label: "Messages", href: "/messages" },
-    ],
-  },
-  {
-    title: "Sell with us",
-    links: [
-      { label: "Become a seller", href: "/account/seller-application" },
-      { label: "Seller dashboard", href: "/seller-dashboard/home" },
-      { label: "Subscription plans", href: "/subscriptions" },
-      { label: "Add a product", href: "/seller-dashboard/products/new" },
-    ],
-  },
+/* ── Data Config ───────────────────────────────────────────────────────── */
+
+const FOOTER_COLS = [
   {
     title: "Company",
     links: [
-      { label: "About Phsar Digital", href: "/about" },
-      { label: "Contact us", href: "/contact-us" },
-      { label: "Privacy policy", href: "/privacy" },
-      { label: "Terms of service", href: "/terms" },
+      { label: "About Us", href: "/about" },
+      { label: "Careers", href: "/careers" },
+      { label: "Press & Media", href: "/press" },
+      { label: "Privacy Policy", href: "/privacy" },
+      { label: "Terms & Conditions", href: "/terms" },
+      { label: "Acceptable Use Policy", href: "/aup" },
     ],
   },
-]
+  {
+    title: "Make Money with Us",
+    links: [
+      { label: "Sell product on Phsar Digital", href: "/sell" },
+      { label: "Sell on Amazon Business", href: "/sell-amazon" },
+      { label: "Merchant Portal", href: "/merchant-portal" },
+      { label: "Merchant Support", href: "/merchant-support" },
+      { label: "Partner With Us", href: "/partner" },
+      { label: "Advertising", href: "/advertising" },
+      { label: "Help Center", href: "/help" },
+      { label: "Community", href: "/community" },
+    ],
+  },
+  {
+    title: "Let Us Help You",
+    links: [
+      { label: "Brand Directory", href: "/brands" },
+      { label: "Customer Service", href: "/contact-us" },
+      { label: "Your Account", href: "/account" },
+      { label: "Your Order", href: "/orders" },
+      { label: "Shipping Rates & Policies", href: "/shipping" },
+      { label: "Returns & Replacements", href: "/returns" },
+    ],
+  },
+];
 
-const benefits = [
-  { Icon: ShieldCheck, title: "Secure shopping", text: "Protected checkout" },
-  { Icon: Truck, title: "Local delivery", text: "Across Cambodia" },
-  { Icon: Headphones, title: "Helpful support", text: "Here when you need us" },
-  { Icon: Store, title: "Trusted sellers", text: "Local shops and brands" },
-]
+const TRUST_BADGES = [
+  {
+    icon: RefreshCw,
+    line1: "100% SECURE",
+    line2: "CHECKOUT",
+  },
+  {
+    icon: Headphones,
+    line1: "24/7 DEDICATED",
+    line2: "SUPPORT",
+  },
+  {
+    icon: Star,
+    line1: "THOUSANDS OF",
+    line2: "GENUINE REVIEWS",
+    fill: true,
+  },
+];
+
+const CONTACTS = [
+  { icon: Phone, text: "+012*********", href: "tel:+012000000" },
+  {
+    icon: Mail,
+    text: "Phsar.Digital@com.kh",
+    href: "mailto:Phsar.Digital@com.kh",
+  },
+  { icon: User, text: "Support ticket", href: "/support" },
+  { icon: MapPin, text: "street 124, Toul Kork, Cambodia", href: "#" },
+];
+
+/* ── Main Component ─────────────────────────────────────────────────────── */
 
 export default function Footer() {
-  const [email, setEmail] = React.useState("")
-  const [subscribed, setSubscribed] = React.useState(false)
+  const [email, setEmail] = useState("");
 
-  function subscribe(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (!email.trim()) return
-    setSubscribed(true)
-    setEmail("")
-  }
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) return;
+    // Handle newsletter subscription
+    setEmail("");
+  };
 
   return (
-    <footer className="mt-auto bg-[#171326] text-white">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        <section className="relative -top-8 overflow-hidden rounded-3xl bg-[#6C4CD8] px-6 py-7 shadow-[0_20px_50px_rgba(53,35,125,0.28)] sm:px-8 lg:flex lg:items-center lg:justify-between lg:gap-10">
-          <div className="max-w-xl">
-            <p className="text-sm font-semibold text-white/70">Stay close to the marketplace</p>
-            <h2 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">New arrivals and local deals, in your inbox.</h2>
-            <p className="mt-2 text-sm leading-6 text-white/75">A useful update from Phsar Digital—no clutter, and you can unsubscribe anytime.</p>
+    <footer className="w-full bg-white text-gray-900 font-sans border-t border-gray-100">
+      {/* ── Top Newsletter Banner ── */}
+      <div className="bg-[#E8E5FA] px-6 py-9 sm:px-12 lg:px-20">
+        <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-6 lg:flex-row lg:items-center">
+          <div>
+            <h2 className="text-xl font-bold tracking-tight text-gray-900 sm:text-2xl">
+              Sign up for Phsar Digital News &amp; Offers
+            </h2>
+            <p className="mt-1 text-sm text-gray-600 sm:text-base">
+              Be the first to know about exclusive deals, new arrivals, and
+              marketplace insights!
+            </p>
           </div>
-          <form onSubmit={subscribe} className="mt-5 flex w-full max-w-lg flex-col gap-2 sm:flex-row lg:mt-0">
-            <label className="relative min-w-0 flex-1">
-              <span className="sr-only">Email address</span>
-              <Mail className="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-[#6C4CD8]" />
-              <input required type="email" value={email} onChange={(event) => { setEmail(event.target.value); setSubscribed(false) }} placeholder="Enter your email address" className="h-12 w-full rounded-xl border-0 bg-white pl-12 pr-4 text-sm text-[#241F35] outline-none ring-white/30 placeholder:text-slate-400 focus:ring-4" />
-            </label>
-            <button type="submit" className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#201938] px-5 text-sm font-semibold transition hover:bg-[#151026]">Subscribe <ArrowRight className="size-4" /></button>
+
+          <form
+            onSubmit={handleSubmit}
+            className="flex w-full max-w-md items-center rounded-lg bg-white p-1.5 shadow-sm ring-1 ring-black/5"
+          >
+            <div className="flex flex-1 items-center gap-2.5 px-3">
+              <Mail className="h-5 w-5 shrink-0 text-[#6C4CD8]" />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Phsar.Digital@com.kh"
+                aria-label="Email address"
+                required
+                className="w-full bg-transparent text-sm text-gray-800 placeholder:text-[#6C4CD8]/80 outline-none"
+              />
+            </div>
+            <button
+              type="submit"
+              className="flex shrink-0 items-center gap-2 rounded-md bg-[#6C4CD8] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#5839be] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6C4CD8]"
+            >
+              <Send className="h-4 w-4" />
+              Sign up
+            </button>
           </form>
-          {subscribed && <p role="status" className="mt-3 text-sm font-medium text-white lg:absolute lg:bottom-2 lg:right-8">Thanks for subscribing!</p>}
-        </section>
+        </div>
+      </div>
 
-        <div className="grid gap-10 pb-10 pt-1 sm:grid-cols-2 lg:grid-cols-[1.35fr_repeat(4,1fr)]">
-          <div className="sm:col-span-2 lg:col-span-1">
-            <Link href="/home" className="inline-flex items-center gap-3">
-              <span className="grid size-11 place-items-center rounded-xl bg-white"><PhsarDigitalLogo className="size-9" aria-hidden="true" /></span>
-              <span><strong className="block text-lg">Phsar Digital</strong><span className="text-xs text-white/50">Cambodia&apos;s digital marketplace</span></span>
+      {/* ── Main Links Section ── */}
+      <div className="mx-auto max-w-7xl px-6 pt-12 pb-8 sm:px-12 lg:px-20">
+        <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-[1.2fr_1fr_1.2fr_1fr] items-start">
+          {/* Brand Identity */}
+          <div className="flex flex-col items-center justify-center text-center sm:col-span-2 lg:col-span-1 lg:items-start lg:text-left">
+            <Link href="/home" className="flex items-center gap-3 group">
+              <PhsarDigitalLogo
+                className="h-10 w-10 sm:h-12 sm:w-12 shrink-0 transition-transform group-hover:scale-105"
+                aria-hidden="true"
+              />
+              <h3 className="text-2xl font-extrabold tracking-tight text-gray-950">
+                Phsar Digital
+              </h3>
             </Link>
-            <p className="mt-5 max-w-xs text-sm leading-6 text-white/60">Discover products from Cambodian sellers and shop with confidence in one connected marketplace.</p>
-            <address className="mt-5 space-y-3 not-italic text-sm text-white/65">
-              <a href="mailto:support@phsardigital.com" className="flex items-center gap-3 hover:text-white"><Mail className="size-4 text-[#a998ff]" />support@phsardigital.com</a>
-              <a href="tel:+85512000000" className="flex items-center gap-3 hover:text-white"><Phone className="size-4 text-[#a998ff]" />+855 12 000 000</a>
-              <span className="flex items-start gap-3"><MapPin className="mt-0.5 size-4 shrink-0 text-[#a998ff]" />Phnom Penh, Cambodia</span>
-            </address>
+            <p className="mt-3 text-xs sm:text-sm text-gray-500 leading-relaxed max-w-xs">
+              Cambodia&apos;s leading digital marketplace for authentic
+              products, verified sellers, and secure payments.
+            </p>
           </div>
 
-          {linkGroups.map((group) => (
-            <nav key={group.title} aria-label={group.title}>
-              <h3 className="text-sm font-bold text-white">{group.title}</h3>
-              <ul className="mt-4 space-y-3">
-                {group.links.map((link) => <li key={link.label}><Link href={link.href} className="text-sm text-white/55 transition hover:text-white">{link.label}</Link></li>)}
+          {/* Navigation Columns */}
+          {FOOTER_COLS.map((col) => (
+            <div key={col.title}>
+              <h4 className="text-sm font-bold text-gray-950 uppercase tracking-wider">
+                {col.title}
+              </h4>
+              <ul className="mt-4 space-y-2.5">
+                {col.links.map((link) => (
+                  <li key={link.label}>
+                    <Link
+                      href={link.href}
+                      className="text-sm text-gray-600 transition hover:text-[#6C4CD8] hover:underline underline-offset-4"
+                    >
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
               </ul>
-            </nav>
-          ))}
-        </div>
-
-        <div className="grid border-y border-white/10 py-6 sm:grid-cols-2 lg:grid-cols-4">
-          {benefits.map(({ Icon, title, text }, index) => (
-            <div key={title} className={`flex items-center gap-3 py-3 ${index > 0 ? "lg:border-l lg:border-white/10 lg:pl-6" : ""}`}>
-              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white/10 text-[#b8aaff]"><Icon className="size-5" /></span>
-              <span><strong className="block text-sm">{title}</strong><span className="text-xs text-white/45">{text}</span></span>
             </div>
           ))}
         </div>
 
-        <div className="flex flex-col gap-3 py-6 text-xs text-white/45 sm:flex-row sm:items-center sm:justify-between">
-          <p>© {new Date().getFullYear()} Phsar Digital. All rights reserved.</p>
-          <p>Made for buyers and sellers across Cambodia.</p>
+        {/* ── Solid Center Divider ── */}
+        <hr className="my-10 border-t-2 border-gray-900" />
+
+        {/* ── Trust Badges ── */}
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-3 text-center sm:text-left my-8">
+          {TRUST_BADGES.map((badge, idx) => {
+            const Icon = badge.icon;
+            return (
+              <div
+                key={idx}
+                className="flex items-center justify-center sm:justify-start gap-4"
+              >
+                <Icon
+                  className={`h-7 w-7 shrink-0 text-[#6C4CD8] ${badge.fill ? "fill-[#6C4CD8]" : ""}`}
+                />
+                <span className="text-xs font-black tracking-wide text-[#6C4CD8] leading-snug">
+                  {badge.line1}
+                  <br />
+                  {badge.line2}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* ── Sub-header with Dual Lines ── */}
+        <div className="my-6 flex items-center gap-4">
+          <span className="text-sm font-bold text-[#6C4CD8] whitespace-nowrap">
+            Start A Conversation
+          </span>
+          <div className="h-[1px] flex-1 bg-gray-400" />
+          <span className="text-sm font-bold text-[#6C4CD8] whitespace-nowrap">
+            Address
+          </span>
+          <div className="h-[1px] flex-1 bg-gray-400" />
+        </div>
+
+        {/* ── Contacts Row ── */}
+        <div className="flex flex-wrap items-center justify-between gap-y-4 gap-x-6 pt-2 text-sm font-medium text-gray-800">
+          {CONTACTS.map((item, idx) => {
+            const Icon = item.icon;
+            return (
+              <Link
+                key={idx}
+                href={item.href}
+                className="flex items-center gap-2 transition hover:text-[#6C4CD8]"
+              >
+                <Icon className="h-4 w-4 shrink-0 text-[#6C4CD8]" />
+                <span>{item.text}</span>
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* ── Copyright Disclaimer ── */}
+        <div className="mt-10 border-t border-gray-200 pt-6 text-center text-xs text-gray-400">
+          &copy; {new Date().getFullYear()} Phsar Digital. All rights reserved.
         </div>
       </div>
     </footer>
-  )
+  );
 }

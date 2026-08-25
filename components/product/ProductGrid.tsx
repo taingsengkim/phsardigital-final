@@ -20,8 +20,7 @@ export default function ProductGrid({ listings, className }: Props) {
   return (
     <div
       className={cn(
-        // 2 cols mobile → 3 sm → 4 md → 5 xl  (matches mockup 5-col grid)
-        "grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5",
+        "grid grid-cols-2 gap-3.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-5",
         className
       )}
     >

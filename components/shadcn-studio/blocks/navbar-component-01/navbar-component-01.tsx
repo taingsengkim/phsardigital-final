@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useState } from "react";
 import {
   Search,
@@ -18,6 +17,7 @@ import {
   Store,
   Clock,
   BadgeCheck,
+  MessageSquare,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -28,7 +28,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import SvgComponentSvg from "@/assets/svg/phsardigitalLogo";
+import PhsarDigitalLogo from "@/assets/svg/phsardigitalLogo";
 import LoginButton from "@/components/auth/LoginButton";
 import { useSession, logoutFromKeycloak } from "@/lib/auth-client";
 import { useGetMeQuery } from "@/lib/api/authApi";
@@ -85,7 +85,7 @@ export default function Navbar() {
   const isPendingSeller = sellerApp?.status === "PENDING";
 
   const userAvatar = profile?.avatarUrl || sellerApp?.logoUri || user?.image || "";
-  const storeName = sellerApp?.storeDisplayName || sellerApp?.businessName;
+  const storeName = sellerApp?.businessName;
 
   const categoriesList =
     apiCategories && apiCategories.length > 0
@@ -113,12 +113,9 @@ export default function Navbar() {
             className="flex shrink-0 items-center gap-2 text-decoration-none group transition-transform hover:scale-105 active:scale-95"
             aria-label="Phsar Digital home"
           >
-            <Image
-              src="/picture/logo.png"
-              alt="Phsar Digital logo"
-              width={36}
-              height={36}
-              className="h-9 w-9 object-contain rounded-xl"
+            <PhsarDigitalLogo
+              className="h-9 w-9 shrink-0"
+              aria-hidden="true"
             />
             <span className="text-xl font-bold text-[#241F35]">
               Phsar Digital
@@ -142,7 +139,7 @@ export default function Navbar() {
 
           <div className="flex-1" />
 
-          {/* Saved â€” only when logged in */}
+          {/* Saved — only when logged in */}
           {isLoggedIn && (
             <Link
               href="/saved"
@@ -153,6 +150,22 @@ export default function Navbar() {
               {savedCount > 0 && (
                 <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#6C4CD8] text-[10px] font-bold text-white shadow-sm animate-in zoom-in">
                   {savedCount}
+                </span>
+              )}
+            </Link>
+          )}
+
+          {/* Messages — route to /messages */}
+          {isLoggedIn && (
+            <Link
+              href="/messages"
+              aria-label="Messages"
+              className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F1EFFA] transition-all hover:bg-[#E5E0F5] hover:scale-105 active:scale-95 group"
+            >
+              <MessageSquare size={18} className="text-[#6C4CD8] transition-transform group-hover:scale-110" />
+              {messageCount > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#6C4CD8] text-[10px] font-bold text-white shadow-sm animate-in zoom-in">
+                  {messageCount}
                 </span>
               )}
             </Link>
@@ -231,6 +244,13 @@ export default function Navbar() {
                     <Link href="/orders" className="flex items-center gap-2.5 cursor-pointer py-2 transition-colors hover:text-[#6C4CD8]">
                       <Package size={16} className="text-[#8D86A8]" />
                       <span className="text-sm font-medium">My Orders</span>
+                    </Link>
+                  </DropdownMenuItem>
+
+                  <DropdownMenuItem asChild>
+                    <Link href="/messages" className="flex items-center gap-2.5 cursor-pointer py-2 transition-colors hover:text-[#6C4CD8]">
+                      <MessageSquare size={16} className="text-[#8D86A8]" />
+                      <span className="text-sm font-medium">Messages</span>
                     </Link>
                   </DropdownMenuItem>
 
@@ -325,23 +345,25 @@ export default function Navbar() {
 
           <div className="flex-1" />
 
-          {/* Seller Link in Nav Rail */}
-          {isSeller ? (
-            <Link
-              href="/seller-dashboard/home"
-              className="flex shrink-0 items-center gap-1.5 rounded-full bg-white px-4 py-1 text-xs font-bold text-[#6C4CD8] transition hover:bg-white/90 shadow-sm"
-            >
-              <Store size={14} />
-              <span>{storeName || "Seller Dashboard"}</span>
-            </Link>
-          ) : (
-            <Link
-              href="/account/seller-application"
-              className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/20 px-3.5 py-1 text-xs font-bold text-white transition hover:bg-white/30"
-            >
-              <Store size={14} />
-              <span>Become a Seller</span>
-            </Link>
+          {/* Seller Link in Nav Rail — only when logged in */}
+          {isLoggedIn && (
+            isSeller ? (
+              <Link
+                href="/seller-dashboard/home"
+                className="flex shrink-0 items-center gap-1.5 rounded-full bg-white px-4 py-1 text-xs font-bold text-[#6C4CD8] transition hover:bg-white/90 shadow-sm"
+              >
+                <Store size={14} />
+                <span>{storeName || "Seller Dashboard"}</span>
+              </Link>
+            ) : (
+              <Link
+                href="/account/seller-application"
+                className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/20 px-3.5 py-1 text-xs font-bold text-white transition hover:bg-white/30"
+              >
+                <Store size={14} />
+                <span>Become a Seller</span>
+              </Link>
+            )
           )}
 
           {/* location pill */}

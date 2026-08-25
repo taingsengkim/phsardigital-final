@@ -116,16 +116,16 @@ export default async function ProductDetailPage({ params }: Props) {
   };
 
   return (
-    <div className="min-h-screen bg-[#F6F5FA] font-sans">
+    <div className="min-h-screen bg-white dark:bg-black font-sans">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
       />
 
-      <div className="mx-auto max-w-[1240px] px-6 py-9">
+      <div className="mx-auto max-w-[1320px] px-4 sm:px-6 py-6 sm:py-8 space-y-8 sm:space-y-10">
         {/* ── breadcrumb ── */}
-        <nav aria-label="Breadcrumb" className="mb-6">
-          <ol className="flex flex-wrap items-center gap-1.5 text-[15px] text-[#8B85A0]">
+        <nav aria-label="Breadcrumb" className="mb-2">
+          <ol className="flex flex-wrap items-center gap-1.5 text-xs sm:text-sm text-gray-500 dark:text-zinc-400">
             {breadcrumbTrail.map((crumb, i) => (
               <li key={`${crumb.label}-${i}`} className="flex items-center gap-1.5">
                 {i > 0 && <ChevronRight size={13} className="shrink-0 opacity-50" />}

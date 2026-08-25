@@ -3,9 +3,11 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   BadgeCheck,
   Check,
+  CheckCircle2,
   Flame,
   Link2,
   Minus,
@@ -15,15 +17,22 @@ import {
   Share2,
   ShieldCheck,
   ShoppingCart,
+  ShoppingBag,
   Star,
   Truck,
+  ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import RatingStars from "@/components/product/RatingStars";
 import SavedButton from "@/components/saved/SavedButton";
+import { authClient, useSession } from "@/lib/auth-client";
 import { addToCart } from "@/app/api/cart";
 import type { ApiListing, ReviewSummary } from "@/lib/types";
-import { getListingFullPrice, getListingPrice, hasListingDiscount } from "@/lib/api/listing-price";
+import {
+  getListingFullPrice,
+  getListingPrice,
+  hasListingDiscount,
+} from "@/lib/api/listing-price";
 
 type Props = {
   listing: ApiListing;
@@ -69,10 +78,14 @@ export default function ProductDetailClient({
   sellerId,
 }: Props) {
   const router = useRouter();
+  const { data: session } = useSession();
+  const isLoggedIn = Boolean(session?.user);
+
   const [qty, setQty] = useState(1);
   const [adding, setAdding] = useState(false);
   const [added, setAdded] = useState(false);
   const [shared, setShared] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const listingId = listing.uuid;
   const productSlug = listing.slug || listing.uuid;
@@ -90,35 +103,57 @@ export default function ProductDetailClient({
   const attributes = useMemo(
     () =>
       [...(listing.listingAttributes ?? [])].sort(
-        (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
+        (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0),
       ),
-    [listing.listingAttributes]
+    [listing.listingAttributes],
   );
 
   const listedOn = formatListedDate(listing.createdAt);
   const { average, total } = reviewSummary;
 
+  function triggerToast(msg: string) {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 4000);
+  }
+
   async function handleAddToCart() {
+    if (!isLoggedIn) {
+      await authClient.signIn.oauth2({
+        providerId: "keycloak",
+        callbackURL: typeof window !== "undefined" ? window.location.href : "/",
+      });
+      return;
+    }
     setAdding(true);
     try {
       await addToCart(listingId, qty, productSlug ?? undefined);
       setAdded(true);
+      triggerToast(`Added ${qty} × "${listing.title ?? "Item"}" to your cart!`);
       setTimeout(() => setAdded(false), 2500);
     } catch {
-      // the cart layer already falls back locally
+      // local fallback handles state
     } finally {
       setAdding(false);
     }
   }
 
   async function handleBuyNow() {
+    if (!isLoggedIn) {
+      await authClient.signIn.oauth2({
+        providerId: "keycloak",
+        callbackURL: typeof window !== "undefined" ? window.location.href : "/",
+      });
+      return;
+    }
     try {
       await addToCart(listingId, qty, productSlug ?? undefined);
     } catch {
-      // continue to checkout regardless
+      // continue to checkout
     }
     router.push(
-      `/checkout?slug=${encodeURIComponent(productSlug ?? "")}&qty=${qty}`
+      `/checkout?slug=${encodeURIComponent(productSlug ?? "")}&qty=${qty}`,
     );
   }
 
@@ -135,7 +170,7 @@ export default function ProductDetailClient({
         await navigator.share(shareData);
         return;
       } catch {
-        // user dismissed the sheet — fall through to copying
+        // user dismissed sheet
       }
     }
 
@@ -149,7 +184,43 @@ export default function ProductDetailClient({
   }
 
   return (
-    <div className="flex flex-col gap-6 font-sans">
+    <div className="relative flex flex-col gap-6 font-sans">
+      {/* ── Success Toast Alert Banner ── */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -24, scale: 0.92 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 450, damping: 26 }}
+            className="fixed top-20 right-6 z-50 flex items-center gap-3.5 rounded-2xl bg-emerald-600 px-5 py-4 text-white shadow-[0_16px_40px_-10px_rgba(5,150,105,0.4)] border border-emerald-400/40 max-w-md backdrop-blur-md"
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/20 text-white shadow-xs">
+              <CheckCircle2 size={22} className="text-white" />
+            </div>
+
+            <div className="flex-1 pr-1">
+              <p className="text-base font-extrabold text-white leading-snug">
+                Item Added to Cart!
+              </p>
+              <p className="text-xs sm:text-sm font-medium text-emerald-100 line-clamp-1 mt-0.5">
+                {toastMessage}
+              </p>
+            </div>
+
+            <Link href="/cart">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="flex items-center gap-1.5 rounded-xl bg-white px-4 py-2.5 text-xs sm:text-sm font-extrabold text-emerald-700 shadow-md transition-all hover:bg-emerald-50 shrink-0"
+              >
+                <span>View Cart</span>
+                <ArrowRight size={14} />
+              </motion.button>
+            </Link>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {/* ── category + status chips ── */}
       <div className="flex flex-wrap items-center gap-2">
         {listing.category?.name && (
@@ -185,7 +256,7 @@ export default function ProductDetailClient({
           {listing.title || "Product details"}
         </h1>
         <div className="flex shrink-0 items-center gap-2 pt-1">
-          <SavedButton listingId={listingId} />
+          <SavedButton listingId={listingId} initialSaved={Boolean(listing.isFavorite)} />
           <button
             type="button"
             onClick={handleShare}
@@ -216,7 +287,9 @@ export default function ProductDetailClient({
         {average !== null ? (
           <span className="flex items-center gap-2 border-l border-[#E2DFEC] pl-4">
             <RatingStars rating={average} size={16} />
-            <span className="font-bold text-[#F5B301]">{average.toFixed(1)}</span>
+            <span className="font-bold text-[#F5B301]">
+              {average.toFixed(1)}
+            </span>
             <a href="#reviews" className="text-[#8B85A0] hover:text-[#6C4CD8]">
               ({total} {total === 1 ? "review" : "reviews"})
             </a>
@@ -232,15 +305,15 @@ export default function ProductDetailClient({
       <div className="rounded-2xl bg-[#F6F5FA] px-6 py-5">
         <div className="flex flex-wrap items-baseline gap-3">
           <span className="text-[36px] font-black leading-none text-[#6C4CD8]">
-            {formatUsd(fullPrice)}
+            {formatUsd(price)}
           </span>
           {hasDiscount && (
-            <span className="text-[15px] font-semibold text-emerald-600">
-              Discount price: {formatUsd(price)}
+            <span className="text-[16px] font-semibold text-[#8B85A0] line-through">
+              {formatUsd(fullPrice)}
             </span>
           )}
           <span className="text-[15px] font-medium text-[#8B85A0]">
-            ≈ {formatKhr(fullPrice)}
+            ≈ {formatKhr(price)}
           </span>
         </div>
 
@@ -249,7 +322,11 @@ export default function ProductDetailClient({
           <span
             className={cn(
               "h-2.5 w-2.5 rounded-full",
-              inStock ? (lowStock ? "bg-amber-500" : "bg-emerald-500") : "bg-red-500"
+              inStock
+                ? lowStock
+                  ? "bg-amber-500"
+                  : "bg-emerald-500"
+                : "bg-red-500",
             )}
           />
           <span
@@ -259,7 +336,7 @@ export default function ProductDetailClient({
                 ? lowStock
                   ? "text-amber-600"
                   : "text-emerald-600"
-                : "text-red-500"
+                : "text-red-500",
             )}
           >
             {!isActive
@@ -287,7 +364,10 @@ export default function ProductDetailClient({
         <div className="overflow-hidden rounded-2xl border border-[#E2DFEC] bg-white">
           <div className="grid grid-cols-1 divide-y divide-[#F0EDFB] sm:grid-cols-2 sm:divide-x">
             {attributes.slice(0, 6).map((attr, i) => (
-              <div key={attr.uuid ?? `${attr.key}-${i}`} className="px-5 py-3.5">
+              <div
+                key={attr.uuid ?? `${attr.key}-${i}`}
+                className="px-5 py-3.5"
+              >
                 <p className="text-[13px] font-semibold uppercase tracking-wide text-[#8B85A0]">
                   {attr.key}
                 </p>
@@ -343,7 +423,9 @@ export default function ProductDetailClient({
           disabled={adding || !inStock}
           className={cn(
             "flex flex-1 items-center justify-center gap-2.5 rounded-xl py-3.5 text-[17px] font-bold text-white shadow-md transition-all hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50",
-            added ? "bg-emerald-500 hover:bg-emerald-600" : "bg-[#6C4CD8] hover:bg-[#5B3DC0]"
+            added
+              ? "bg-emerald-500 hover:bg-emerald-600"
+              : "bg-[#6C4CD8] hover:bg-[#5B3DC0]",
           )}
         >
           {added ? <Check size={20} /> : <ShoppingCart size={20} />}
@@ -363,9 +445,17 @@ export default function ProductDetailClient({
       {/* ── trust badges ── */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { Icon: Truck, label: "Fast delivery", sub: "Phnom Penh & provinces" },
+          {
+            Icon: Truck,
+            label: "Fast delivery",
+            sub: "Phnom Penh & provinces",
+          },
           { Icon: RotateCcw, label: "7-day returns", sub: "On damaged items" },
-          { Icon: ShieldCheck, label: "Buyer protection", sub: "Secure checkout" },
+          {
+            Icon: ShieldCheck,
+            label: "Buyer protection",
+            sub: "Secure checkout",
+          },
         ].map(({ Icon, label, sub }) => (
           <div
             key={label}
@@ -395,9 +485,7 @@ export default function ProductDetailClient({
         <div className="flex items-center gap-1.5">
           <Package size={13} />
           <dt className="sr-only">Item code</dt>
-          <dd className="font-mono">
-            {listingId.slice(0, 8).toUpperCase()}
-          </dd>
+          <dd className="font-mono">{listingId.slice(0, 8).toUpperCase()}</dd>
         </div>
         {listedOn && (
           <div className="flex items-center gap-1.5">

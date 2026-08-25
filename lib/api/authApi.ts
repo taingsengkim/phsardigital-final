@@ -43,6 +43,15 @@ export const authApi = createApi({
         body: payload,
       }),
     }),
+    /** POST /api/v1/auth/verify-email/resend — 202, no body. */
+    resendVerificationEmail: builder.mutation<unknown, string>({
+      query: (email) => ({
+        url: "/auth/verify-email/resend",
+        method: "POST",
+        body: { email },
+      }),
+    }),
+
     getMe: builder.query<UserProfile, string | void>({
       query: (accessToken) => ({
         url: "/user-profiles/me",
@@ -99,6 +108,7 @@ export const authApi = createApi({
 
 export const {
   useRegisterMutation,
+  useResendVerificationEmailMutation,
   useGetMeQuery,
   useUpdateMeMutation,
   useUploadAvatarMutation,

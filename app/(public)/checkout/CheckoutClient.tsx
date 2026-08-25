@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronRight,
   Truck,
@@ -27,21 +28,29 @@ import {
   Clock,
   ArrowLeft,
   Search,
+  Camera,
+  Link2,
+  Eye,
+  Minus,
+  Edit2,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getListingBySlug } from "@/app/api/listings";
-import { getCart } from "@/app/api/cart";
+import { getCart, getCarts, updateCartItemQty, deleteCartItem, deleteSellerCart } from "@/app/api/cart";
 import { createOrder } from "@/app/api/orders";
 import type { Listing } from "@/lib/types";
 
 type CheckoutItem = {
-  id: number;
+  id: number | string;
   title: string;
   price: number;
   quantity: number;
   image: string;
   slug?: string;
   storeName: string;
+  sellerId?: string;
+  itemUuid?: string;
 };
 
 type SavedAddress = {
@@ -50,8 +59,19 @@ type SavedAddress = {
   isDefault?: boolean;
   fullName: string;
   phone: string;
-  city: string;
-  address: string;
+  locationType?: "city" | "province";
+  khan?: string;
+  sangkat?: string;
+  village?: string;
+  streetNo?: string;
+  province?: string;
+  district?: string;
+  commune?: string;
+  googleMapLink?: string;
+  photo?: string | null;
+  photos?: string[];
+  city?: string;
+  address?: string;
 };
 
 type ChatMessage = {
@@ -78,6 +98,12 @@ const INITIAL_SAVED_ADDRESSES: SavedAddress[] = [
     isDefault: true,
     fullName: "Vanneth Sok",
     phone: "096 888 7777",
+    locationType: "city",
+    khan: "Ruessei Kaev",
+    sangkat: "Tuol Sangkae 2",
+    village: "Phum 1",
+    streetNo: "House #42B, Street 271",
+    googleMapLink: "https://maps.google.com",
     city: "Phnom Penh",
     address: "House #42B, Street 271, Tuol Sangkae 2, Ruessei Kaev",
   },
@@ -86,6 +112,12 @@ const INITIAL_SAVED_ADDRESSES: SavedAddress[] = [
     label: "Office / Work",
     fullName: "Vanneth Sok",
     phone: "012 345 6789",
+    locationType: "city",
+    khan: "Daun Penh",
+    sangkat: "Wat Phnom",
+    village: "Phum 4",
+    streetNo: "Canadia Tower, 18th Floor, Monivong Blvd",
+    googleMapLink: "https://maps.google.com",
     city: "Phnom Penh",
     address: "Canadia Tower, 18th Floor, Monivong Blvd, Wat Phnom, Daun Penh",
   },
@@ -94,6 +126,12 @@ const INITIAL_SAVED_ADDRESSES: SavedAddress[] = [
     label: "Siem Reap House",
     fullName: "Vanneth Sok",
     phone: "096 888 7777",
+    locationType: "province",
+    province: "Siem Reap",
+    district: "Svay Dangkum",
+    commune: "Sala Kamreuk",
+    village: "House #12, National Road 06",
+    googleMapLink: "https://maps.google.com",
     city: "Siem Reap",
     address: "House #12, National Road 06, Svay Dangkum",
   },
@@ -223,17 +261,44 @@ export default function CheckoutClient() {
   // Workflow Stage Control: "form" | "invoice_success" | "full_chat_page"
   const [stage, setStage] = useState<"form" | "invoice_success" | "full_chat_page">("form");
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showEditCartModal, setShowEditCartModal] = useState(false);
+  const [showDeleteCartConfirmModal, setShowDeleteCartConfirmModal] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [orderCompleted, setOrderCompleted] = useState<{ id: number; total: number; storeName: string } | null>(null);
+
+  function triggerToast(msg: string) {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 4000);
+  }
 
   // Saved Addresses State
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>(INITIAL_SAVED_ADDRESSES);
   const [selectedAddressId, setSelectedAddressId] = useState<string>("home");
 
-  // Form Input State
+  // Form Input State (City vs Province)
+  const [locationType, setLocationType] = useState<"city" | "province">("city");
+  const [locationTitle, setLocationTitle] = useState("Home (Phnom Penh)");
   const [fullName, setFullName] = useState("Vanneth Sok");
-  const [phone, setPhone] = useState("096 888 7777");
-  const [city, setCity] = useState("Phnom Penh");
-  const [address, setAddress] = useState("House #42B, Street 271, Tuol Sangkae 2, Ruessei Kaev");
+  const [phone, setPhone] = useState("012 345 6789");
+
+  // City User Fields (Phnom Penh)
+  const [khan, setKhan] = useState("Daun Penh");
+  const [sangkat, setSangkat] = useState("Wat Phnom");
+  const [village, setVillage] = useState("Phum 1");
+  const [streetNo, setStreetNo] = useState("Canadia Tower, 18th Floor, Monivong Blvd");
+
+  // Province User Fields
+  const [province, setProvince] = useState("Siem Reap");
+  const [district, setDistrict] = useState("Svay Dangkum");
+  const [commune, setCommune] = useState("Sala Kamreuk");
+
+  // Shared Optional Fields
+  const [googleMapLink, setGoogleMapLink] = useState("");
+  const [housePhotos, setHousePhotos] = useState<string[]>([]);
+  const [viewPhotoUrl, setViewPhotoUrl] = useState<string | null>(null);
+
   const [paymentMethod, setPaymentMethod] = useState<"pay_now_shop" | "cod">("pay_now_shop");
 
   // New location options
@@ -251,49 +316,125 @@ export default function CheckoutClient() {
     async function loadCheckoutData() {
       setLoading(true);
       try {
-        const cart = await getCart();
+        const vendorCarts = await getCarts();
         let mappedItems: CheckoutItem[] = [];
 
-        if (cart && cart.items && cart.items.length > 0) {
-          mappedItems = cart.items.map((item) => {
-            const img =
-              item.listing?.images?.find((i) => i.is_primary)?.url ??
-              item.listing?.images?.[0]?.url ??
-              "/picture/pic1.jpg";
-            return {
+        if (vendorCarts && Array.isArray(vendorCarts) && vendorCarts.length > 0) {
+          vendorCarts.forEach((cart, cartIdx) => {
+            const sellerId = cart.sellerId || cart.sellerProfile?.sellerId || "";
+            const storeName = cart.sellerProfile?.businessName?.trim()
+              || (cart.sellerId
+                ? cart.sellerId.length > 20
+                  ? `Shop #${cart.sellerId.slice(0, 6)}`
+                  : cart.sellerId
+                : `Shop ${cartIdx + 1}`);
+
+            if (cart.items && Array.isArray(cart.items)) {
+              cart.items.forEach((item, itemIdx) => {
+                const rawThumb = typeof item.thumbnailUri === "string"
+                  ? item.thumbnailUri
+                  : (typeof item.thumbnailUri === "object" && item.thumbnailUri?.uri
+                    ? item.thumbnailUri.uri
+                    : null);
+
+                const img = rawThumb && rawThumb.length > 5
+                  ? rawThumb
+                  : item.title?.toLowerCase().includes("keyboard")
+                  ? "/picture/pic7.jpg"
+                  : item.title?.toLowerCase().includes("hoodie") || item.title?.toLowerCase().includes("dress")
+                  ? "/picture/pic3.jpg"
+                  : item.title?.toLowerCase().includes("phone")
+                  ? "/picture/pic1.jpg"
+                  : `/picture/pic${(itemIdx % 7) + 1}.jpg`;
+
+                const safeUnitPrice = typeof item.unitPrice === "number" && !isNaN(item.unitPrice)
+                  ? item.unitPrice
+                  : (typeof (item as any).price === "number" && !isNaN((item as any).price) ? (item as any).price : 0);
+
+                mappedItems.push({
+                  id: item.uuid || item.listingUuid,
+                  title: item.title || "Product Item",
+                  price: safeUnitPrice,
+                  quantity: item.quantity ?? 1,
+                  image: img,
+                  slug: item.listingUuid,
+                  storeName,
+                  sellerId,
+                  itemUuid: item.uuid,
+                });
+              });
+            }
+          });
+        }
+
+        // Fallback if vendorCarts was empty
+        if (mappedItems.length === 0) {
+          const singleCart = await getCart();
+          if (singleCart && singleCart.items && singleCart.items.length > 0) {
+            mappedItems = singleCart.items.map((item) => ({
               id: item.listing_id,
               title: item.listing?.title ?? "Product Item",
-              price: item.listing?.price ?? 0,
+              price: typeof item.listing?.price === "number" && !isNaN(item.listing.price) ? item.listing.price : 0,
               quantity: item.quantity,
-              image: img,
+              image: item.listing?.images?.[0]?.url ?? "/picture/pic1.jpg",
               slug: item.listing?.slug,
-              storeName: item.listing?.store_name ?? "Phsar Digital Store",
-            };
-          });
+              storeName: item.listing?.store_name ?? "TechHub KH",
+            }));
+          }
         }
 
         if (slugParam) {
           const parsedQty = Math.max(1, parseInt(qtyParam ?? "1", 10));
-          const existing = mappedItems.find((i) => i.slug === slugParam);
+          const existing = mappedItems.find(
+            (i) => i.slug === slugParam || String(i.id) === String(slugParam)
+          );
 
           if (existing) {
-            existing.quantity = Math.max(existing.quantity, parsedQty);
+            existing.quantity = existing.quantity + parsedQty;
           } else {
-            const listing: Listing = await getListingBySlug(slugParam);
-            const primaryImg =
-              listing.images?.find((img) => img.is_primary)?.url ??
-              listing.images?.[0]?.url ??
-              "/picture/pic1.jpg";
+            try {
+              const listing: Listing = await getListingBySlug(slugParam);
+              if (listing) {
+                const matchByTitle = mappedItems.find(
+                  (i) => i.title.toLowerCase() === listing.title?.toLowerCase()
+                );
 
-            mappedItems.unshift({
-              id: listing.id,
-              title: listing.title,
-              price: listing.price,
-              quantity: parsedQty,
-              image: primaryImg,
-              slug: listing.slug,
-              storeName: listing.store_name ?? "Phsar Digital Store",
-            });
+                if (matchByTitle) {
+                  matchByTitle.quantity += parsedQty;
+                } else {
+                  const primaryImg =
+                    (listing as any).thumbnailUri?.uri ||
+                    listing.images?.find((img) => img.is_primary)?.url ||
+                    listing.images?.[0]?.url ||
+                    (listing.title?.toLowerCase().includes("keyboard")
+                      ? "/picture/pic7.jpg"
+                      : listing.title?.toLowerCase().includes("hoodie") || listing.title?.toLowerCase().includes("dress")
+                      ? "/picture/pic3.jpg"
+                      : "/picture/pic1.jpg");
+
+                  const safeListingPrice =
+                    typeof (listing as any).discountPrice === "number" && !isNaN((listing as any).discountPrice)
+                      ? (listing as any).discountPrice
+                      : (typeof listing.price === "number" && !isNaN(listing.price)
+                        ? listing.price
+                        : (typeof (listing as any).fullPrice === "number" && !isNaN((listing as any).fullPrice)
+                          ? (listing as any).fullPrice
+                          : 0));
+
+                  mappedItems.unshift({
+                    id: listing.uuid || listing.id,
+                    title: listing.title || "Product Item",
+                    price: safeListingPrice,
+                    quantity: parsedQty,
+                    image: primaryImg,
+                    slug: listing.slug || listing.uuid || slugParam,
+                    storeName: listing.store_name ?? (listing as any).sellerProfile?.businessName ?? "SOMA Coffee & Roastery",
+                  });
+                }
+              }
+            } catch {
+              // ignore
+            }
           }
         }
 
@@ -301,20 +442,29 @@ export default function CheckoutClient() {
           mappedItems = [
             {
               id: 101,
-              title: "POCO Smart Phone — 8GB RAM / 256GB Storage (5G Dual SIM)",
-              price: 229.50,
-              quantity: 1,
-              image: "/picture/pic1.jpg",
-              slug: "poco-smart-phone",
+              title: "Wireless Mechanical Keyboard",
+              price: 89.99,
+              quantity: 7,
+              image: "/picture/pic7.jpg",
+              slug: "ac364012-6788-4df9-baf9-a7815753d9c1",
               storeName: "TechHub KH",
             },
             {
               id: 102,
-              title: "Fitbit Versa 4 Fitness Smartwatch",
-              price: 108.00,
-              quantity: 1,
+              title: "ISTAD Friends Hoodie",
+              price: 25.0,
+              quantity: 5,
+              image: "/picture/pic3.jpg",
+              slug: "a99cbb20-21a9-4349-ab9f-30e1b6aff5c4",
+              storeName: "TechHub KH",
+            },
+            {
+              id: 103,
+              title: "Cats Accessories Pack",
+              price: 12.0,
+              quantity: 2,
               image: "/picture/pic4.jpg",
-              slug: "fitbit-versa-4",
+              slug: "3cd9eca1-520a-4314-afba-7d238cff1301",
               storeName: "Van Shop",
             },
           ];
@@ -346,22 +496,51 @@ export default function CheckoutClient() {
     loadCheckoutData();
   }, [slugParam, qtyParam]);
 
+  // Formatted summary address string for invoice & order creation
+  const fullAddressString =
+    locationType === "city"
+      ? `${streetNo ? `Street ${streetNo}, ` : ""}${village ? `Phum ${village}, ` : ""}${sangkat ? `Sangkat ${sangkat}, ` : ""}${khan ? `Khan ${khan}, ` : ""}Phnom Penh`
+      : `${village ? `Phum ${village}, ` : ""}${commune ? `Khum/Commune ${commune}, ` : ""}${district ? `Srok/District ${district}, ` : ""}${province || "Province"}`;
+
   // Handle choosing a saved address
   function handleSelectSavedAddress(addr: SavedAddress) {
     setSelectedAddressId(addr.id);
+    setLocationTitle(addr.label || "Saved Location");
     setFullName(addr.fullName);
     setPhone(addr.phone);
-    setCity(addr.city);
-    setAddress(addr.address);
+    const type = addr.locationType || (addr.city === "Phnom Penh" ? "city" : "province");
+    setLocationType(type);
+    if (type === "city") {
+      setKhan(addr.khan || "Daun Penh");
+      setSangkat(addr.sangkat || "Wat Phnom");
+      setVillage(addr.village || "Phum 1");
+      setStreetNo(addr.streetNo || addr.address || "");
+    } else {
+      setProvince(addr.province || addr.city || "Siem Reap");
+      setDistrict(addr.district || "Svay Dangkum");
+      setCommune(addr.commune || "Sala Kamreuk");
+      setVillage(addr.village || addr.address || "");
+    }
+    setGoogleMapLink(addr.googleMapLink || "");
+    setHousePhotos(addr.photos || (addr.photo ? [addr.photo] : []));
   }
 
   // Handle clicking + Add New Location
   function handleAddNewAddressClick() {
     setSelectedAddressId("new");
+    setLocationTitle("");
     setFullName("Vanneth Sok");
-    setPhone("096 888 7777");
-    setCity("Phnom Penh");
-    setAddress("");
+    setPhone("012 345 6789");
+    setLocationType("city");
+    setKhan("");
+    setSangkat("");
+    setVillage("");
+    setStreetNo("");
+    setProvince("Siem Reap");
+    setDistrict("");
+    setCommune("");
+    setGoogleMapLink("");
+    setHousePhotos([]);
     setNewLabel("New Location");
   }
 
@@ -371,8 +550,65 @@ export default function CheckoutClient() {
   // Filter items for currently selected store
   const activeItems = items.filter((i) => i.storeName === (selectedStore || allStores[0]));
 
+  // Quantity management handlers for Order Summary
+  async function handleUpdateQuantity(itemId: string | number, newQty: number) {
+    const targetItem = items.find((i) => String(i.id) === String(itemId));
+
+    // Optimistic UI state update
+    if (newQty <= 0) {
+      setItems((prev) => prev.filter((i) => String(i.id) !== String(itemId)));
+    } else {
+      setItems((prev) =>
+        prev.map((i) => (String(i.id) === String(itemId) ? { ...i, quantity: newQty } : i))
+      );
+    }
+
+    // Proxy request to backend API via Route Handler
+    if (targetItem?.sellerId && targetItem?.itemUuid) {
+      if (newQty <= 0) {
+        await deleteCartItem(targetItem.sellerId, targetItem.itemUuid);
+      } else {
+        await updateCartItemQty(targetItem.sellerId, targetItem.itemUuid, newQty);
+      }
+    }
+  }
+
+  // Delete entire cart for selected store
+  async function handleDeleteSellerCart() {
+    if (!selectedStore || activeItems.length === 0) return;
+
+    const storeToDelete = selectedStore;
+    const sellerId = activeItems[0]?.sellerId;
+
+    // Optimistic UI update: filter out all items belonging to this store
+    const remainingItems = items.filter((i) => i.storeName !== storeToDelete);
+    setItems(remainingItems);
+
+    // Trigger success toast notification banner
+    triggerToast(`Successfully removed all items from ${storeToDelete}!`);
+
+    // Auto-switch to next available store if available
+    const remainingStores = Array.from(new Set(remainingItems.map((i) => i.storeName)));
+    if (remainingStores.length > 0) {
+      setSelectedStore(remainingStores[0]);
+    } else {
+      setSelectedStore("");
+    }
+
+    // Call backend API via route handler proxy
+    if (sellerId) {
+      await deleteSellerCart(sellerId);
+    } else {
+      for (const item of activeItems) {
+        if (item.sellerId && item.itemUuid) {
+          await deleteCartItem(item.sellerId, item.itemUuid);
+        }
+      }
+    }
+  }
+
   // Price calculations for active store
-  const subtotal = activeItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  const subtotal = activeItems.reduce((sum, i) => sum + (typeof i.price === "number" && !isNaN(i.price) ? i.price : 0) * (i.quantity || 1), 0);
   const discountAmount = subtotal > 150 ? 10 : 0;
   const shippingFee = subtotal >= 50 ? 0 : 1.5;
   const grandTotal = Math.max(0, subtotal - discountAmount + shippingFee);
@@ -380,8 +616,16 @@ export default function CheckoutClient() {
   // Step 1: Open Confirmation Popup Modal
   function handleInitiateCheckout(e: React.FormEvent) {
     e.preventDefault();
-    if (!address.trim() || !phone.trim() || !fullName.trim()) {
-      setError("Please fill in all required shipping details.");
+    if (!phone.trim() || !fullName.trim()) {
+      setError("Please fill in your full name and phone number.");
+      return;
+    }
+    if (locationType === "city" && (!khan.trim() || !sangkat.trim() || !streetNo.trim())) {
+      setError("Please fill in your Khan, Sangkat, and Street No.");
+      return;
+    }
+    if (locationType === "province" && (!province.trim() || !district.trim() || !commune.trim())) {
+      setError("Please fill in your Province, District, and Commune.");
       return;
     }
     if (!selectedStore) {
@@ -398,14 +642,24 @@ export default function CheckoutClient() {
     setSubmitting(true);
 
     // Save new location if requested
-    if (selectedAddressId === "new" && saveNewAddress && address.trim()) {
+    if (selectedAddressId === "new" && saveNewAddress) {
       const createdAddr: SavedAddress = {
         id: `addr_${Date.now()}`,
-        label: newLabel.trim() || "Saved Location",
+        label: locationTitle.trim() || newLabel.trim() || "Saved Location",
         fullName: fullName.trim(),
         phone: phone.trim(),
-        city,
-        address: address.trim(),
+        locationType,
+        khan,
+        sangkat,
+        village,
+        streetNo,
+        province,
+        district,
+        commune,
+        googleMapLink,
+        photos: housePhotos,
+        city: locationType === "city" ? "Phnom Penh" : province,
+        address: fullAddressString,
       };
       setSavedAddresses((prev) => [...prev, createdAddr]);
       setSelectedAddressId(createdAddr.id);
@@ -413,10 +667,10 @@ export default function CheckoutClient() {
 
     try {
       const order = await createOrder({
-        shipping_address: `${fullName} (${phone}) - ${address}, ${city}`,
+        shipping_address: `${fullName} (${phone}) - ${fullAddressString}`,
         payment_method: paymentMethod,
         items: activeItems.map((i) => ({
-          listing_id: i.id,
+          listing_id: typeof i.id === "number" ? i.id : parseInt(String(i.id), 10) || 101,
           quantity: i.quantity,
           unit_price: i.price,
         })),
@@ -602,7 +856,7 @@ export default function CheckoutClient() {
             </div>
             <div className="flex justify-between text-[#8B85A0]">
               <span>Delivery Address</span>
-              <span className="font-medium text-right text-[#1A1330] max-w-[220px] truncate">{address}, {city}</span>
+              <span className="font-medium text-right text-[#1A1330] max-w-[220px] truncate">{fullAddressString}</span>
             </div>
           </div>
 
@@ -786,7 +1040,7 @@ export default function CheckoutClient() {
 
                       <div className="border-t border-[#F0EDFB] pt-3 text-[12.5px] text-[#8B85A0] space-y-1">
                         <p><strong>Deliver To:</strong> {fullName} ({phone})</p>
-                        <p><strong>Address:</strong> {address}, {city}</p>
+                        <p><strong>Address:</strong> {fullAddressString}</p>
                         <p><strong>Payment Option:</strong> {paymentMethod === "pay_now_shop" ? "Pay Now (KHQR)" : "Cash on Delivery"}</p>
                       </div>
 
@@ -1002,21 +1256,60 @@ export default function CheckoutClient() {
 
               {/* ── ADDRESS FORM FIELDS ── */}
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 pt-4 border-t border-[#F0EDFB]">
-                {selectedAddressId === "new" && (
-                  <div className="sm:col-span-2">
-                    <label htmlFor="newLabel" className="mb-1.5 block text-[13px] font-bold text-[#1A1330]">
-                      Location Label (e.g. Condo, Parents' House) *
-                    </label>
-                    <input
-                      id="newLabel"
-                      type="text"
-                      value={newLabel}
-                      onChange={(e) => setNewLabel(e.target.value)}
-                      placeholder="Enter label name"
-                      className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
-                    />
+                {/* Location Type Selector */}
+                <div className="sm:col-span-2">
+                  <label className="mb-2 block text-[13px] font-extrabold text-[#1A1330] uppercase tracking-wide">
+                    Location Type *
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setLocationType("city")}
+                      className={cn(
+                        "flex-1 rounded-xl py-3 px-4 text-sm font-extrabold border-2 transition-all flex items-center justify-center gap-2 cursor-pointer",
+                        locationType === "city"
+                          ? "border-[#6C4CD8] bg-[#F8F7FC] text-[#6C4CD8] shadow-xs"
+                          : "border-[#EDEBF3] bg-white text-[#7C7596] hover:bg-[#F8F7FC]"
+                      )}
+                    >
+                      <Building size={16} />
+                      City User (Phnom Penh)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLocationType("province")}
+                      className={cn(
+                        "flex-1 rounded-xl py-3 px-4 text-sm font-extrabold border-2 transition-all flex items-center justify-center gap-2 cursor-pointer",
+                        locationType === "province"
+                          ? "border-[#6C4CD8] bg-[#F8F7FC] text-[#6C4CD8] shadow-xs"
+                          : "border-[#EDEBF3] bg-white text-[#7C7596] hover:bg-[#F8F7FC]"
+                      )}
+                    >
+                      <MapPin size={16} />
+                      Province User
+                    </button>
                   </div>
-                )}
+                </div>
+
+                {/* Location Title / Name */}
+                <div className="sm:col-span-2">
+                  <label htmlFor="locationTitle" className="mb-1.5 flex items-center justify-between text-[13px] font-bold text-[#1A1330]">
+                    <span className="flex items-center gap-1.5">
+                      <Building size={15} className="text-[#6C4CD8]" />
+                      Location Title / Name *
+                    </span>
+                    <span className="text-[12px] font-normal text-[#8B85A0]">e.g. Home, Office, Condo, Parents' House</span>
+                  </label>
+                  <input
+                    id="locationTitle"
+                    type="text"
+                    value={locationTitle}
+                    onChange={(e) => setLocationTitle(e.target.value)}
+                    required
+                    placeholder="e.g. Home (Phnom Penh), Work Office, Siem Reap Villa, Condo"
+                    className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
+                  />
+                </div>
 
                 <div>
                   <label htmlFor="fullName" className="mb-1.5 block text-[13px] font-bold text-[#1A1330]">
@@ -1043,42 +1336,235 @@ export default function CheckoutClient() {
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     required
-                    placeholder="096 123 4567"
+                    placeholder="012 345 6789"
                     className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
                   />
                 </div>
 
+                {/* ── CITY USER FIELDS (Phnom Penh) ── */}
+                {locationType === "city" && (
+                  <>
+                    <div>
+                      <label htmlFor="khan" className="mb-1.5 block text-[13px] font-bold text-[#1A1330]">
+                        Khan *
+                      </label>
+                      <input
+                        id="khan"
+                        type="text"
+                        value={khan}
+                        onChange={(e) => setKhan(e.target.value)}
+                        required
+                        placeholder="e.g. Daun Penh, Tuol Kork, Ruessei Kaev"
+                        className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="sangkat" className="mb-1.5 block text-[13px] font-bold text-[#1A1330]">
+                        Sangkat *
+                      </label>
+                      <input
+                        id="sangkat"
+                        type="text"
+                        value={sangkat}
+                        onChange={(e) => setSangkat(e.target.value)}
+                        required
+                        placeholder="e.g. Wat Phnom, Tuol Sangkae 2"
+                        className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="village" className="mb-1.5 block text-[13px] font-bold text-[#1A1330]">
+                        Village *
+                      </label>
+                      <input
+                        id="village"
+                        type="text"
+                        value={village}
+                        onChange={(e) => setVillage(e.target.value)}
+                        required
+                        placeholder="e.g. Phum 1, Phum 4"
+                        className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="streetNo" className="mb-1.5 block text-[13px] font-bold text-[#1A1330]">
+                        Street No. *
+                      </label>
+                      <input
+                        id="streetNo"
+                        type="text"
+                        value={streetNo}
+                        onChange={(e) => setStreetNo(e.target.value)}
+                        required
+                        placeholder="e.g. Street 271, House #42B"
+                        className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {/* ── PROVINCE USER FIELDS ── */}
+                {locationType === "province" && (
+                  <>
+                    <div>
+                      <label htmlFor="province" className="mb-1.5 block text-[13px] font-bold text-[#1A1330]">
+                        Province *
+                      </label>
+                      <select
+                        id="province"
+                        value={province}
+                        onChange={(e) => setProvince(e.target.value)}
+                        className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition cursor-pointer"
+                      >
+                        <option value="Siem Reap">Siem Reap (សៀមរាប)</option>
+                        <option value="Battambang">Battambang (បាត់ដំបង)</option>
+                        <option value="Kampong Cham">Kampong Cham (កំពង់ចាម)</option>
+                        <option value="Sihanoukville">Sihanoukville (ព្រះសីហនុ)</option>
+                        <option value="Kampot">Kampot (កំពត)</option>
+                        <option value="Kandal">Kandal (កណ្តាល)</option>
+                        <option value="Takeo">Takeo (តាកែវ)</option>
+                        <option value="Prey Veng">Prey Veng (ព្រៃវែង)</option>
+                        <option value="Svay Rieng">Svay Rieng (ស្វាយរៀង)</option>
+                        <option value="Kratie">Kratie (ក្រចេះ)</option>
+                        <option value="Ratanakiri">Ratanakiri (រតនគិរី)</option>
+                        <option value="Mondulkiri">Mondulkiri (មណ្ឌលគិរី)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label htmlFor="district" className="mb-1.5 block text-[13px] font-bold text-[#1A1330]">
+                        District (Srok) *
+                      </label>
+                      <input
+                        id="district"
+                        type="text"
+                        value={district}
+                        onChange={(e) => setDistrict(e.target.value)}
+                        required
+                        placeholder="e.g. Svay Dangkum, Prasat Bakong"
+                        className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="commune" className="mb-1.5 block text-[13px] font-bold text-[#1A1330]">
+                        Commune (Khum) *
+                      </label>
+                      <input
+                        id="commune"
+                        type="text"
+                        value={commune}
+                        onChange={(e) => setCommune(e.target.value)}
+                        required
+                        placeholder="e.g. Sala Kamreuk, Svay Dangkum"
+                        className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="villageProvince" className="mb-1.5 block text-[13px] font-bold text-[#1A1330]">
+                        Village *
+                      </label>
+                      <input
+                        id="villageProvince"
+                        type="text"
+                        value={village}
+                        onChange={(e) => setVillage(e.target.value)}
+                        required
+                        placeholder="e.g. Phum Wat Bo, Phum Mondul 1"
+                        className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {/* ── GOOGLE MAP LINK (OPTIONAL) ── */}
                 <div className="sm:col-span-2">
-                  <label htmlFor="city" className="mb-1.5 block text-[13px] font-bold text-[#1A1330]">
-                    City / Province *
+                  <label htmlFor="googleMapLink" className="mb-1.5 flex items-center justify-between text-[13px] font-bold text-[#1A1330]">
+                    <span className="flex items-center gap-1.5">
+                      <Link2 size={15} className="text-[#6C4CD8]" />
+                      GoogleMap (Link)
+                    </span>
+                    <span className="text-[12px] font-normal text-[#8B85A0]">Optional</span>
                   </label>
-                  <select
-                    id="city"
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
+                  <input
+                    id="googleMapLink"
+                    type="url"
+                    value={googleMapLink}
+                    onChange={(e) => setGoogleMapLink(e.target.value)}
+                    placeholder="https://maps.google.com/?q=11.5564,104.9282"
                     className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
-                  >
-                    <option value="Phnom Penh">Phnom Penh (ភ្នំពេញ)</option>
-                    <option value="Siem Reap">Siem Reap (សៀមរាប)</option>
-                    <option value="Battambang">Battambang (បាត់ដំបង)</option>
-                    <option value="Kampong Cham">Kampong Cham (កំពង់ចាម)</option>
-                    <option value="Sihanoukville">Sihanoukville (ព្រះសីហនុ)</option>
-                  </select>
+                  />
                 </div>
 
+                {/* ── HOUSE OR OFFICE PHOTOS (OPTIONAL MULTIPLE UPLOADS & LIGHTBOX VIEW) ── */}
                 <div className="sm:col-span-2">
-                  <label htmlFor="address" className="mb-1.5 block text-[13px] font-bold text-[#1A1330]">
-                    Street Address / House No. *
+                  <label className="mb-1.5 flex items-center justify-between text-[13px] font-bold text-[#1A1330]">
+                    <span className="flex items-center gap-1.5">
+                      <Camera size={15} className="text-[#6C4CD8]" />
+                      House or Office Photos
+                    </span>
+                    <span className="text-[12px] font-normal text-[#8B85A0]">Optional (Multiple)</span>
                   </label>
-                  <textarea
-                    id="address"
-                    rows={3}
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    required
-                    placeholder="House number, street name, Sangkat, Khan"
-                    className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition resize-none"
-                  />
+
+                  <div className="space-y-3">
+                    <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-sm font-semibold text-[#6C4CD8] transition hover:border-[#6C4CD8] hover:bg-[#F8F7FC]">
+                      <Camera size={18} />
+                      <span>{housePhotos.length > 0 ? `+ Add More Photos (${housePhotos.length} uploaded)` : "Upload House or Office Photos"}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files || []);
+                          files.forEach((file) => {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              if (reader.result) {
+                                setHousePhotos((prev) => [...prev, reader.result as string]);
+                              }
+                            };
+                            reader.readAsDataURL(file);
+                          });
+                          e.target.value = "";
+                        }}
+                      />
+                    </label>
+
+                    {/* Uploaded Photos Gallery Preview */}
+                    {housePhotos.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-3 pt-1">
+                        {housePhotos.map((photo, idx) => (
+                          <div
+                            key={idx}
+                            className="group relative h-16 w-16 cursor-pointer overflow-hidden rounded-2xl border-2 border-[#EDEBF3] shadow-xs transition-transform hover:scale-105 hover:border-[#6C4CD8]"
+                            onClick={() => setViewPhotoUrl(photo)}
+                            title="Click to view full image"
+                          >
+                            <img src={photo} alt={`House photo ${idx + 1}`} className="h-full w-full object-cover" />
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Eye size={16} className="text-white drop-shadow-md" />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setHousePhotos((prev) => prev.filter((_, i) => i !== idx));
+                              }}
+                              className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-white shadow-md hover:bg-rose-600 transition"
+                              title="Delete photo"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {selectedAddressId === "new" && (
@@ -1168,24 +1654,60 @@ export default function CheckoutClient() {
           {/* ── RIGHT COLUMN: Order Summary (Selected Vendor Only) ── */}
           <div>
             <div className="sticky top-24 rounded-3xl border border-[#EDEBF3] bg-white p-7 shadow-[0_4px_24px_rgba(108,76,216,0.08)] space-y-6">
-              <div className="border-b border-[#F0EDFB] pb-4">
-                <div className="flex items-center gap-2 text-[#6C4CD8]">
-                  <Store size={18} />
-                  <span className="text-[13px] font-extrabold uppercase tracking-wide">
-                    {selectedStore || "Vendor Order"}
-                  </span>
+              <div className="border-b border-[#F0EDFB] pb-4 flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2 text-[#6C4CD8]">
+                    <Store size={18} />
+                    <span className="text-[13px] font-extrabold uppercase tracking-wide">
+                      {selectedStore || "Vendor Order"}
+                    </span>
+                  </div>
+                  <h2 className="text-[20px] font-extrabold text-[#1A1330] mt-1">
+                    Order Summary
+                  </h2>
                 </div>
-                <h2 className="text-[20px] font-extrabold text-[#1A1330] mt-1">
-                  Order Summary
-                </h2>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setShowEditCartModal(true)}
+                    title="Edit item quantities"
+                    aria-label="Edit item quantities"
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-[#EDEBF3] bg-[#FAF9FD] text-[#6C4CD8] transition hover:border-[#6C4CD8]/40 hover:bg-[#6C4CD8] hover:text-white cursor-pointer shadow-2xs"
+                  >
+                    <Edit2 size={18} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteCartConfirmModal(true)}
+                    title="Delete entire cart for this store"
+                    aria-label="Delete entire cart for this store"
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-rose-600 transition hover:bg-rose-600 hover:text-white cursor-pointer shadow-xs"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
               </div>
 
               {/* Items List for Selected Vendor */}
               <div className="space-y-4 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin">
                 {activeItems.map((item) => (
                   <div key={item.id} className="flex items-center gap-4">
-                    <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-[#F5F3FA] border border-[#EDEBF3]">
-                      <Image src={item.image} alt={item.title} fill className="object-cover" />
+                    <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-[#F5F3FA] border border-[#EDEBF3]">
+                      {item.image && item.image.length > 5 ? (
+                        <Image
+                          src={item.image}
+                          alt={item.title}
+                          fill
+                          className="object-cover"
+                          unoptimized={item.image.startsWith("http")}
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center bg-[#1A1330] text-[#6C4CD8]">
+                          <ShoppingBag size={24} />
+                        </div>
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-[14px] font-bold text-[#1A1330] truncate">{item.title}</p>
@@ -1194,7 +1716,7 @@ export default function CheckoutClient() {
                       </p>
                     </div>
                     <p className="text-[15px] font-extrabold text-[#6C4CD8]">
-                      ${(item.price * item.quantity).toFixed(2)}
+                      ${((typeof item.price === "number" && !isNaN(item.price) ? item.price : 0) * (item.quantity || 1)).toFixed(2)}
                     </p>
                   </div>
                 ))}
@@ -1293,7 +1815,7 @@ export default function CheckoutClient() {
               </div>
               <div className="flex justify-between text-[#8B85A0]">
                 <span>Delivery Location</span>
-                <span className="font-semibold text-right text-[#1A1330] max-w-[200px] truncate">{address}, {city}</span>
+                <span className="font-semibold text-right text-[#1A1330] max-w-[200px] truncate">{fullAddressString}</span>
               </div>
               <div className="flex justify-between text-[#8B85A0]">
                 <span>Payment Option</span>
@@ -1330,6 +1852,231 @@ export default function CheckoutClient() {
           </div>
         </div>
       )}
+
+      {/* ── SCROLLABLE EDIT QUANTITY POPUP MODAL ── */}
+      {showEditCartModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 sm:p-6 backdrop-blur-xs animate-in fade-in">
+          <div className="w-full max-w-2xl sm:max-w-3xl overflow-hidden rounded-3xl bg-white p-6 sm:p-8 shadow-2xl space-y-6">
+            <div className="flex items-center justify-between border-b border-[#F0EDFB] pb-4">
+              <div>
+                <div className="flex items-center gap-2 text-[#6C4CD8]">
+                  <Store size={18} />
+                  <span className="text-xs font-extrabold uppercase tracking-wide">{selectedStore}</span>
+                </div>
+                <h3 className="text-[22px] font-extrabold text-[#1A1330] mt-1">
+                  Edit Item Quantities ({activeItems.length})
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowEditCartModal(false)}
+                className="flex h-10 w-10 items-center justify-center rounded-xl p-1 text-[#8B85A0] hover:bg-[#F6F5FA] cursor-pointer transition"
+                title="Close modal"
+              >
+                <X size={22} />
+              </button>
+            </div>
+
+            {/* Scrollable list of items to edit quantity */}
+            <div className="space-y-4 max-h-[55vh] overflow-y-auto pr-2 scrollbar-thin">
+              {activeItems.length === 0 ? (
+                <div className="py-12 text-center text-[#8B85A0]">
+                  <p className="text-base font-semibold">No items left in cart for this store.</p>
+                </div>
+              ) : (
+                activeItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-[#EDEBF3] bg-[#FAF9FD] p-4 sm:p-5 transition hover:border-[#6C4CD8]/40 hover:bg-white shadow-xs"
+                  >
+                    <div className="flex items-center gap-4 min-w-0 flex-1">
+                      <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-white border border-[#EDEBF3]">
+                        {item.image && item.image.length > 5 ? (
+                          <Image
+                            src={item.image}
+                            alt={item.title}
+                            fill
+                            className="object-cover"
+                            unoptimized={item.image.startsWith("http")}
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-[#6C4CD8]">
+                            <ShoppingBag size={26} />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[16px] font-extrabold text-[#1A1330] truncate">{item.title}</p>
+                        <p className="text-[13px] text-[#8B85A0] mt-0.5">
+                          Sold by <span className="font-semibold text-[#6C4CD8]">{item.storeName}</span>
+                        </p>
+                        <p className="text-[14px] font-extrabold text-[#6C4CD8] mt-1">
+                          ${(typeof item.price === "number" && !isNaN(item.price) ? item.price : 0).toFixed(2)} / unit
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Quantity Stepper & Line Total */}
+                    <div className="flex items-center justify-between sm:justify-end gap-6 pt-2 sm:pt-0 border-t sm:border-t-0 border-[#EDEBF3]">
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
+                          className="flex h-10 w-10 items-center justify-center rounded-xl bg-white border border-[#E2DFEC] text-[#6C4CD8] font-bold hover:bg-[#6C4CD8] hover:text-white transition cursor-pointer shadow-2xs"
+                        >
+                          <Minus size={16} />
+                        </button>
+                        <span className="w-10 text-center text-[16px] font-black text-[#1A1330]">
+                          {item.quantity}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
+                          className="flex h-10 w-10 items-center justify-center rounded-xl bg-white border border-[#E2DFEC] text-[#6C4CD8] font-bold hover:bg-[#6C4CD8] hover:text-white transition cursor-pointer shadow-2xs"
+                        >
+                          <Plus size={16} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateQuantity(item.id, 0)}
+                          title="Remove item"
+                          className="ml-2 flex h-10 w-10 items-center justify-center rounded-xl text-rose-500 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition cursor-pointer"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+
+                      <div className="text-right min-w-[90px]">
+                        <p className="text-[11px] font-semibold text-[#8B85A0] uppercase">Total</p>
+                        <p className="text-[17px] font-black text-[#6C4CD8]">
+                          ${((typeof item.price === "number" && !isNaN(item.price) ? item.price : 0) * (item.quantity || 1)).toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="border-t border-[#F0EDFB] pt-5 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase text-[#8B85A0] tracking-wider">Order Total</p>
+                <p className="text-[24px] font-black text-[#6C4CD8]">${grandTotal.toFixed(2)}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowEditCartModal(false)}
+                className="rounded-2xl bg-[#6C4CD8] px-8 py-3.5 text-sm font-extrabold text-white shadow-lg transition hover:bg-[#5B3DC0] cursor-pointer"
+              >
+                Done Editing
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── DELETE STORE CART CONFIRMATION MODAL ── */}
+      {showDeleteCartConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in">
+          <div className="w-full max-w-lg overflow-hidden rounded-3xl bg-white p-7 sm:p-8 shadow-2xl space-y-6 border border-[#EDEBF3]">
+            <div className="flex items-center gap-4 border-b border-[#F0EDFB] pb-4">
+              <div className="flex h-13 w-13 shrink-0 items-center justify-center rounded-2xl bg-rose-50 border border-rose-100 text-rose-600">
+                <AlertTriangle size={26} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 text-[#6C4CD8]">
+                  <Store size={15} />
+                  <span className="text-[12px] font-extrabold uppercase tracking-wider truncate">
+                    {selectedStore}
+                  </span>
+                </div>
+                <h3 className="text-[22px] font-black text-[#1A1330] mt-0.5">
+                  Clear Store Cart?
+                </h3>
+              </div>
+            </div>
+
+            <p className="text-[15px] sm:text-[16px] text-[#5A5470] leading-relaxed font-medium">
+              Are you sure you want to remove all <span className="font-black text-[#1A1330]">{activeItems.length} items</span> from <span className="font-extrabold text-[#6C4CD8]">{selectedStore}</span>? This action will delete the entire cart for this store.
+            </p>
+
+            <div className="flex items-center gap-3.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowDeleteCartConfirmModal(false)}
+                className="flex-1 rounded-2xl border border-[#EDEBF3] bg-[#F6F5FA] py-3.5 text-[14px] font-extrabold text-[#5A5470] transition hover:bg-[#EDEBF3] hover:text-[#1A1330] cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  setShowDeleteCartConfirmModal(false);
+                  await handleDeleteSellerCart();
+                }}
+                className="flex-1 rounded-2xl bg-rose-600 py-3.5 text-[14px] font-extrabold text-white shadow-md transition hover:bg-rose-700 cursor-pointer flex items-center justify-center gap-2"
+              >
+                <Trash2 size={17} />
+                <span>Yes, Clear Cart</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── FULL-SIZE PHOTO PREVIEW LIGHTBOX MODAL ── */}
+      {viewPhotoUrl && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-xs animate-in fade-in"
+          onClick={() => setViewPhotoUrl(null)}
+        >
+          <div
+            className="relative max-h-[90vh] max-w-4xl overflow-hidden rounded-3xl bg-white p-2 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setViewPhotoUrl(null)}
+              className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-black/60 text-white transition hover:bg-black cursor-pointer"
+              title="Close full view"
+            >
+              <X size={20} />
+            </button>
+            <img
+              src={viewPhotoUrl}
+              alt="House Photo Full View"
+              className="max-h-[85vh] w-auto max-w-full rounded-2xl object-contain"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ── SUCCESS TOAST NOTIFICATION ── */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            className="fixed top-24 right-6 z-50 flex items-center gap-3.5 rounded-3xl bg-[#00875A] p-4 pr-6 text-white shadow-2xl border border-emerald-400/30 max-w-md w-full"
+          >
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/20 text-white">
+              <CheckCircle2 size={24} />
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <p className="text-[15px] font-black text-white leading-snug">
+                Cart Cleared Successfully!
+              </p>
+              <p className="text-[13px] font-medium text-emerald-100 truncate mt-0.5">
+                {toastMessage}
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

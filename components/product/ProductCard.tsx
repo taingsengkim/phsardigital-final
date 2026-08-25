@@ -1,147 +1,199 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
-import type { Listing } from "@/lib/types";
-import { cn } from "@/lib/utils";
-import ProductBadge from "./ProductBadge";
+import { Star, Store } from "lucide-react";
+import { cn, getFileUrl } from "@/lib/utils";
 import SavedButton from "@/components/saved/SavedButton";
+import { getPrimaryImage } from "@/app/(public)/home/listing-helpers";
 
-type Props = {
-  listing: Listing;
-  className?: string;
+export type CardListing = {
+  id?: number | string;
+  uuid?: string;
+  slug?: string;
+  title: string;
+  price?: number | null;
+  fullPrice?: number | null;
+  discountPrice?: number | null;
+  isFavorite?: boolean | null;
+  averageRating?: number | null;
+  reviewCount?: number | null;
+  sellerProfile?: { businessName?: string | null } | null;
+  images?:
+    | {
+        uuid?: string;
+        uri?: string;
+        url?: string;
+        isPrimary?: boolean;
+        is_primary?: boolean;
+        sortOrder?: number;
+      }[]
+    | null;
+  thumbnailUri?: { uri?: string; url?: string } | null;
 };
 
-function averageRating(listing: Listing): number {
-  if (!listing.reviews || listing.reviews.length === 0) return 0;
-  return (
-    listing.reviews.reduce((sum, r) => sum + r.rating, 0) /
-    listing.reviews.length
-  );
-}
+type Props = {
+  listing: CardListing;
+  className?: string;
+  isSavedPage?: boolean;
+  onRemove?: (uuid: string) => Promise<void>;
+  sellerName?: string;
+};
 
-export default function ProductCard({ listing, className }: Props) {
-  const primaryImage =
-    listing.images?.find((img) => img.is_primary) ?? listing.images?.[0];
-  const avg = averageRating(listing);
-  const reviewCount = listing.reviews?.length ?? 0;
+export function ProductCard({ listing, className, sellerName, onRemove }: Props) {
+  const key = listing.uuid ?? String(listing.id ?? listing.slug ?? "");
 
-  // pick the best active discount
-  const now = Date.now();
-  const activeDiscount = listing.discounts
-    ?.filter(
-      (d) =>
-        new Date(d.starts_at).getTime() <= now &&
-        new Date(d.ends_at).getTime() >= now
-    )
-    .sort((a, b) => b.discount_percent - a.discount_percent)[0];
+  // 1. Image Resolution (prefer thumbnailUri.uri)
+  const rawImageUri = listing.thumbnailUri?.uri || listing.thumbnailUri?.url;
+  const imgSrc = rawImageUri ? getFileUrl(rawImageUri) : getPrimaryImage(listing);
 
-  const discountedPrice = activeDiscount
-    ? listing.price * (1 - activeDiscount.discount_percent / 100)
-    : null;
+  // 2. Pricing & Discount calculation
+  const fullPrice = listing.fullPrice ?? listing.price ?? null;
+  const discountPrice = listing.discountPrice ?? null;
+  const hasDiscount =
+    discountPrice !== null &&
+    fullPrice !== null &&
+    discountPrice < fullPrice &&
+    fullPrice > 0;
 
-  // store name — replace with listing.store?.name when your ERD is wired up
-  const storeName = "Store1Name";
+  const discountPercentage =
+    hasDiscount && fullPrice && discountPrice
+      ? Math.round(((fullPrice - discountPrice) / fullPrice) * 100)
+      : 0;
+
+  const activePrice = hasDiscount ? discountPrice! : (fullPrice ?? listing.price ?? 0);
+
+  // 3. Rating & Review calculation with graceful fallbacks
+  const rawRating = listing.averageRating;
+  const rating = typeof rawRating === "number" && rawRating >= 0 ? rawRating : 0;
+  const filledStars = Math.round(rating);
+  const reviewCount =
+    typeof listing.reviewCount === "number" && listing.reviewCount >= 0
+      ? listing.reviewCount
+      : 0;
+
+  // 4. Seller business name
+  const businessName = listing.sellerProfile?.businessName || sellerName || null;
+
+  const productUrl = `/products/${listing.uuid || listing.slug || listing.id || ""}`;
 
   return (
     <article
       className={cn(
-        "group relative flex flex-col overflow-hidden rounded-xl border bg-card text-card-foreground shadow-sm transition-shadow hover:shadow-md",
+        "group relative flex flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_2px_12px_rgba(36,31,53,0.06)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_32px_rgba(108,76,216,0.15)]",
         className
       )}
     >
-      {/* ── discount badge (top-left) ── */}
-      <ProductBadge
-        discounts={listing.discounts}
-        className="absolute left-2 top-2 z-10"
-      />
+      {/* ── Top Image Container ── */}
+      <div className="relative aspect-square w-full overflow-hidden bg-[#F5F3FA]">
+        {/* Discount Badge at top-left */}
+        {hasDiscount && discountPercentage > 0 && (
+          <span className="absolute left-2.5 top-2.5 z-10 inline-flex items-center rounded-full bg-red-500 px-2.5 py-0.5 text-[11px] font-bold text-white shadow-sm">
+            -{discountPercentage}%
+          </span>
+        )}
 
-      {/* ── save button (top-right) ── */}
-      <SavedButton
-        listingId={listing.id}
-        className="absolute right-2 top-2 z-10"
-      />
+        {/* Favorite/Wishlist Button at top-right */}
+        <SavedButton
+          listingId={key}
+          initialSaved={Boolean(listing.isFavorite)}
+          onToggle={(isSaved) => {
+            if (!isSaved && onRemove) {
+              onRemove(key);
+            }
+          }}
+          className="absolute right-2.5 top-2.5 z-10 shadow-sm"
+        />
 
-      {/* ── product image ── */}
-      <Link
-        href={`/products/${listing.slug}`}
-        tabIndex={-1}
-        aria-hidden="true"
-        className="block"
-      >
-        <div className="aspect-square w-full overflow-hidden bg-muted">
-          {primaryImage ? (
+        {/* Product Thumbnail */}
+        <Link href={productUrl} tabIndex={-1} aria-hidden="true" className="block h-full w-full">
+          {imgSrc ? (
             <Image
-              src={primaryImage.url}
-              alt={primaryImage.alt_text ?? listing.title}
-              width={400}
-              height={400}
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              src={imgSrc}
+              alt={listing.title || "Product image"}
+              fill
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              className="object-cover transition-transform duration-500 group-hover:scale-[1.06]"
+              unoptimized={Boolean(imgSrc.startsWith("http"))}
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center bg-muted text-[10px] text-muted-foreground">
-              No image
+            <div className="flex h-full w-full items-center justify-center text-[#C4B5FD]">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                className="h-12 w-12"
+              >
+                <rect x="3" y="3" width="18" height="18" rx="3" />
+                <circle cx="8.5" cy="8.5" r="1.5" />
+                <path d="m21 15-5-5L5 21" />
+              </svg>
             </div>
           )}
-        </div>
-      </Link>
+        </Link>
+      </div>
 
-      {/* ── card body ── */}
-      <div className="flex flex-1 flex-col gap-1 p-2.5">
-        {/* title */}
+      {/* ── Product Content Info ── */}
+      <div className="flex flex-1 flex-col gap-2 p-3.5">
+        {/* Title */}
         <Link
-          href={`/products/${listing.slug}`}
-          className="line-clamp-2 text-xs font-medium leading-snug hover:underline"
+          href={productUrl}
+          className="line-clamp-2 text-sm sm:text-base font-semibold leading-snug text-[#241F35] transition-colors hover:text-[#6C4CD8]"
         >
           {listing.title}
         </Link>
 
-        {/* price — original on top, discounted below (matches mockup layout) */}
-        <div className="mt-0.5 flex flex-col">
-          {discountedPrice ? (
-            <>
-              <span className="text-[11px] text-muted-foreground line-through">
-                ${listing.price.toFixed(2)}
-              </span>
-              <span className="text-sm font-bold text-foreground">
-                ${discountedPrice.toFixed(2)}
-              </span>
-            </>
-          ) : (
-            <span className="text-sm font-bold text-foreground">
-              ${listing.price.toFixed(2)}
-            </span>
-          )}
-        </div>
-
-        {/* rating row — shows "( N )" like mockup */}
-        <div className="flex items-center gap-1">
-          {/* stars */}
-          <div className="flex items-center gap-0.5" aria-label={`${avg.toFixed(1)} out of 5`}>
-            {Array.from({ length: 5 }).map((_, i) => (
-              <svg
-                key={i}
-                className={cn(
-                  "h-2.5 w-2.5",
-                  i < Math.round(avg)
-                    ? "fill-yellow-400 text-yellow-400"
-                    : "fill-muted text-muted"
-                )}
-                viewBox="0 0 20 20"
-                aria-hidden="true"
-              >
-                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-              </svg>
-            ))}
+        {/* Ratings and Reviews */}
+        <div className="flex items-center gap-1.5 text-xs text-gray-500">
+          <div className="flex items-center gap-0.5">
+            {Array.from({ length: 5 }).map((_, i) => {
+              const isFilled = filledStars > 0 && i < filledStars;
+              return (
+                <Star
+                  key={i}
+                  size={13}
+                  className={cn(
+                    isFilled
+                      ? "fill-amber-400 text-amber-400"
+                      : "fill-gray-200 text-gray-200"
+                  )}
+                />
+              );
+            })}
           </div>
-          {reviewCount > 0 && (
-            <span className="text-[10px] text-muted-foreground">
-              ( {reviewCount} )
+          <span className="font-semibold text-gray-700">
+            {rating}
+          </span>
+          <span className="text-gray-400">({reviewCount})</span>
+        </div>
+
+        {/* Pricing Section */}
+        <div className="mt-0.5 flex items-baseline gap-2">
+          <span className="text-base sm:text-lg font-extrabold text-[#6C4CD8]">
+            ${activePrice.toFixed(2)}
+          </span>
+          {hasDiscount && fullPrice !== null && (
+            <span className="text-xs sm:text-sm font-medium text-gray-400 line-through">
+              ${fullPrice.toFixed(2)}
             </span>
           )}
         </div>
 
-        {/* store name */}
-        <p className="truncate text-[10px] text-muted-foreground">{storeName}</p>
+        {/* Seller Information */}
+        {businessName && (
+          <div className="mt-auto pt-2 border-t border-gray-100 flex items-center gap-1.5 text-xs text-gray-500">
+            <Store size={13} className="flex-shrink-0 text-gray-400" />
+            <span className="truncate font-medium text-gray-600">
+              {businessName}
+            </span>
+          </div>
+        )}
       </div>
     </article>
   );
 }
+
+export default ProductCard;
+
+

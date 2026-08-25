@@ -1,37 +1,75 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { HeartIcon } from "lucide-react";
+import { authClient, useSession } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { saveListings, unsaveListing } from "@/app/api/savedListings";
+import { addFavorite, removeFavorites } from "@/app/api/favorites";
 
 type Props = {
   listingId: number | string;
   /** Whether the item is already saved (pass from parent/server) */
   initialSaved?: boolean;
+  onToggle?: (isSaved: boolean) => void;
   className?: string;
 };
 
 export default function SavedButton({
   listingId,
   initialSaved = false,
+  onToggle,
   className,
 }: Props) {
-  const [saved, setSaved] = useState(initialSaved);
+  const { data: session } = useSession();
+  const isLoggedIn = Boolean(session?.user);
+
+  const [saved, setSaved] = useState(Boolean(initialSaved));
   const [loading, setLoading] = useState(false);
 
-  async function toggle() {
+  useEffect(() => {
+    setSaved(Boolean(initialSaved));
+  }, [initialSaved]);
+
+  async function toggle(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!isLoggedIn) {
+      await authClient.signIn.oauth2({
+        providerId: "keycloak",
+        callbackURL: typeof window !== "undefined" ? window.location.href : "/",
+      });
+      return;
+    }
+
+    const uuid = String(listingId);
+    if (!uuid) return;
+
+    const nextState = !saved;
+    setSaved(nextState);
+    onToggle?.(nextState);
     setLoading(true);
+
     try {
-      if (saved) {
-        await unsaveListing(listingId);
+      if (nextState) {
+        // Add to favorite: POST /api/v1/favorites/{listingUuid}
+        const ok = await addFavorite(uuid);
+        if (!ok) {
+          setSaved(saved);
+          onToggle?.(saved);
+        }
       } else {
-        await saveListings(listingId);
+        // Remove from favorite: DELETE /api/v1/favorites with body ["uuid"]
+        const ok = await removeFavorites([uuid]);
+        if (!ok) {
+          setSaved(saved);
+          onToggle?.(saved);
+        }
       }
-      setSaved((prev) => !prev);
     } catch {
-      // silently ignore — user can retry
+      setSaved(saved);
+      onToggle?.(saved);
     } finally {
       setLoading(false);
     }

@@ -13,10 +13,12 @@ const nextConfig: NextConfig = {
   reactCompiler: true,
   images: {
     remotePatterns: [
+      /* allow all http images (MinIO, local dev) */
       {
         protocol: "http",
         hostname: "**",
       },
+      /* allow all https images (API, Unsplash, CDNs) */
       {
         protocol: "https",
         hostname: "**",

@@ -1,32 +1,44 @@
-// Reference only — merge this ordering into your real app/page.tsx around
-// your existing <Navbar /> / category strip / <Footer />. Not meant to
-// overwrite your file directly since I don't have it.
+"use client";
 
-import { FindWhatYouNeed } from "./feature/FindWhatYouNeed";
-import { HeroBanner } from "./feature/HeroBanner";  
-import { NewsletterSignup } from "./feature/NewsletterSignup";
-import { RecommendedSection } from "./feature/RecommendedSection";
-import { TopRatedSection } from "./feature/TopRatedSection";
+import { HeroBanner } from "./feature/HeroBanner";
+import { PopularCategoriesStrip } from "./feature/PopularCategoriesStrip";
+import { FlashDealsSection } from "./feature/FlashDealsSection";
 import { TopSellersSection } from "./feature/TopSellersSection";
+import { TrendingSection } from "./feature/TrendingSection";
+import { PromoBannersRow } from "./feature/PromoBannersRow";
 import { WearableSection } from "./feature/WearableSection";
-
+import { RecommendedSection } from "./feature/RecommendedSection";
+import { SiteFeatures } from "./feature/SiteFeatures";
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen bg-[#F6F5FA] text-[#241F35]">
-      {/* <Navbar /> */}
-      {/* <CategoryStrip /> */}
-
+    <main className="min-h-screen bg-white text-[#111827] flex flex-col space-y-4 sm:space-y-6">
+      {/* 1. Hero Section: Dual Carousel + Side Promo */}
       <HeroBanner />
-      <TopSellersSection />
-      <FindWhatYouNeed />
-      {/* <CategoriesIconRow /> */}
-      <RecommendedSection />
-      <TopRatedSection />
-      <WearableSection />
-      <NewsletterSignup />
 
-      {/* <Footer /> */}
+      {/* 2. Popular Categories Horizontal Strip */}
+      <PopularCategoriesStrip />
+      
+      {/* Today best deals section */}
+      <FlashDealsSection />
+
+      {/* 4. Top Sellers 4-Card Marketplace Stores */}
+      <TopSellersSection />
+
+      {/* 5. Trending Products with Side Collection Spotlight */}
+      <TrendingSection />
+
+      {/* 6. Promotional Marketing Banners */}
+      <PromoBannersRow />
+
+      {/* 7. Category Showcase & Dress Apparel with Tabs */}
+      <WearableSection />
+
+      {/* 8. Daily Discover / Recommended 5-Column Grid */}
+      <RecommendedSection />
+
+      {/* 9. Site Features / 4 Trust Badges */}
+      <SiteFeatures />
     </main>
   );
 }

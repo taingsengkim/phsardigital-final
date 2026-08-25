@@ -1,7 +1,8 @@
 import Link from "next/link";
-import Image from "next/image";
-import { ArrowRight, ImageOff, Star } from "lucide-react";
+import { ArrowRight, Star, ImageOff } from "lucide-react";
 import type { ApiListing, RelatedListing, RelatedReason } from "@/lib/types";
+import { ProductCard } from "@/app/(public)/home/ProductCard";
+import Image from "next/image";
 import { getListingPrice } from "@/lib/api/listing-price";
 
 /** Whatever the rail renders, reduced to the fields a card needs. */
@@ -25,13 +26,13 @@ function fromListing(listing: ApiListing): RailItem {
   const image =
     listing.thumbnailUri?.uri ??
     [...(listing.images ?? [])].sort(
-      (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
+      (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0),
     )[0]?.uri ??
     null;
 
   return {
     uuid: listing.uuid,
-    href: `/products/${listing.slug || listing.uuid}`,
+    href: `/products/${listing.uuid || listing.slug}`,
     title: listing.title || "Untitled product",
     image,
     price: getListingPrice(listing),
@@ -52,7 +53,7 @@ function fromListing(listing: ApiListing): RailItem {
 function fromRelated(related: RelatedListing): RailItem {
   return {
     uuid: related.uuid,
-    href: `/products/${related.slug || related.uuid}`,
+    href: `/products/${related.uuid || related.slug}`,
     title: related.title || "Untitled product",
     // note: RelatedListingResponse returns thumbnailUri as a plain URL string
     image: related.thumbnailUri ?? null,
@@ -169,7 +170,7 @@ type RailProps = {
   limit?: number;
 };
 
-/** A titled 4-up grid of products. Renders nothing when there is nothing to show. */
+/** A titled 4-up grid of products using the primary home ProductCard. Renders nothing when there is nothing to show. */
 export default function ProductRail({
   id,
   eyebrow,
@@ -180,9 +181,7 @@ export default function ProductRail({
   viewAllLabel = "View all",
   limit = 4,
 }: RailProps) {
-  const items = (
-    related ? related.map(fromRelated) : (listings ?? []).map(fromListing)
-  ).slice(0, limit);
+  const items: any[] = (listings ?? related ?? []).slice(0, limit);
 
   if (items.length === 0) return null;
 
@@ -193,7 +192,10 @@ export default function ProductRail({
           <p className="text-[14px] font-semibold uppercase tracking-widest text-[#6C4CD8]">
             {eyebrow}
           </p>
-          <h2 id={id} className="mt-1 text-[24px] font-extrabold text-[#1A1330]">
+          <h2
+            id={id}
+            className="mt-1 text-[24px] font-extrabold text-[#1A1330]"
+          >
             {heading}
           </h2>
         </div>
@@ -208,8 +210,11 @@ export default function ProductRail({
       </div>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-        {items.map((item) => (
-          <ProductRailCard key={item.uuid} item={item} />
+        {items.map((listing) => (
+          <ProductCard
+            key={listing.uuid || listing.id || listing.slug}
+            listing={listing}
+          />
         ))}
       </div>
 

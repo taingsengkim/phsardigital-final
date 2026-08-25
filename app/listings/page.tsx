@@ -6,8 +6,12 @@ interface ListingItem {
   title: string;
 }
 
+type ListingsResponse = {
+  content?: ListingItem[];
+};
+
 export default async function ListingsPage() {
-  const data = await apiFetch("/api/v1/listings?pageNumber=0&pageSize=20");
+  const data = await apiFetch<ListingsResponse>("/api/v1/listings?pageNumber=0&pageSize=20");
 
   return (
     <div>

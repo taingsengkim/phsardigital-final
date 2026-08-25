@@ -1,9 +1,9 @@
 import Link from "next/link";
-import type { CategoryNode } from "@/app/api/categories";
+import type { CategoryTree } from "@/app/api/categories";
 import { cn } from "@/lib/utils";
 
 type Props = {
-  tree: CategoryNode[];
+  tree: CategoryTree[];
   activeSlug?: string;
 };
 
@@ -12,7 +12,7 @@ function CategoryItem({
   activeSlug,
   depth = 0,
 }: {
-  node: CategoryNode;
+  node: CategoryTree;
   activeSlug?: string;
   depth?: number;
 }) {
@@ -37,7 +37,7 @@ function CategoryItem({
         <ul className="mt-0.5 space-y-0.5">
           {node.children.map((child) => (
             <CategoryItem
-              key={child.id}
+              key={child.uuid}
               node={child}
               activeSlug={activeSlug}
               depth={depth + 1}
@@ -68,7 +68,7 @@ export default function CategorySidebar({ tree, activeSlug }: Props) {
       {tree.length > 0 ? (
         <ul className="space-y-0.5">
           {tree.map((node) => (
-            <CategoryItem key={node.id} node={node} activeSlug={activeSlug} />
+            <CategoryItem key={node.uuid} node={node} activeSlug={activeSlug} />
           ))}
         </ul>
       ) : (

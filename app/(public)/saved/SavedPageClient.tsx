@@ -1,67 +1,66 @@
 "use client";
 
-import { useState } from "react";
-import Image from "next/image";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Heart,
-  Trash2,
-  ShoppingCart,
-  Star,
-  Check,
-  ShoppingBag,
-  RefreshCw,
-} from "lucide-react";
-
-import type { SavedItem } from "./types";
-import { INITIAL_SAVED_ITEMS } from "./mockSavedItems";
-
-export type { SavedItem };
-
+import { Heart, Trash2, ShoppingCart, Check, ShoppingBag, Loader2 } from "lucide-react";
+import { ProductCard } from "@/app/(public)/home/ProductCard";
+import { getFavorites, removeFavorites } from "@/app/api/favorites";
 
 export default function SavedPageClient() {
-  const [items, setItems] = useState<SavedItem[]>(INITIAL_SAVED_ITEMS);
+  const [listings, setListings] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
-  const [addedCartIds, setAddedCartIds] = useState<number[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const categories = ["All", ...Array.from(new Set(items.map((i) => i.category)))];
-
-  const filteredItems =
-    selectedCategory === "All"
-      ? items
-      : items.filter((item) => item.category === selectedCategory);
-
-  function removeItem(id: number, title: string) {
-    setItems((prev) => prev.filter((item) => item.id !== id));
-    showToast(`Removed "${title}" from your saved items.`);
+  async function fetchSavedItems() {
+    setLoading(true);
+    try {
+      const rawData = await getFavorites();
+      const items = Array.isArray(rawData) ? rawData : [];
+      const unwrapped = items.map((item: any) => {
+        const listing = item.listing || item;
+        return {
+          ...listing,
+          uuid: listing.uuid || item.uuid || listing.id,
+          isFavorite: true,
+        };
+      });
+      setListings(unwrapped);
+    } catch {
+      setListings([]);
+    } finally {
+      setLoading(false);
+    }
   }
 
-  function clearAll() {
+  useEffect(() => {
+    fetchSavedItems();
+  }, []);
+
+  const categories = ["All", ...Array.from(new Set(listings.map((i) => i.category?.name).filter(Boolean)))];
+
+  const filteredListings =
+    selectedCategory === "All"
+      ? listings
+      : listings.filter((item) => item.category?.name === selectedCategory);
+
+  async function handleRemoveItem(uuid: string) {
+    const itemToRemove = listings.find((i) => (i.uuid || i.slug || i.id) === uuid);
+    setListings((prev) => prev.filter((item) => (item.uuid || item.slug || item.id) !== uuid));
+    await removeFavorites([uuid]);
+    showToast(`Removed "${itemToRemove?.title || "Product"}" from your saved items.`);
+  }
+
+  async function handleClearAll() {
     if (confirm("Are you sure you want to remove all saved items?")) {
-      setItems([]);
+      const allUuids = listings.map((i) => i.uuid || i.slug || i.id).filter(Boolean);
+      setListings([]);
+      if (allUuids.length > 0) {
+        await removeFavorites(allUuids);
+      }
       showToast("Cleared all saved items.");
     }
-  }
-
-  function resetDefaultItems() {
-    setItems(INITIAL_SAVED_ITEMS);
-    setSelectedCategory("All");
-    showToast("Restored static saved items list.");
-  }
-
-  function addToCart(item: SavedItem) {
-    if (!addedCartIds.includes(item.id)) {
-      setAddedCartIds((prev) => [...prev, item.id]);
-    }
-    showToast(`Added "${item.title}" to your cart!`);
-  }
-
-  function moveAllToCart() {
-    const allIds = items.map((i) => i.id);
-    setAddedCartIds(allIds);
-    showToast(`Added all ${items.length} items to your shopping cart!`);
   }
 
   function showToast(msg: string) {
@@ -69,8 +68,19 @@ export default function SavedPageClient() {
     setTimeout(() => setToastMessage((current) => (current === msg ? null : current)), 3500);
   }
 
+  if (loading) {
+    return (
+      <div className="py-24 text-center">
+        <div className="mx-auto flex h-10 w-10 items-center justify-center text-[#6C4CD8]">
+          <Loader2 size={32} className="animate-spin" />
+        </div>
+        <p className="mt-4 text-[16px] font-semibold text-[#8B85A0]">Loading your saved items…</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 font-sans">
       {/* Toast notification */}
       <AnimatePresence>
         {toastMessage && (
@@ -93,13 +103,13 @@ export default function SavedPageClient() {
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-black text-[#1A1330] sm:text-4xl">Saved Items</h1>
             <motion.span
-              key={items.length}
+              key={listings.length}
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: "spring", stiffness: 500, damping: 25 }}
               className="rounded-full bg-[#6C4CD8] px-4 py-1.5 text-sm font-extrabold text-white shadow-sm"
             >
-              {items.length} {items.length === 1 ? "Item" : "Items"}
+              {listings.length} {listings.length === 1 ? "Item" : "Items"}
             </motion.span>
           </div>
           <p className="mt-2 text-base sm:text-lg font-medium text-[#7C7596]">
@@ -107,21 +117,22 @@ export default function SavedPageClient() {
           </p>
         </div>
 
-        {items.length > 0 && (
+        {listings.length > 0 && (
           <div className="flex items-center gap-3 shrink-0">
+            <Link href="/cart">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.94 }}
+                className="flex items-center gap-2 rounded-full bg-[#6C4CD8] px-6 py-3 text-sm sm:text-base font-extrabold text-white shadow-md transition-all hover:bg-[#5B3EC4]"
+              >
+                <ShoppingCart size={18} />
+                View Cart
+              </motion.button>
+            </Link>
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.94 }}
-              onClick={moveAllToCart}
-              className="flex items-center gap-2 rounded-full bg-[#6C4CD8] px-6 py-3 text-sm sm:text-base font-extrabold text-white shadow-md transition-all hover:bg-[#5B3EC4]"
-            >
-              <ShoppingCart size={18} />
-              Move All to Cart
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.94 }}
-              onClick={clearAll}
+              onClick={handleClearAll}
               className="flex items-center gap-2 rounded-full border border-[#EDEBF3] bg-white px-5 py-3 text-sm sm:text-base font-bold text-rose-600 shadow-sm transition-colors hover:bg-rose-50 hover:border-rose-200"
             >
               <Trash2 size={17} />
@@ -131,10 +142,10 @@ export default function SavedPageClient() {
         )}
       </div>
 
-      {items.length > 0 ? (
+      {listings.length > 0 ? (
         <>
           {/* Category Filter bar */}
-          {categories.length > 2 && (
+          {categories.length > 1 && (
             <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
               <span className="text-sm font-semibold text-[#7C7596] mr-2">Filter:</span>
               {categories.map((cat) => (
@@ -155,118 +166,17 @@ export default function SavedPageClient() {
             </div>
           )}
 
-          {/* Product Cards Grid — 4 columns with prominent font sizes matching Checkout page */}
-          <motion.div layout className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4">
-            <AnimatePresence mode="popLayout">
-              {filteredItems.map((item, idx) => {
-                const isAdded = addedCartIds.includes(item.id);
-                return (
-                  <motion.div
-                    key={item.id}
-                    layout
-                    initial={{ opacity: 0, y: 20, scale: 0.92 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8, y: -16, filter: "blur(4px)" }}
-                    whileHover={{ y: -6, scale: 1.02, boxShadow: "0 20px 40px -12px rgba(108, 76, 216, 0.22)" }}
-                    transition={{
-                      layout: { duration: 0.35, ease: "easeOut" },
-                      opacity: { duration: 0.25 },
-                      scale: { duration: 0.25 },
-                      y: { type: "spring", stiffness: 350, damping: 25, delay: idx * 0.04 },
-                    }}
-                    className="group relative flex flex-col overflow-hidden rounded-3xl border border-[#EDEBF3] bg-white p-4.5 shadow-sm transition-colors hover:border-[#6C4CD8]/40"
-                  >
-                    {/* Top image & badges */}
-                    <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-[#F8F7FB]">
-                      <Image
-                        src={item.image}
-                        alt={item.title}
-                        fill
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                        className="object-cover transition-transform duration-500 group-hover:scale-110"
-                      />
-
-                      {/* Discount Tag */}
-                      {item.discountPercent && (
-                        <span className="absolute left-3 top-3 rounded-lg bg-[#FF385C] px-2.5 py-1 text-xs sm:text-sm font-extrabold text-white shadow-md">
-                          -{item.discountPercent}%
-                        </span>
-                      )}
-
-                      {/* Remove item button */}
-                      <motion.button
-                        whileHover={{ scale: 1.15, rotate: 12 }}
-                        whileTap={{ scale: 0.85 }}
-                        onClick={() => removeItem(item.id, item.title)}
-                        aria-label="Remove item"
-                        title="Remove from saved items"
-                        className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-rose-500 shadow-md backdrop-blur-sm transition-colors hover:bg-rose-500 hover:text-white"
-                      >
-                        <Trash2 size={16} />
-                      </motion.button>
-                    </div>
-
-                    {/* Content */}
-                    <div className="mt-4 flex flex-1 flex-col justify-between space-y-3">
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between text-xs sm:text-sm font-bold text-[#6C4CD8]">
-                          <span className="truncate">{item.storeName}</span>
-                        </div>
-
-                        <Link href={`/products/${item.slug}`} className="block">
-                          <h3 className="line-clamp-2 text-base sm:text-lg font-extrabold text-[#1A1330] leading-snug transition-colors hover:text-[#6C4CD8]">
-                            {item.title}
-                          </h3>
-                        </Link>
-                      </div>
-
-                      {/* Rating & Price */}
-                      <div className="pt-3 border-t border-[#EDEBF3]/70 space-y-3">
-                        <div className="flex items-center gap-1.5 text-xs sm:text-sm">
-                          <Star size={15} className="fill-amber-400 text-amber-400" />
-                          <span className="font-extrabold text-[#1A1330]">{item.rating}</span>
-                          <span className="text-xs sm:text-sm text-[#7C7596]">({item.reviewCount})</span>
-                        </div>
-
-                        <div className="flex items-baseline gap-2 flex-wrap">
-                          <span className="text-xl sm:text-2xl font-black text-[#6C4CD8]">
-                            ${item.price.toFixed(2)}
-                          </span>
-                          {item.originalPrice && (
-                            <span className="text-sm font-semibold text-[#9B94B4] line-through">
-                              ${item.originalPrice.toFixed(2)}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Add to Cart button */}
-                        <motion.button
-                          whileHover={{ scale: 1.03 }}
-                          whileTap={{ scale: 0.94 }}
-                          onClick={() => addToCart(item)}
-                          className={`w-full flex items-center justify-center gap-2 rounded-2xl py-3 px-4 text-sm sm:text-base font-extrabold transition-all shadow-md ${
-                            isAdded
-                              ? "bg-emerald-600 text-white"
-                              : "bg-[#6C4CD8] text-white hover:bg-[#5B3EC4]"
-                          }`}
-                        >
-                          {isAdded ? (
-                            <>
-                              <Check size={17} /> Added
-                            </>
-                          ) : (
-                            <>
-                              <ShoppingCart size={17} /> Add to Cart
-                            </>
-                          )}
-                        </motion.button>
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </AnimatePresence>
-          </motion.div>
+          {/* Product Cards Grid — 5 columns matching /home page */}
+          <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-5">
+            {filteredListings.map((listing: any, idx: number) => (
+              <ProductCard
+                key={listing.uuid || listing.id || idx}
+                listing={listing}
+                isSavedPage={true}
+                onRemove={handleRemoveItem}
+              />
+            ))}
+          </div>
         </>
       ) : (
         /* Empty State */
@@ -299,20 +209,9 @@ export default function SavedPageClient() {
                 Browse Products
               </Link>
             </motion.div>
-
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={resetDefaultItems}
-              className="inline-flex items-center gap-2 rounded-full border border-[#EDEBF3] bg-white px-5 py-3 text-sm font-semibold text-[#6C4CD8] transition-all hover:bg-[#F1EFFA]"
-            >
-              <RefreshCw size={16} />
-              Load Sample Items
-            </motion.button>
           </div>
         </motion.div>
       )}
     </div>
   );
 }
-
