@@ -33,6 +33,10 @@ import {
    week of trading rather than just the most recent screenful. */
 const ORDER_SAMPLE = 200;
 
+/* Stock levels, the active/sold-out tiles and the subscription slot count are
+   all derived from the listing list, so it has to span the whole catalogue. */
+const LISTING_SAMPLE = 1000;
+
 /**
  * This page is prerendered, so anything derived from "now" — the rolling 7-day
  * window below — would be baked at build time and disagree with the browser on
@@ -59,7 +63,8 @@ type StockListing = {
 function listingItems(value: unknown): StockListing[] {
   if (Array.isArray(value)) return value as StockListing[];
   const response = value as { content?: unknown; data?: unknown } | undefined;
-  if (Array.isArray(response?.content)) return response.content as StockListing[];
+  if (Array.isArray(response?.content))
+    return response.content as StockListing[];
   if (Array.isArray(response?.data)) return response.data as StockListing[];
   return [];
 }
@@ -134,7 +139,9 @@ function StockOverview({
         ? "Inactive"
         : status.charAt(0) + status.slice(1).toLowerCase(),
     value: listings
-      .filter((listing) => (listing.status ?? "ACTIVE").toUpperCase() === status)
+      .filter(
+        (listing) => (listing.status ?? "ACTIVE").toUpperCase() === status,
+      )
       .reduce(
         (sum, listing) =>
           sum + Math.max(0, Number(listing.stockQty ?? listing.stock ?? 0)),
@@ -184,7 +191,10 @@ function StockOverview({
         <EmptyState
           title="No stock to show yet"
           body="Once you publish products with stock, their levels appear here."
-          action={{ href: "/seller-dashboard/products/new", label: "Add a product" }}
+          action={{
+            href: "/seller-dashboard/products/new",
+            label: "Add a product",
+          }}
         />
       ) : (
         <div className="grid grid-cols-[32px_1fr] gap-3">
@@ -198,7 +208,10 @@ function StockOverview({
           <div className="relative h-56 border-b border-border">
             <div className="pointer-events-none absolute inset-x-0 top-0 flex h-[calc(100%-28px)] flex-col justify-between">
               {[0, 1, 2, 3].map((line) => (
-                <span key={line} className="border-t border-dashed border-border" />
+                <span
+                  key={line}
+                  className="border-t border-dashed border-border"
+                />
               ))}
             </div>
             <div className="absolute inset-0 flex items-end justify-around gap-2 px-1">
@@ -251,7 +264,9 @@ function KpiCard({
       <div className={`grid size-9 place-items-center rounded-xl ${tone}`}>
         {icon}
       </div>
-      <p className="mt-4 text-xs font-semibold text-muted-foreground">{title}</p>
+      <p className="mt-4 text-xs font-semibold text-muted-foreground">
+        {title}
+      </p>
       <p className="mt-1 text-2xl font-extrabold tracking-tight text-foreground">
         {value}
       </p>
@@ -289,7 +304,9 @@ type PopularProduct = { name: string; quantity: number };
 
 function PopularProducts({ products }: { products: PopularProduct[] }) {
   const colors = ["#4F46E5", "#6D8CE8", "#9BB5F0", "#D8E1F5"];
-  const ranked = [...products].sort((a, b) => b.quantity - a.quantity).slice(0, 4);
+  const ranked = [...products]
+    .sort((a, b) => b.quantity - a.quantity)
+    .slice(0, 4);
   const total = ranked.reduce((sum, product) => sum + product.quantity, 0);
   const segments = ranked.map((product, index) => {
     const before = ranked
@@ -320,7 +337,9 @@ function PopularProducts({ products }: { products: PopularProduct[] }) {
           >
             <div className="absolute inset-[30%] grid place-items-center rounded-full bg-card text-center">
               <div>
-                <p className="text-xl font-extrabold text-foreground">{total}</p>
+                <p className="text-xl font-extrabold text-foreground">
+                  {total}
+                </p>
                 <p className="text-[10px] text-muted-foreground">units</p>
               </div>
             </div>
@@ -342,7 +361,10 @@ function PopularProducts({ products }: { products: PopularProduct[] }) {
                   {product.name}
                 </span>
                 <span className="font-bold text-foreground">
-                  {total ? ((product.quantity / total) * 100).toFixed(1) : "0.0"}%
+                  {total
+                    ? ((product.quantity / total) * 100).toFixed(1)
+                    : "0.0"}
+                  %
                 </span>
               </div>
             ))}
@@ -376,7 +398,9 @@ function SalesAnalytics({ days }: { days: DailyMetric[] }) {
             <p className="mt-1 text-3xl font-extrabold text-foreground">
               {totalSales.toLocaleString()}
             </p>
-            <p className="text-xs text-muted-foreground">Across the last 7 days</p>
+            <p className="text-xs text-muted-foreground">
+              Across the last 7 days
+            </p>
           </div>
           <span className="rounded-xl border border-border px-3 py-2 text-xs font-semibold text-muted-foreground">
             Last 7 days
@@ -437,7 +461,10 @@ function SalesAnalytics({ days }: { days: DailyMetric[] }) {
                 strokeDasharray="2 2"
               />
             ))}
-            <polygon points={`0,100 ${linePoints} 100,100`} fill="url(#revenue-fill)" />
+            <polygon
+              points={`0,100 ${linePoints} 100,100`}
+              fill="url(#revenue-fill)"
+            />
             <polyline
               points={linePoints}
               fill="none"
@@ -474,7 +501,7 @@ export default function DashboardSeller() {
   const { data: reviewsData, isLoading: isLoadingReviews } =
     useGetSellerReviewsQuery({ pageNumber: 0, pageSize: 10 });
   const { data: listingsData, isLoading: isLoadingListings } =
-    useGetMyListingsQuery({ pageNumber: 0, pageSize: 100 });
+    useGetMyListingsQuery({ pageNumber: 0, pageSize: LISTING_SAMPLE });
 
   const ordersList = ordersData?.content || [];
   const reviewsList = reviewsData?.content || [];
@@ -486,6 +513,13 @@ export default function DashboardSeller() {
     (sum, order) => sum + (order.totalPrice || 0),
     0,
   );
+
+  /* The plan banner reports usage against the slot limit; until the
+     subscription lands, counting the non-archived catalogue keeps it honest. */
+  const usedListingSlots = stockListings.filter(
+    (listing) => (listing.status ?? "ACTIVE").toUpperCase() !== "ARCHIVED",
+  ).length;
+  const listingsUsed = subscription?.listingsUsed ?? usedListingSlots;
 
   const activeProducts = stockListings.filter(
     (listing) => (listing.status ?? "ACTIVE").toUpperCase() === "ACTIVE",
@@ -499,7 +533,10 @@ export default function DashboardSeller() {
   const popularProducts: PopularProduct[] = Array.from(
     ordersList.reduce((products, order) => {
       for (const item of order.items ?? []) {
-        products.set(item.title, (products.get(item.title) ?? 0) + (item.quantity || 0));
+        products.set(
+          item.title,
+          (products.get(item.title) ?? 0) + (item.quantity || 0),
+        );
       }
       return products;
     }, new Map<string, number>()),
@@ -601,9 +638,9 @@ export default function DashboardSeller() {
               <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-300">
                 {subscription.planDisplayName || subscription.plan}
               </span>
-              <h3 className="mt-0.5 text-base font-bold">
-                {subscription.listingsUsed} of {subscription.listingLimit} listings
-                used
+              <h3 className="mt-0.5 text-base font-bold text-white">
+                Posting allowed • {listingsUsed} of {subscription.listingLimit}{" "}
+                listings used
               </h3>
             </div>
           </div>
@@ -665,7 +702,7 @@ export default function DashboardSeller() {
         <SalesAnalytics days={dailyMetrics} />
       ) : (
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1.8fr)_minmax(300px,1fr)]">
-          <Panel className="h-[368px]" >
+          <Panel className="h-[368px]">
             <Loader2 className="size-5 animate-spin text-primary" />
           </Panel>
           <Panel className="h-[368px]">
@@ -740,7 +777,11 @@ export default function DashboardSeller() {
                   </article>
                 ))}
               </div>
-              <Button asChild variant="outline" className="mt-4 w-full rounded-xl">
+              <Button
+                asChild
+                variant="outline"
+                className="mt-4 w-full rounded-xl"
+              >
                 <Link href="/seller-dashboard/products/comment">
                   View all reviews <ArrowRight className="size-3.5" />
                 </Link>
@@ -798,7 +839,11 @@ export default function DashboardSeller() {
                   </div>
                 ))}
               </div>
-              <Button asChild variant="outline" className="mt-4 w-full rounded-xl">
+              <Button
+                asChild
+                variant="outline"
+                className="mt-4 w-full rounded-xl"
+              >
                 <Link href="/seller-dashboard/orders">
                   View all orders <ArrowRight className="size-3.5" />
                 </Link>

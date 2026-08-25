@@ -31,6 +31,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useAppDispatch } from "@/lib/hooks"
 import { sellerApi } from "@/lib/api/sellerApi"
 import type { CategoryAttributeDefinition, SellerCategoryTree } from "@/lib/types/seller-product"
+import { toast } from "sonner"
 
 const productImageSchema = z.custom<File>(
   (value) => typeof File !== "undefined" && value instanceof File,
@@ -393,7 +394,10 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
       }
 
       dispatch(sellerApi.util.invalidateTags(["SellerListings"]))
-      router.push("/seller-dashboard/products/dashboard")
+      toast.success(isEditing ? "Product updated successfully." : "Product created successfully.", {
+        id: "product-save-success",
+      })
+      router.push(`/seller-dashboard/products/dashboard?success=${isEditing ? "updated" : "created"}`)
       router.refresh()
     } catch (error) {
       const apiError = error as ApiFailure

@@ -6,9 +6,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, Package, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGetListingsQuery } from "@/lib/api/homeApi";
-import ProductCard from "../ProductCard";
 
 import { CURATED_PRODUCTS } from "@/lib/curated-products";
+import ProductCard from "../ProductCard";
 
 const TABS = [
   "Featured Products",
@@ -25,7 +25,8 @@ export function RecommendedSection() {
   const apiListings =
     listingsResponse?.data || (listingsResponse as any)?.content || [];
 
-  const rawListings = apiListings || [];
+  const rawListings =
+    apiListings && apiListings.length >= 4 ? apiListings : CURATED_PRODUCTS;
 
   // Filter listings based on active tab
   const filteredListings = React.useMemo(() => {
