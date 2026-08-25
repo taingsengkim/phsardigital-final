@@ -11,7 +11,6 @@ import { useGetListingsQuery } from "@/lib/api/homeApi";
 import ProductCard from "../ProductCard";
 
 const TABS = [
-  "Featured Products",
   "Best Selling",
   "Latest Arrivals",
   "Hot Deals",
@@ -19,38 +18,71 @@ const TABS = [
 type Tab = (typeof TABS)[number];
 
 export function RecommendedSection() {
-  const [activeTab, setActiveTab] = React.useState<Tab>("Featured Products");
+  const [activeTab, setActiveTab] = React.useState<Tab>("Best Selling");
   const { data: listingsResponse, isLoading } = useGetListingsQuery();
 
   const apiListings =
     listingsResponse?.data || (listingsResponse as any)?.content || [];
 
   const rawListings =
-    apiListings && apiListings.length >= 4 ? apiListings : CURATED_PRODUCTS;
+    apiListings && apiListings.length > 0 ? apiListings : CURATED_PRODUCTS;
 
   // Filter listings based on active tab
   const filteredListings = React.useMemo(() => {
     const list = [...rawListings];
-    if (activeTab === "Featured Products") {
-      return list.filter((p: any) => p.isFeatured !== false);
-    }
+
     if (activeTab === "Best Selling") {
-      return list.sort(
-        (a: any, b: any) =>
-          (b.sold ?? b.reviewCount ?? 0) - (a.sold ?? a.reviewCount ?? 0),
-      );
+      return list
+        .sort((a: any, b: any) => {
+          const ratingA = a.averageRating ?? 0;
+          const ratingB = b.averageRating ?? 0;
+          if (ratingB !== ratingA) {
+            return ratingB - ratingA;
+          }
+          const reviewsA = a.reviewCount ?? 0;
+          const reviewsB = b.reviewCount ?? 0;
+          if (reviewsB !== reviewsA) {
+            return reviewsB - reviewsA;
+          }
+          const soldA = a.sold ?? 0;
+          const soldB = b.sold ?? 0;
+          return soldB - soldA;
+        })
+        .slice(0, 25);
     }
+
     if (activeTab === "Latest Arrivals") {
-      return list.slice().reverse();
+      return list
+        .sort((a: any, b: any) => {
+          const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return timeB - timeA;
+        })
+        .slice(0, 25);
     }
+
     if (activeTab === "Hot Deals") {
-      return list.filter((p: any) => {
-        const full = p.fullPrice ?? p.price;
-        const disc = p.discountPrice;
-        return disc && full && full > disc;
-      });
+      return list
+        .filter((p: any) => {
+          const full = p.fullPrice ?? p.price;
+          const disc = p.discountPrice;
+          return disc && full && full > disc;
+        })
+        .sort((a: any, b: any) => {
+          const fullA = a.fullPrice ?? a.price ?? 0;
+          const discA = a.discountPrice ?? fullA;
+          const pctA = fullA > 0 ? ((fullA - discA) / fullA) * 100 : 0;
+
+          const fullB = b.fullPrice ?? b.price ?? 0;
+          const discB = b.discountPrice ?? fullB;
+          const pctB = fullB > 0 ? ((fullB - discB) / fullB) * 100 : 0;
+
+          return pctB - pctA;
+        })
+        .slice(0, 25);
     }
-    return list;
+
+    return list.slice(0, 25);
   }, [rawListings, activeTab]);
 
   return (
@@ -102,14 +134,12 @@ export function RecommendedSection() {
             transition={{ duration: 0.25 }}
             className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
           >
-            {filteredListings
-              .slice(0, 15)
-              .map((listing: any, index: number) => (
-                <ProductCard
-                  key={listing.uuid || listing.id || index}
-                  listing={listing}
-                />
-              ))}
+            {filteredListings.map((listing: any, index: number) => (
+              <ProductCard
+                key={listing.uuid || listing.id || index}
+                listing={listing}
+              />
+            ))}
           </motion.div>
         </AnimatePresence>
       )}
