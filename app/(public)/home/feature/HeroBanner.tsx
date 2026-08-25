@@ -170,6 +170,7 @@ export function HeroBanner() {
                 fill
                 priority
                 sizes="(max-width: 1024px) 100vw, 70vw"
+                quality={90}
                 className="object-cover object-center sm:object-right select-none"
               />
 
