@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight, ImageOff, X, ZoomIn } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ModalPortal } from "@/components/ui/modal-portal";
 import type { ApiImage } from "@/lib/types";
 
 type Props = {
@@ -219,63 +220,65 @@ export default function ProductGallery({
 
       {/* ── lightbox ── */}
       {zoomed && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-6 backdrop-blur-sm"
-          onClick={() => setZoomed(false)}
-          role="dialog"
-          aria-modal="true"
-          aria-label={`${title} full size image`}
-        >
+        <ModalPortal>
           <div
-            className="relative flex max-h-[88vh] max-w-[92vw] items-center justify-center"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 p-6"
+            onClick={() => setZoomed(false)}
+            role="dialog"
+            aria-modal="true"
+            aria-label={`${title} full size image`}
           >
-            <Image
-              src={active.url}
-              alt={active.alt}
-              width={1200}
-              height={1200}
-              unoptimized
-              className="max-h-[88vh] w-auto object-contain"
-            />
-
+            <div
+              className="relative flex max-h-[88vh] max-w-[92vw] items-center justify-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Image
+                src={active.url}
+                alt={active.alt}
+                width={1200}
+                height={1200}
+                unoptimized
+                className="max-h-[88vh] w-auto object-contain"
+              />
+  
+              {count > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => step(-1)}
+                    aria-label="Previous image"
+                    className="absolute -left-4 flex h-11 w-11 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-sm transition hover:bg-white/30 sm:-left-16"
+                  >
+                    <ChevronLeft size={22} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => step(1)}
+                    aria-label="Next image"
+                    className="absolute -right-4 flex h-11 w-11 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-sm transition hover:bg-white/30 sm:-right-16"
+                  >
+                    <ChevronRight size={22} />
+                  </button>
+                </>
+              )}
+            </div>
+  
+            <button
+              type="button"
+              onClick={() => setZoomed(false)}
+              aria-label="Close"
+              className="absolute right-6 top-6 flex h-11 w-11 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-sm transition hover:bg-white/30"
+            >
+              <X size={20} />
+            </button>
+  
             {count > 1 && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => step(-1)}
-                  aria-label="Previous image"
-                  className="absolute -left-4 flex h-11 w-11 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-sm transition hover:bg-white/30 sm:-left-16"
-                >
-                  <ChevronLeft size={22} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => step(1)}
-                  aria-label="Next image"
-                  className="absolute -right-4 flex h-11 w-11 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-sm transition hover:bg-white/30 sm:-right-16"
-                >
-                  <ChevronRight size={22} />
-                </button>
-              </>
+              <span className="absolute bottom-6 rounded-lg bg-white/15 px-3 py-1.5 text-[13px] font-semibold text-white backdrop-blur-sm">
+                {index + 1} / {count}
+              </span>
             )}
           </div>
-
-          <button
-            type="button"
-            onClick={() => setZoomed(false)}
-            aria-label="Close"
-            className="absolute right-6 top-6 flex h-11 w-11 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-sm transition hover:bg-white/30"
-          >
-            <X size={20} />
-          </button>
-
-          {count > 1 && (
-            <span className="absolute bottom-6 rounded-lg bg-white/15 px-3 py-1.5 text-[13px] font-semibold text-white backdrop-blur-sm">
-              {index + 1} / {count}
-            </span>
-          )}
-        </div>
+        </ModalPortal>
       )}
     </div>
   );

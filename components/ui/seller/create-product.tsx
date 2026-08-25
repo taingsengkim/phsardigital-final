@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -13,6 +14,7 @@ import {
   ImagePlus,
   Info,
   Upload,
+  X,
 } from "lucide-react"
 
 import {
@@ -101,6 +103,31 @@ function categoryPath(tree: SellerCategoryTree[], uuid?: string | null): SellerC
   return []
 }
 
+/**
+ * ListingResponse.category is a CategorySummaryResponse — `{ name, slug }`
+ * only, with no uuid — so an edit has to match the category back to the tree by
+ * slug (name as a fallback for older rows). Reading `category.uuid` always
+ * yielded undefined, which left the select empty on edit and, because the
+ * attribute schema is fetched by the selected uuid, blanked every custom field
+ * with it.
+ */
+function findCategoryBySummary(
+  tree: SellerCategoryTree[],
+  summary?: { slug?: string | null; name?: string | null } | null,
+): SellerCategoryTree | undefined {
+  const slug = summary?.slug?.trim().toLowerCase()
+  const name = summary?.name?.trim().toLowerCase()
+  if (!slug && !name) return undefined
+
+  for (const category of tree) {
+    if (slug && category.slug?.trim().toLowerCase() === slug) return category
+    if (!slug && name && category.name.trim().toLowerCase() === name) return category
+    const match = findCategoryBySummary(category.children ?? [], summary)
+    if (match) return match
+  }
+  return undefined
+}
+
 function flattenCategoryTree(tree: SellerCategoryTree[], parents: string[] = []): SellerCategoryTree[] {
   return tree.flatMap((category) => {
     const path = [...parents, category.name]
@@ -142,15 +169,39 @@ function DropZone({
   label,
   files,
   onFiles,
+  onRemove,
+  coverLabel,
 }: {
   accept: string
   multiple?: boolean
   label: string
   files: File[]
   onFiles: (files: File[]) => void
+  onRemove?: (index: number) => void
+  /** Badge for the first pick, which is the one that becomes the cover. */
+  coverLabel?: string
 }) {
   const inputRef = React.useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = React.useState(false)
+
+  /* A picked file is only viewable through an object URL, and every one of
+     them has to be handed back or it leaks for the life of the page. */
+  const previews = React.useMemo(
+    () =>
+      files.map((file) => ({
+        key: `${file.name}-${file.size}-${file.lastModified}`,
+        name: file.name,
+        url: file.type.startsWith("image/") ? URL.createObjectURL(file) : "",
+      })),
+    [files],
+  )
+  React.useEffect(
+    () => () =>
+      previews.forEach((preview) => {
+        if (preview.url) URL.revokeObjectURL(preview.url)
+      }),
+    [previews],
+  )
 
   return (
     <div>
@@ -182,9 +233,48 @@ function DropZone({
         className="hidden"
         onChange={(event) => onFiles(Array.from(event.target.files ?? []))}
       />
-      {files.length > 0 && (
-        <ul className="mt-3 space-y-2 text-sm text-slate-600">
-          {files.map((file) => <li key={`${file.name}-${file.size}`} className="rounded-lg bg-slate-50 px-3 py-2">{file.name}</li>)}
+      {previews.length > 0 && (
+        <ul className="mt-3 flex flex-wrap gap-3">
+          {previews.map((preview, index) => (
+            <li key={preview.key} className="w-24">
+              <figure className="group relative size-24 overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                {preview.url ? (
+                  <Image
+                    src={preview.url}
+                    alt={preview.name}
+                    fill
+                    unoptimized
+                    sizes="96px"
+                    className="object-cover"
+                  />
+                ) : (
+                  <span className="grid size-full place-items-center px-1 text-center text-[10px] text-slate-500">
+                    {preview.name}
+                  </span>
+                )}
+
+                {coverLabel && index === 0 && (
+                  <figcaption className="absolute inset-x-0 bottom-0 bg-violet-600/85 py-0.5 text-center text-[10px] font-bold uppercase tracking-wide text-white">
+                    {coverLabel}
+                  </figcaption>
+                )}
+
+                {onRemove && (
+                  <button
+                    type="button"
+                    onClick={() => onRemove(index)}
+                    aria-label={`Remove ${preview.name}`}
+                    className="absolute right-1 top-1 grid size-6 place-items-center rounded-full bg-slate-900/70 text-white opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                )}
+              </figure>
+              <p className="mt-1 truncate text-[11px] text-slate-500" title={preview.name}>
+                {preview.name}
+              </p>
+            </li>
+          ))}
         </ul>
       )}
     </div>
@@ -280,16 +370,40 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
   }, [attributeSchema])
   const isSubmitting = isCreating || isUpdating
 
+  /* What the product already has, so an edit shows its photos instead of an
+     empty drop zone. The thumbnail leads, then the gallery by sortOrder. */
+  const existingImages = React.useMemo(() => {
+    if (!isEditing || !listing) return []
+    const thumbnail = listing.thumbnailUri?.uri
+    const gallery = [...(listing.images ?? [])]
+      .filter((image) => image?.uri)
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+
+    const seen = new Set<string>()
+    const ordered: { key: string; uri: string; isCover: boolean }[] = []
+    for (const uri of [thumbnail, ...gallery.map((image) => image.uri)]) {
+      if (!uri || seen.has(uri)) continue
+      seen.add(uri)
+      ordered.push({ key: uri, uri, isCover: ordered.length === 0 })
+    }
+    return ordered
+  }, [isEditing, listing])
+
   React.useEffect(() => {
     if (!listing || !isEditing) return
-    const path = categoryPath(categoryTree, listing.category?.uuid)
+    /* The tree arrives on its own schedule; until it does there is nothing to
+       match the category against, and resetting now would lock in a blank one. */
+    if (categoryTree.length === 0) return
+    const matched =
+      categoryPath(categoryTree, listing.category?.uuid).at(-1) ??
+      findCategoryBySummary(categoryTree, listing.category)
     reset({
       title: listing.title ?? "",
       description: listing.description ?? "",
       price: Number(listing.fullPrice ?? listing.price ?? 0),
       discountPrice: listing.discountPrice == null ? undefined : Number(listing.discountPrice),
       stockQty: Number(listing.stockQty ?? 0),
-      categoryUuid: listing.category?.uuid ?? path.at(-1)?.uuid ?? "",
+      categoryUuid: listing.category?.uuid ?? matched?.uuid ?? "",
       status: listing.status === "DRAFT" || listing.status === "ARCHIVED" ? listing.status : "ACTIVE",
       images: [],
     })
@@ -485,10 +599,45 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
 
         <Section title="Images" color="bg-sky-200">
           <FieldLabel>{isEditing ? "Add new product images (optional)" : "Cover images"}</FieldLabel>
-          {isEditing && listing?.thumbnailUri && (
-            <p className="mb-3 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">The current product images will be kept. Selecting new images will add them and set the first new image as the cover.</p>
+          {isEditing && existingImages.length > 0 && (
+            <div className="mb-4">
+              <p className="mb-2 text-sm font-medium text-slate-600">
+                Current images — kept as they are. New images are added after
+                these, and the first new one becomes the cover.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                {existingImages.map((image) => (
+                  <figure
+                    key={image.key}
+                    className="relative size-24 overflow-hidden rounded-xl border border-slate-200 bg-slate-50"
+                  >
+                    <Image
+                      src={image.uri}
+                      alt=""
+                      fill
+                      sizes="96px"
+                      quality={90}
+                      className="object-cover"
+                    />
+                    {image.isCover && (
+                      <figcaption className="absolute inset-x-0 bottom-0 bg-slate-900/70 py-0.5 text-center text-[10px] font-bold uppercase tracking-wide text-white">
+                        Cover
+                      </figcaption>
+                    )}
+                  </figure>
+                ))}
+              </div>
+            </div>
           )}
-          <DropZone accept="image/*" multiple label="Click to add images" files={images} onFiles={(files) => setValue("images", [...images, ...files], { shouldDirty: true, shouldValidate: true })} />
+          <DropZone
+            accept="image/*"
+            multiple
+            label="Click to add images"
+            files={images}
+            coverLabel={isEditing ? "New cover" : "Cover"}
+            onFiles={(files) => setValue("images", [...images, ...files], { shouldDirty: true, shouldValidate: true })}
+            onRemove={(index) => setValue("images", images.filter((_, i) => i !== index), { shouldDirty: true, shouldValidate: true })}
+          />
           <FieldError message={errors.images?.message} />
         </Section>
 

@@ -1,32 +1,29 @@
 "use client";
 
 import { authClient } from "@/lib/auth-client";
-import { Button } from "../ui/button";
+import { cn } from "@/lib/utils";
+import { NAV_PILL } from "@/components/layout/nav-pill";
 
-export default function LoginButton() {
+export default function LoginButton({
+  className = "",
+}: {
+  className?: string;
+}) {
   async function handleKeycloakSignIn() {
     await authClient.signIn.oauth2({ providerId: "keycloak", callbackURL: "/" });
   }
   return (
-    <Button
+    <button
+      type="button"
       onClick={handleKeycloakSignIn}
       aria-label="Login"
-      style={{
-        background: "#6C4CD8",
-        color: "#fff",
-        borderRadius: 999,
-        padding: "8px 14px",
-        fontSize: 13,
-        fontWeight: 700,
-        textDecoration: "none",
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        whiteSpace: "nowrap",
-        flexShrink: 0,
-      }}
+      className={cn(
+        NAV_PILL,
+        "bg-[#6C4CD8] text-white transition-colors hover:bg-[#5B3DC0]",
+        className,
+      )}
     >
       Login
-    </Button>
+    </button>
   );
 }

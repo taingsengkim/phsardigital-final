@@ -33,6 +33,8 @@ import { useGetSellerApplicationQuery, useGetSellerProfileQuery } from "@/lib/ap
 import { useGetCategoriesQuery } from "@/lib/api/homeApi";
 import LoginButton from "@/components/auth/LoginButton";
 import RegisterButton from "@/components/auth/RegisterButton";
+import { NAV_PILL, NAV_RAIL_PILL } from "@/components/layout/nav-pill";
+import { cn } from "@/lib/utils";
 
 const BRAND = "#6C4CD8";
 const NAV_LINKS = ["Home", "Offers", "Brands", "Stores", "All Products"];
@@ -162,7 +164,7 @@ export default function Navbar() {
                   href="/account/seller-application"
                   aria-label="Store Pending"
                   title="Seller application under review"
-                  className="flex items-center gap-1.5 rounded-full bg-amber-100 border border-amber-300 px-3 py-1.5 text-xs font-bold text-amber-800 transition hover:bg-amber-200"
+                  className={cn(NAV_PILL, "border border-amber-300 bg-amber-100 text-amber-800 transition-colors hover:bg-amber-200")}
                 >
                   <Clock size={13} className="text-amber-600" />
                   <span className="hidden md:inline">Store Pending</span>
@@ -322,7 +324,7 @@ export default function Navbar() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
-                className="flex flex-shrink-0 items-center gap-1.5 rounded-md px-3 py-1.5 text-[12px] font-semibold text-white"
+                className={cn(NAV_RAIL_PILL, "rounded-md text-white")}
                 style={{ background: "rgba(255,255,255,0.15)" }}
                 aria-label="Select Category"
               >
@@ -359,7 +361,7 @@ export default function Navbar() {
             isSeller ? (
               <Link
                 href="/seller-dashboard/home"
-                className="flex flex-shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1 text-[12px] font-bold text-[#6C4CD8] bg-white transition hover:bg-white/90 shadow-xs"
+                className={cn(NAV_RAIL_PILL, "bg-white font-bold text-[#6C4CD8] shadow-xs transition-colors hover:bg-white/90")}
               >
                 <Store size={13} />
                 {storeName || "Seller Dashboard"}
@@ -367,7 +369,7 @@ export default function Navbar() {
             ) : (
               <Link
                 href="/account/seller-application"
-                className="flex flex-shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-semibold text-white transition hover:bg-white/20"
+                className={cn(NAV_RAIL_PILL, "text-white transition-colors hover:bg-white/20")}
                 style={{ background: "rgba(255,255,255,0.18)" }}
               >
                 <Store size={13} />
@@ -377,7 +379,7 @@ export default function Navbar() {
           )}
 
           <div
-            className="flex flex-shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-semibold text-white"
+            className={cn(NAV_RAIL_PILL, "text-white")}
             style={{ background: "rgba(255,255,255,0.12)" }}
           >
             <MapPin size={12} />
@@ -416,7 +418,7 @@ export default function Navbar() {
                 <Link
                   href={isLoggedIn ? "/account" : "/auth/login"}
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex-1 rounded-lg bg-white py-1.5 text-center text-xs font-bold text-[#6C4CD8]"
+                  className="flex h-8 flex-1 items-center justify-center rounded-lg bg-white text-xs font-bold text-[#6C4CD8]"
                 >
                   {isLoggedIn ? "My Account" : "Sign In"}
                 </Link>
@@ -425,7 +427,7 @@ export default function Navbar() {
                   <Link
                     href="/auth/register"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="flex-1 rounded-lg border border-white/60 py-1.5 text-center text-xs font-bold text-white"
+                    className="flex h-8 flex-1 items-center justify-center rounded-lg border border-white/60 text-xs font-bold text-white"
                   >
                     Register
                   </Link>
@@ -434,7 +436,7 @@ export default function Navbar() {
                   <Link
                     href="/seller-dashboard/home"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="flex-1 rounded-lg bg-emerald-400 py-1.5 text-center text-xs font-bold text-[#1A1330]"
+                    className="flex h-8 flex-1 items-center justify-center rounded-lg bg-emerald-400 text-xs font-bold text-[#1A1330]"
                   >
                     Seller Dashboard
                   </Link>
