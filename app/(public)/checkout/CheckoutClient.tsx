@@ -38,7 +38,7 @@ import {
 import { cn, displayImageUrl } from "@/lib/utils";
 import { getListingBySlug } from "@/app/api/listings";
 import { getCart, getCarts, updateCartItemQty, deleteCartItem, deleteSellerCart } from "@/app/api/cart";
-import { createOrder } from "@/app/api/orders";
+import { useCheckoutMutation } from "@/lib/redux/service/purchaseApi";
 import type { Listing } from "@/lib/types";
 
 type CheckoutItem = {
@@ -90,6 +90,12 @@ type ChatThread = {
   lastTime: string;
   unreadCount?: number;
 };
+
+/** Orders are identified by uuid; show a short, quotable reference instead. */
+function orderRef(uuid?: string): string {
+  if (!uuid) return "#ORD";
+  return `#ORD-${uuid.slice(0, 8).toUpperCase()}`;
+}
 
 const INITIAL_SAVED_ADDRESSES: SavedAddress[] = [
   {
@@ -264,7 +270,7 @@ export default function CheckoutClient() {
   const [showEditCartModal, setShowEditCartModal] = useState(false);
   const [showDeleteCartConfirmModal, setShowDeleteCartConfirmModal] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [orderCompleted, setOrderCompleted] = useState<{ id: number; total: number; storeName: string } | null>(null);
+  const [orderCompleted, setOrderCompleted] = useState<{ id: string; ref: string; total: number; storeName: string } | null>(null);
 
   function triggerToast(msg: string) {
     setToastMessage(msg);
@@ -274,6 +280,12 @@ export default function CheckoutClient() {
   }
 
   // Saved Addresses State
+  const [checkout] = useCheckoutMutation();
+  /* Checkout needs the cart's uuid and the seller's id, but the screen tracks
+     the chosen shop by name — so keep the identifiers alongside it. */
+  const [cartsByStore, setCartsByStore] = useState<
+    Record<string, { cartUuid: string; sellerId: string }>
+  >({});
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>(INITIAL_SAVED_ADDRESSES);
   const [selectedAddressId, setSelectedAddressId] = useState<string>("home");
 
@@ -319,6 +331,8 @@ export default function CheckoutClient() {
         const vendorCarts = await getCarts();
         let mappedItems: CheckoutItem[] = [];
 
+        const cartIndex: Record<string, { cartUuid: string; sellerId: string }> = {};
+
         if (vendorCarts && Array.isArray(vendorCarts) && vendorCarts.length > 0) {
           vendorCarts.forEach((cart, cartIdx) => {
             const sellerId = cart.sellerId || cart.sellerProfile?.sellerId || "";
@@ -328,6 +342,10 @@ export default function CheckoutClient() {
                   ? `Shop #${cart.sellerId.slice(0, 6)}`
                   : cart.sellerId
                 : `Shop ${cartIdx + 1}`);
+
+            if (cart.uuid && sellerId) {
+              cartIndex[storeName] = { cartUuid: cart.uuid, sellerId };
+            }
 
             if (cart.items && Array.isArray(cart.items)) {
               cart.items.forEach((item, itemIdx) => {
@@ -471,6 +489,7 @@ export default function CheckoutClient() {
         }
 
         setItems(mappedItems);
+        setCartsByStore(cartIndex);
 
         // Select initial store
         if (slugParam) {
@@ -681,18 +700,29 @@ export default function CheckoutClient() {
     }
 
     try {
-      const order = await createOrder({
-        shipping_address: `${fullName} (${phone}) - ${fullAddressString}`,
-        payment_method: paymentMethod,
-        items: activeItems.map((i) => ({
-          listing_id: typeof i.id === "number" ? i.id : parseInt(String(i.id), 10) || 101,
-          quantity: i.quantity,
-          unit_price: i.price,
-        })),
-      });
+      /* Checkout is per seller: the seller owns the URL, their cart the body.
+         A cart spanning several shops therefore becomes several orders, which
+         is what the "proceed to checkout for your next shop" step below is. */
+      const target = cartsByStore[selectedStore];
+      if (!target?.cartUuid || !target?.sellerId) {
+        throw new Error(
+          "This shop's cart could not be identified. Please reload the checkout and try again.",
+        );
+      }
+
+      /* The address is sent as loose fields rather than an addressId: the list
+         this screen offers is local, so its ids are not address-book uuids the
+         API would recognise. Only cartUuid is required either way. */
+      const order = await checkout({
+        sellerId: target.sellerId,
+        cartUuid: target.cartUuid,
+        shippingAddress: fullAddressString,
+        recipientName: fullName.trim(),
+        recipientPhone: phone.trim(),
+      }).unwrap();
 
       const store = selectedStore;
-      setOrderCompleted({ id: order.id, total: grandTotal, storeName: store });
+      setOrderCompleted({ id: order.uuid, ref: orderRef(order.uuid), total: grandTotal, storeName: store });
       setActiveChatStore(store);
 
       // Update chat threads list with newly created order thread
@@ -701,7 +731,7 @@ export default function CheckoutClient() {
         if (exists) {
           return prev.map((t) =>
             t.storeName === store
-              ? { ...t, lastMessage: `Invoice #ORD-${order.id} created`, lastTime: "10:14 AM" }
+              ? { ...t, lastMessage: `Invoice ${orderRef(order.uuid)} created`, lastTime: "10:14 AM" }
               : t
           );
         }
@@ -709,7 +739,7 @@ export default function CheckoutClient() {
           {
             id: `t_${Date.now()}`,
             storeName: store,
-            lastMessage: `Invoice #ORD-${order.id} created`,
+            lastMessage: `Invoice ${orderRef(order.uuid)} created`,
             lastTime: "10:14 AM",
           },
           ...prev,
@@ -727,7 +757,7 @@ export default function CheckoutClient() {
         {
           id: "m2",
           sender: "seller",
-          text: `Hello ${fullName}! Invoice #ORD-${order.id} has been received and confirmed by ${store}.`,
+          text: `Hello ${fullName}! Invoice ${orderRef(order.uuid)} has been received and confirmed by ${store}.`,
           isQrCard: paymentMethod === "pay_now_shop",
           time: "10:15 AM",
         },
@@ -830,7 +860,7 @@ export default function CheckoutClient() {
           </div>
           <h1 className="mt-6 text-[28px] font-black text-[#1A1330]">Invoice Sent to {orderCompleted.storeName}!</h1>
           <p className="mt-2 text-[15px] text-[#8B85A0]">
-            Your order invoice <span className="font-bold text-[#6C4CD8]">#ORD-{orderCompleted.id}</span> has been issued. You can now chat directly with <span className="font-bold text-[#1A1330]">{orderCompleted.storeName}</span> to finalize payment and delivery.
+            Your order invoice <span className="font-bold text-[#6C4CD8]">{orderCompleted.ref}</span> has been issued. You can now chat directly with <span className="font-bold text-[#1A1330]">{orderCompleted.storeName}</span> to finalize payment and delivery.
           </p>
 
           {/* Interactive Progress Tracker */}
@@ -856,7 +886,7 @@ export default function CheckoutClient() {
           {/* Invoice Summary */}
           <div className="my-6 rounded-2xl border border-[#EDEBF3] p-5 text-left text-[14px] space-y-2.5">
             <div className="flex justify-between border-b border-[#F0EDFB] pb-2 font-bold text-[#1A1330]">
-              <span className="flex items-center gap-1.5"><FileText size={16} className="text-[#6C4CD8]" /> Invoice #ORD-{orderCompleted.id}</span>
+              <span className="flex items-center gap-1.5"><FileText size={16} className="text-[#6C4CD8]" /> Invoice {orderCompleted.ref}</span>
               <span className="text-[#6C4CD8]">${orderCompleted.total.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-[#8B85A0]">
@@ -983,7 +1013,7 @@ export default function CheckoutClient() {
                       </div>
                       <p className="text-[11.5px] text-[#8B85A0] truncate mt-0.5">
                         {thread.storeName === orderCompleted.storeName && isActive
-                          ? `Invoice #ORD-${orderCompleted.id} created`
+                          ? `Invoice ${orderCompleted.ref} created`
                           : thread.lastMessage}
                       </p>
                     </div>
@@ -1039,7 +1069,7 @@ export default function CheckoutClient() {
                           <span className="text-[14px] font-extrabold uppercase tracking-wide">Purchase Invoice Ticket</span>
                         </div>
                         <span className="rounded-md bg-[#6C4CD8] px-2.5 py-1 text-[12px] font-bold text-white">
-                          #ORD-{orderCompleted.id}
+                          {orderCompleted.ref}
                         </span>
                       </div>
 
