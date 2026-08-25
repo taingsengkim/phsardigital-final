@@ -11,7 +11,6 @@ import { useGetListingsQuery } from "@/lib/api/homeApi";
 import ProductCard from "../ProductCard";
 
 const TABS = [
-  "Featured Products",
   "Best Selling",
   "Latest Arrivals",
   "Hot Deals",
@@ -19,38 +18,71 @@ const TABS = [
 type Tab = (typeof TABS)[number];
 
 export function RecommendedSection() {
-  const [activeTab, setActiveTab] = React.useState<Tab>("Featured Products");
+  const [activeTab, setActiveTab] = React.useState<Tab>("Best Selling");
   const { data: listingsResponse, isLoading } = useGetListingsQuery();
 
   const apiListings =
     listingsResponse?.data || (listingsResponse as any)?.content || [];
 
   const rawListings =
-    apiListings && apiListings.length >= 4 ? apiListings : CURATED_PRODUCTS;
+    apiListings && apiListings.length > 0 ? apiListings : CURATED_PRODUCTS;
 
   // Filter listings based on active tab
   const filteredListings = React.useMemo(() => {
     const list = [...rawListings];
-    if (activeTab === "Featured Products") {
-      return list.filter((p: any) => p.isFeatured !== false);
-    }
+
     if (activeTab === "Best Selling") {
-      return list.sort(
-        (a: any, b: any) =>
-          (b.sold ?? b.reviewCount ?? 0) - (a.sold ?? a.reviewCount ?? 0),
-      );
+      return list
+        .sort((a: any, b: any) => {
+          const ratingA = a.averageRating ?? 0;
+          const ratingB = b.averageRating ?? 0;
+          if (ratingB !== ratingA) {
+            return ratingB - ratingA;
+          }
+          const reviewsA = a.reviewCount ?? 0;
+          const reviewsB = b.reviewCount ?? 0;
+          if (reviewsB !== reviewsA) {
+            return reviewsB - reviewsA;
+          }
+          const soldA = a.sold ?? 0;
+          const soldB = b.sold ?? 0;
+          return soldB - soldA;
+        })
+        .slice(0, 25);
     }
+
     if (activeTab === "Latest Arrivals") {
-      return list.slice().reverse();
+      return list
+        .sort((a: any, b: any) => {
+          const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return timeB - timeA;
+        })
+        .slice(0, 25);
     }
+
     if (activeTab === "Hot Deals") {
-      return list.filter((p: any) => {
-        const full = p.fullPrice ?? p.price;
-        const disc = p.discountPrice;
-        return disc && full && full > disc;
-      });
+      return list
+        .filter((p: any) => {
+          const full = p.fullPrice ?? p.price;
+          const disc = p.discountPrice;
+          return disc && full && full > disc;
+        })
+        .sort((a: any, b: any) => {
+          const fullA = a.fullPrice ?? a.price ?? 0;
+          const discA = a.discountPrice ?? fullA;
+          const pctA = fullA > 0 ? ((fullA - discA) / fullA) * 100 : 0;
+
+          const fullB = b.fullPrice ?? b.price ?? 0;
+          const discB = b.discountPrice ?? fullB;
+          const pctB = fullB > 0 ? ((fullB - discB) / fullB) * 100 : 0;
+
+          return pctB - pctA;
+        })
+        .slice(0, 25);
     }
-    return list;
+
+    return list.slice(0, 25);
   }, [rawListings, activeTab]);
 
   return (
@@ -69,16 +101,16 @@ export function RecommendedSection() {
         </p>
 
         {/* Tab Pills */}
-        <div className="mt-6 inline-flex flex-wrap justify-center gap-2 p-1.5 rounded-full bg-gray-100 dark:bg-zinc-800/80 border border-gray-200/60 dark:border-zinc-700">
+        <div className="mt-6 inline-flex flex-wrap justify-center gap-2.5 p-2 rounded-full bg-gray-100 dark:bg-zinc-800/80 border border-gray-200/60 dark:border-zinc-700">
           {TABS.map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={cn(
-                "relative rounded-full px-5 py-2 text-xs sm:text-sm font-semibold transition-all duration-200 cursor-pointer",
+                "relative rounded-full px-6 py-2.5 text-sm sm:text-base font-bold transition-all duration-200 cursor-pointer",
                 activeTab === tab
                   ? "bg-[#6C4CD8] text-white shadow-sm"
-                  : "text-gray-600 dark:text-zinc-300 hover:text-[#111827] dark:hover:text-white",
+                  : "text-gray-700 dark:text-zinc-300 hover:text-[#111827] dark:hover:text-white",
               )}
             >
               {tab}
@@ -102,14 +134,12 @@ export function RecommendedSection() {
             transition={{ duration: 0.25 }}
             className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
           >
-            {filteredListings
-              .slice(0, 15)
-              .map((listing: any, index: number) => (
-                <ProductCard
-                  key={listing.uuid || listing.id || index}
-                  listing={listing}
-                />
-              ))}
+            {filteredListings.map((listing: any, index: number) => (
+              <ProductCard
+                key={listing.uuid || listing.id || index}
+                listing={listing}
+              />
+            ))}
           </motion.div>
         </AnimatePresence>
       )}
@@ -118,7 +148,7 @@ export function RecommendedSection() {
       <div className="mt-10 flex justify-center">
         <Link
           href="/products"
-          className="inline-flex items-center gap-2 rounded-xl bg-white dark:bg-zinc-800 border-2 border-[#6C4CD8] px-6 py-2.5 text-xs sm:text-sm font-bold text-[#6C4CD8] dark:text-[#A78BFA] hover:bg-[#6C4CD8] hover:text-white dark:hover:bg-[#6C4CD8] dark:hover:text-white transition-all shadow-xs"
+          className="inline-flex items-center gap-2 rounded-xl bg-white dark:bg-zinc-800 border-2 border-[#6C4CD8] px-7 py-3 text-sm sm:text-base font-bold text-[#6C4CD8] dark:text-[#A78BFA] hover:bg-[#6C4CD8] hover:text-white dark:hover:bg-[#6C4CD8] dark:hover:text-white transition-all shadow-xs"
         >
           <span>Explore All Products</span>
         </Link>

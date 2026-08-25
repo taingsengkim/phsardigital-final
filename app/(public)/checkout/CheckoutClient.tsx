@@ -613,19 +613,34 @@ export default function CheckoutClient() {
   const shippingFee = subtotal >= 50 ? 0 : 1.5;
   const grandTotal = Math.max(0, subtotal - discountAmount + shippingFee);
 
+  // Address completeness validation (all address inputs required except photo upload)
+  const isAddressValid = Boolean(
+    fullName.trim() &&
+    phone.trim() &&
+    locationTitle.trim() &&
+    googleMapLink.trim() &&
+    (locationType === "city"
+      ? khan.trim() && sangkat.trim() && village.trim() && streetNo.trim()
+      : province.trim() && district.trim() && commune.trim() && village.trim())
+  );
+
   // Step 1: Open Confirmation Popup Modal
   function handleInitiateCheckout(e: React.FormEvent) {
     e.preventDefault();
-    if (!phone.trim() || !fullName.trim()) {
-      setError("Please fill in your full name and phone number.");
+    if (!fullName.trim() || !phone.trim() || !locationTitle.trim()) {
+      setError("Please fill in your Full Name, Phone Number, and Location Title.");
       return;
     }
-    if (locationType === "city" && (!khan.trim() || !sangkat.trim() || !streetNo.trim())) {
-      setError("Please fill in your Khan, Sangkat, and Street No.");
+    if (locationType === "city" && (!khan.trim() || !sangkat.trim() || !village.trim() || !streetNo.trim())) {
+      setError("Please fill in all Phnom Penh address fields (Khan, Sangkat, Village, and Street No).");
       return;
     }
-    if (locationType === "province" && (!province.trim() || !district.trim() || !commune.trim())) {
-      setError("Please fill in your Province, District, and Commune.");
+    if (locationType === "province" && (!province.trim() || !district.trim() || !commune.trim() || !village.trim())) {
+      setError("Please fill in all Province address fields (Province, District, Commune, and Village).");
+      return;
+    }
+    if (!googleMapLink.trim()) {
+      setError("Please enter your GoogleMap link.");
       return;
     }
     if (!selectedStore) {
@@ -1481,20 +1496,21 @@ export default function CheckoutClient() {
                   </>
                 )}
 
-                {/* ── GOOGLE MAP LINK (OPTIONAL) ── */}
+                {/* ── GOOGLE MAP LINK (REQUIRED) ── */}
                 <div className="sm:col-span-2">
                   <label htmlFor="googleMapLink" className="mb-1.5 flex items-center justify-between text-[13px] font-bold text-[#1A1330]">
                     <span className="flex items-center gap-1.5">
                       <Link2 size={15} className="text-[#6C4CD8]" />
-                      GoogleMap (Link)
+                      GoogleMap (Link) *
                     </span>
-                    <span className="text-[12px] font-normal text-[#8B85A0]">Optional</span>
+                    <span className="text-[12px] font-bold text-[#6C4CD8]">Required</span>
                   </label>
                   <input
                     id="googleMapLink"
                     type="url"
                     value={googleMapLink}
                     onChange={(e) => setGoogleMapLink(e.target.value)}
+                    required
                     placeholder="https://maps.google.com/?q=11.5564,104.9282"
                     className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
                   />
@@ -1758,8 +1774,8 @@ export default function CheckoutClient() {
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={submitting || activeItems.length === 0}
-                className="w-full flex items-center justify-center gap-2 rounded-2xl bg-[#6C4CD8] py-4 text-[17px] font-bold text-white shadow-[0_8px_25px_rgba(108,76,216,0.35)] transition-all hover:scale-[1.02] hover:bg-[#5B3DC0] disabled:opacity-50"
+                disabled={submitting || activeItems.length === 0 || !isAddressValid}
+                className="w-full flex items-center justify-center gap-2 rounded-2xl bg-[#6C4CD8] py-4 text-[17px] font-bold text-white shadow-[0_8px_25px_rgba(108,76,216,0.35)] transition-all hover:scale-[1.02] hover:bg-[#5B3DC0] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:shadow-none"
               >
                 {submitting ? (
                   "Processing Order..."
@@ -1770,6 +1786,13 @@ export default function CheckoutClient() {
                   </>
                 )}
               </button>
+
+              {!isAddressValid && (
+                <p className="text-center text-[12px] font-semibold text-amber-700 bg-amber-50 rounded-xl p-2.5 border border-amber-200/80 flex items-center justify-center gap-1.5">
+                  <AlertTriangle size={14} className="shrink-0 text-amber-600" />
+                  <span>Please fill in all required address fields to proceed with checkout</span>
+                </p>
+              )}
 
               {/* Trust Badges */}
               <div className="flex items-center justify-center gap-2 pt-2 text-[12px] font-semibold text-[#8B85A0]">

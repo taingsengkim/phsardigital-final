@@ -276,6 +276,7 @@ export async function GET(request: NextRequest) {
       return false;
     };
 
+    filtered = filtered.filter((p: any) => matchesCategory(p.category?.slug, p.category?.name));
   }
 
   const sellerIdParam = searchParams.get("sellerId");

@@ -75,10 +75,10 @@ export function TrendingSection() {
             </p>
             <Link
               href="/products?category=womens-fashion"
-              className="inline-flex items-center gap-2 rounded-full bg-white text-[#111827] px-5 py-2.5 text-xs font-bold transition-all hover:bg-[#6C4CD8] hover:text-white"
+              className="inline-flex items-center gap-2 rounded-full bg-white text-[#111827] px-5 py-2.5 text-sm font-bold transition-all hover:bg-[#6C4CD8] hover:text-white"
             >
               <span>Explore Now</span>
-              <ArrowRight className="size-3.5" />
+              <ArrowRight className="size-4" />
             </Link>
           </div>
         </motion.div>

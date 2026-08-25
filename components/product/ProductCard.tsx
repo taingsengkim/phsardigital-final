@@ -75,7 +75,8 @@ export function ProductCard({ listing, className, sellerName, onRemove }: Props)
   // 4. Seller business name
   const businessName = listing.sellerProfile?.businessName || sellerName || null;
 
-  const productUrl = `/products/${listing.uuid || listing.slug || listing.id || ""}`;
+  const targetUuid = listing.uuid || listing.id || listing.slug || "";
+  const productUrl = `/products/${targetUuid}`;
 
   return (
     <article
