@@ -8,6 +8,7 @@ import PhsarDigitalLogo from "@/assets/svg/phsardigitalLogo"
 import { logoutFromKeycloak } from "@/lib/auth-client"
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from "@/components/ui/sidebar"
 import { cn } from "@/lib/utils"
+import { useGetConversationsQuery } from "@/lib/redux/service/sellerMessageApi"
 
 type NavLink = { label: string; href: string }
 
@@ -40,6 +41,13 @@ function Submenu({ links }: { links: NavLink[] }) {
 
 export function SellerSidebar() {
   const pathname = usePathname()
+  const { data: conversations = [] } = useGetConversationsQuery(undefined, {
+    pollingInterval: 30_000,
+  })
+  const unreadMessages = conversations.reduce(
+    (total, conversation) => total + Math.max(0, conversation.unreadCount ?? 0),
+    0,
+  )
   const [reportsOpen, setReportsOpen] = React.useState(pathname.includes("/products/dashboard") || pathname.includes("/products/comment"))
   const [inventoryOpen, setInventoryOpen] = React.useState(pathname.includes("/products/") || pathname.startsWith("/seller-dashboard/orders"))
   const [logoutOpen, setLogoutOpen] = React.useState(false)
@@ -98,7 +106,14 @@ export function SellerSidebar() {
           <Link href="/seller-dashboard/message" className={cn(itemClass, active("/seller-dashboard/message") && activeClass)}>
             <MessageCircle className="size-[21px] shrink-0" strokeWidth={1.8} />
             <span className="group-data-[collapsible=icon]:hidden">Messages</span>
-            <span className="ml-auto grid size-[22px] place-items-center rounded-full bg-[#fa3f50] text-[11px] font-bold text-white shadow-sm group-data-[collapsible=icon]:hidden">2</span>
+            {unreadMessages > 0 && (
+              <span
+                aria-label={`${unreadMessages} unread message${unreadMessages === 1 ? "" : "s"}`}
+                className="ml-auto grid min-w-[22px] place-items-center rounded-full bg-[#fa3f50] px-1.5 text-[11px] font-bold leading-[22px] text-white shadow-sm group-data-[collapsible=icon]:hidden"
+              >
+                {unreadMessages > 99 ? "99+" : unreadMessages}
+              </span>
+            )}
           </Link>
         </nav>
       </SidebarContent>

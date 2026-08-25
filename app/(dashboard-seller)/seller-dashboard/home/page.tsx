@@ -227,7 +227,7 @@ export default function DashboardSeller() {
   const { data: subscription } = useGetSellerSubscriptionQuery();
   const { data: ordersData, isLoading: isLoadingOrders } = useGetSellerOrdersQuery({ pageNumber: 0, pageSize: 20 });
   const { data: reviewsData, isLoading: isLoadingReviews } = useGetSellerReviewsQuery({ pageNumber: 0, pageSize: 10 });
-  const { data: listingsData, isLoading: isLoadingListings } = useGetMyListingsQuery({ pageNumber: 0, pageSize: 100 });
+  const { data: listingsData, isLoading: isLoadingListings } = useGetMyListingsQuery({ pageNumber: 0, pageSize: 1000 });
 
   const ordersList = ordersData?.content || [];
   const reviewsList = reviewsData?.content || [];
@@ -240,6 +240,9 @@ export default function DashboardSeller() {
 
   const totalOrdersCount = String(ordersData?.page?.totalElements ?? ordersList.length);
   const activeProducts = stockListings.filter((listing) => (listing.status ?? "ACTIVE").toUpperCase() === "ACTIVE").length;
+  const usedListingSlots = stockListings.filter(
+    (listing) => (listing.status ?? "ACTIVE").toUpperCase() !== "ARCHIVED",
+  ).length;
   const soldOutProducts = stockListings.filter((listing) =>
     (listing.status ?? "").toUpperCase() === "SOLD_OUT" || Number(listing.stockQty ?? listing.stock ?? 0) === 0,
   ).length;
@@ -327,7 +330,7 @@ export default function DashboardSeller() {
                 Active Plan: {subscription.planDisplayName || subscription.plan}
               </span>
               <h3 className="text-base font-bold text-white mt-0.5">
-                Posting Allowed • {subscription.listingsUsed} of {subscription.listingLimit} Listings Used
+                Posting Allowed • {isLoadingListings ? "…" : usedListingSlots} of {subscription.listingLimit} Listings Used
               </h3>
             </div>
           </div>

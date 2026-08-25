@@ -45,7 +45,7 @@ export function CustomerList() {
     <section className="flex min-h-[calc(100vh-104px)] flex-col bg-background px-[28px] py-[30px] text-foreground sm:px-[38px]">
       <h1 className="mb-[24px] text-[32px] font-bold leading-none tracking-[-0.8px]">Customer list</h1>
       <div className="flex-1 rounded-[10px] border border-border bg-card px-[18px] pb-[12px] pt-[18px] text-card-foreground shadow-sm">
-        <div className="flex flex-wrap items-center gap-[16px] pb-[28px]">
+        <div className="flex flex-wrap items-center gap-[16px] pb-[18px]">
           <span className="h-[31px] w-[14px] rounded-[5px] bg-primary" />
           <h2 className="text-[17px] font-semibold">Customer</h2>
           <label className="relative w-full max-w-[345px] sm:ml-[7px]"><Search className="absolute left-[13px] top-1/2 size-[18px] -translate-y-1/2 text-muted-foreground" /><input value={query} onChange={(event) => setQuery(event.target.value)} type="search" placeholder="Search by name or email" className="h-[39px] w-full rounded-[10px] border-0 bg-muted pl-[40px] pr-[14px] text-[13px] text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/25" /></label>
@@ -54,7 +54,7 @@ export function CustomerList() {
         <div className="min-w-[720px]">
           <div className="grid grid-cols-[42px_minmax(220px,1.25fr)_minmax(230px,1.3fr)_120px_120px_100px_70px] items-center border-b border-[#eceef0] pb-[14px] text-[11px] font-medium text-[#777f89]"><Checkbox checked={allSelected} onChange={toggleAll} label="Select all customers" /><span>Name</span><span>Email</span><span>Purchase</span><span>Comments</span><span>Likes</span><span className="text-center">Actions</span></div>
           {visible.map((customer) => (
-            <div key={customer.id} className={cn("grid min-h-[100px] grid-cols-[42px_minmax(220px,1.25fr)_minmax(230px,1.3fr)_120px_120px_100px_70px] items-center border-b border-border px-[0] py-[12px] last:border-0", selected.has(customer.id) && "my-[8px] rounded-[9px] border-b-0 bg-primary/10 px-[10px] text-foreground")}>
+            <div key={customer.id} className={cn("grid min-h-[76px] grid-cols-[42px_minmax(220px,1.25fr)_minmax(230px,1.3fr)_120px_120px_100px_70px] items-center border-b border-border px-0 py-2 last:border-0", selected.has(customer.id) && "my-1 rounded-[9px] border-b-0 bg-primary/10 px-[10px] text-foreground")}>
               <Checkbox checked={selected.has(customer.id)} onChange={() => toggle(customer.id)} label={`Select ${customer.name}`} />
               <div className="flex items-center gap-[14px]"><Image src={customer.avatar} alt="" width={48} height={48} className="size-[48px] rounded-full object-cover" /><div><p className="text-[13px] font-semibold">{customer.name}</p><p className="mt-[3px] text-[11px] text-[#858c95]">{customer.phone}</p></div></div>
               <p className="truncate pr-[16px] text-[12px] text-[#66707a]">{customer.email}</p>
