@@ -256,7 +256,7 @@ export default function ProductDetailClient({
           {listing.title || "Product details"}
         </h1>
         <div className="flex shrink-0 items-center gap-2 pt-1">
-          <SavedButton listingId={listingId} />
+          <SavedButton listingId={listingId} initialSaved={Boolean(listing.isFavorite)} />
           <button
             type="button"
             onClick={handleShare}

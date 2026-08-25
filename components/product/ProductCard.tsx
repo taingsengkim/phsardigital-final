@@ -40,7 +40,7 @@ type Props = {
   sellerName?: string;
 };
 
-export function ProductCard({ listing, className, sellerName }: Props) {
+export function ProductCard({ listing, className, sellerName, onRemove }: Props) {
   const key = listing.uuid ?? String(listing.id ?? listing.slug ?? "");
 
   // 1. Image Resolution (prefer thumbnailUri.uri)
@@ -97,6 +97,11 @@ export function ProductCard({ listing, className, sellerName }: Props) {
         <SavedButton
           listingId={key}
           initialSaved={Boolean(listing.isFavorite)}
+          onToggle={(isSaved) => {
+            if (!isSaved && onRemove) {
+              onRemove(key);
+            }
+          }}
           className="absolute right-2.5 top-2.5 z-10 shadow-sm"
         />
 
