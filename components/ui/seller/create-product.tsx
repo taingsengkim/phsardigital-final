@@ -29,6 +29,7 @@ import {
   useUploadProductFileMutation,
 } from "@/lib/redux/service/sellerProductApi"
 import { readSellerDrafts, writeSellerDrafts } from "@/lib/seller-drafts"
+import { ListingGalleryManager } from "@/components/ui/seller/listing-gallery-manager"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useAppDispatch } from "@/lib/hooks"
 import { sellerApi } from "@/lib/api/sellerApi"
@@ -370,25 +371,6 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
   }, [attributeSchema])
   const isSubmitting = isCreating || isUpdating
 
-  /* What the product already has, so an edit shows its photos instead of an
-     empty drop zone. The thumbnail leads, then the gallery by sortOrder. */
-  const existingImages = React.useMemo(() => {
-    if (!isEditing || !listing) return []
-    const thumbnail = listing.thumbnailUri?.uri
-    const gallery = [...(listing.images ?? [])]
-      .filter((image) => image?.uri)
-      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
-
-    const seen = new Set<string>()
-    const ordered: { key: string; uri: string; isCover: boolean }[] = []
-    for (const uri of [thumbnail, ...gallery.map((image) => image.uri)]) {
-      if (!uri || seen.has(uri)) continue
-      seen.add(uri)
-      ordered.push({ key: uri, uri, isCover: ordered.length === 0 })
-    }
-    return ordered
-  }, [isEditing, listing])
-
   React.useEffect(() => {
     if (!listing || !isEditing) return
     /* The tree arrives on its own schedule; until it does there is nothing to
@@ -598,47 +580,25 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
         </Section>
 
         <Section title="Images" color="bg-sky-200">
-          <FieldLabel>{isEditing ? "Add new product images (optional)" : "Cover images"}</FieldLabel>
-          {isEditing && existingImages.length > 0 && (
-            <div className="mb-4">
-              <p className="mb-2 text-sm font-medium text-slate-600">
-                Current images — kept as they are. New images are added after
-                these, and the first new one becomes the cover.
-              </p>
-              <div className="flex flex-wrap gap-3">
-                {existingImages.map((image) => (
-                  <figure
-                    key={image.key}
-                    className="relative size-24 overflow-hidden rounded-xl border border-slate-200 bg-slate-50"
-                  >
-                    <Image
-                      src={image.uri}
-                      alt=""
-                      fill
-                      sizes="96px"
-                      quality={90}
-                      className="object-cover"
-                    />
-                    {image.isCover && (
-                      <figcaption className="absolute inset-x-0 bottom-0 bg-slate-900/70 py-0.5 text-center text-[10px] font-bold uppercase tracking-wide text-white">
-                        Cover
-                      </figcaption>
-                    )}
-                  </figure>
-                ))}
-              </div>
-            </div>
+          {/* Editing manages the live gallery directly — every action there hits
+              the API on the spot, so it does not wait for the form's Save. */}
+          {isEditing ? (
+            <ListingGalleryManager listing={listing} listingUuid={editUuid} />
+          ) : (
+            <>
+              <FieldLabel>Cover images</FieldLabel>
+              <DropZone
+                accept="image/*"
+                multiple
+                label="Click to add images"
+                files={images}
+                coverLabel="Cover"
+                onFiles={(files) => setValue("images", [...images, ...files], { shouldDirty: true, shouldValidate: true })}
+                onRemove={(index) => setValue("images", images.filter((_, i) => i !== index), { shouldDirty: true, shouldValidate: true })}
+              />
+              <FieldError message={errors.images?.message} />
+            </>
           )}
-          <DropZone
-            accept="image/*"
-            multiple
-            label="Click to add images"
-            files={images}
-            coverLabel={isEditing ? "New cover" : "Cover"}
-            onFiles={(files) => setValue("images", [...images, ...files], { shouldDirty: true, shouldValidate: true })}
-            onRemove={(index) => setValue("images", images.filter((_, i) => i !== index), { shouldDirty: true, shouldValidate: true })}
-          />
-          <FieldError message={errors.images?.message} />
         </Section>
 
         <Section title="Price" color="bg-emerald-200">

@@ -114,5 +114,17 @@ export interface UpdateListingThumbnailRequest {
 export interface AddListingImageMutationRequest {
   uuid: string
   objectName: string
-  sortOrder: number
+  /** Omitted appends to the end of the gallery. */
+  sortOrder?: number
+}
+
+export interface ReorderListingImagesRequest {
+  uuid: string
+  /** The complete gallery, first to last. Position is the array index. */
+  imageUuids: string[]
+}
+
+export interface RemoveListingImageRequest {
+  uuid: string
+  imageUuid: string
 }

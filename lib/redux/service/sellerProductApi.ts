@@ -5,6 +5,8 @@ import type {
   CategoryAttributeSchema,
   CreateListingRequest,
   DeleteListingRequest,
+  RemoveListingImageRequest,
+  ReorderListingImagesRequest,
   SellerCategory,
   SellerCategoryTree,
   SellerListing,
@@ -97,6 +99,30 @@ export const sellerProductApi = createApi({
       }),
       invalidatesTags: ["SellerListing"],
     }),
+    uploadProductFiles: builder.mutation<UploadedFile[], File[]>({
+      query: (files) => {
+        const body = new FormData()
+        for (const file of files) body.append("files", file)
+        return { url: "/files/upload-multiple", method: "POST", body }
+      },
+    }),
+    /* The API wants the COMPLETE order, first to last, and rejects a list that
+       repeats an image or misses one. Position is the array index. */
+    reorderListingImages: builder.mutation<ApiListing, ReorderListingImagesRequest>({
+      query: ({ uuid, imageUuids }) => ({
+        url: `/listings/${encodeURIComponent(uuid)}/images/order`,
+        method: "PATCH",
+        body: { imageUuids },
+      }),
+      invalidatesTags: ["SellerListing"],
+    }),
+    removeListingImage: builder.mutation<void, RemoveListingImageRequest>({
+      query: ({ uuid, imageUuid }) => ({
+        url: `/listings/${encodeURIComponent(uuid)}/images/${encodeURIComponent(imageUuid)}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["SellerListing"],
+    }),
     removeListingDiscount: builder.mutation<ApiListing, string>({
       query: (uuid) => ({
         url: `/listings/${encodeURIComponent(uuid)}/discount`,
@@ -126,4 +152,7 @@ export const {
   useAddListingImageMutation,
   useRemoveListingDiscountMutation,
   useDeleteSellerListingMutation,
+  useUploadProductFilesMutation,
+  useReorderListingImagesMutation,
+  useRemoveListingImageMutation,
 } = sellerProductApi

@@ -30,6 +30,8 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "**",
       },
+       { protocol: 'https',
+         hostname: 'files.quizzy.it.com', pathname: '/**' },                                                                                                               
     ],
   },
 };
