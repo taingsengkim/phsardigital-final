@@ -4,8 +4,9 @@ import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ChevronRight, Clock, Star, ShoppingBag, Heart } from "lucide-react";
+import { ChevronRight, Clock, Star, ShoppingBag } from "lucide-react";
 import { useGetFeaturedListingsQuery } from "@/lib/api/homeApi";
+import SavedButton from "@/components/saved/SavedButton";
 
 interface FlashDealItem {
   id: string;
@@ -21,96 +22,20 @@ interface FlashDealItem {
   image: string;
   badge?: string;
   thumbnails?: string[];
+  isFavorite?: boolean;
 }
 
-const FEATURED_DEAL: FlashDealItem = {
-  id: "flash-featured-1",
-  slug: "vintage-floral-cottagecore-corset-mini-dress",
-  title: "Vintage Floral Cottagecore Corset Lace-Up Mini Dress with Puff Sleeves",
-  category: "Women's Fashion",
-  storeName: "Dance skirts",
-  originalPrice: 65,
-  salePrice: 45,
-  discountPercent: 30,
-  rating: 4.9,
-  reviewCount: 48,
-  badge: "Hot Deal",
-  image: "/picture/product_dress_blue_floral.jpg",
-  thumbnails: [
-    "/picture/product_dress_blue_floral.jpg",
-    "/picture/product_dress_beige_slit.jpg",
-    "/picture/product_dress_toile_blue.jpg",
-  ],
-};
-
-const FLASH_ITEMS: FlashDealItem[] = [
-  {
-    id: "flash-item-2",
-    slug: "french-toile-blue-porcelain-vintage-mini-dress",
-    title: "French Toile De Jouy Blue Vintage Puff Sleeve Mini Dress",
-    category: "Women's Fashion",
-    storeName: "Dance skirts",
-    originalPrice: 72,
-    salePrice: 52,
-    discountPercent: 28,
-    rating: 4.9,
-    reviewCount: 32,
-    badge: "New",
-    image: "/picture/product_dress_toile_blue.jpg",
-  },
-  {
-    id: "flash-item-3",
-    slug: "beige-floral-slit-sweetheart-midi-dress",
-    title: "Beige Floral Sweetheart Neckline Midi Dress with High Leg Slit",
-    category: "Women's Fashion",
-    storeName: "Fashion By Srey",
-    originalPrice: 85,
-    salePrice: 58,
-    discountPercent: 32,
-    rating: 4.8,
-    reviewCount: 29,
-    badge: "Popular",
-    image: "/picture/product_dress_beige_slit.jpg",
-  },
-  {
-    id: "flash-item-4",
-    slug: "luxury-organic-botanical-facial-serum",
-    title: "Luxury Organic Botanical Hydrating Facial Essence & Serum Set",
-    category: "Health & Beauty",
-    storeName: "Aura Naturals",
-    originalPrice: 110,
-    salePrice: 75,
-    discountPercent: 31,
-    rating: 5.0,
-    reviewCount: 64,
-    badge: "Limited",
-    image: "/picture/hero_natural_care.jpg",
-  },
-  {
-    id: "flash-item-5",
-    slug: "premium-aquamarine-skincare-moisturizer",
-    title: "Aquamarine Deep Moisture Restoring Face Oil & Night Cream",
-    category: "Health & Beauty",
-    storeName: "Storee Corner",
-    originalPrice: 95,
-    salePrice: 62,
-    discountPercent: 35,
-    rating: 4.7,
-    reviewCount: 19,
-    badge: "Sale",
-    image: "/picture/hero_slide_summer_sale.jpg",
-  },
-];
-
 function formatFlashDeal(item: any): FlashDealItem {
-  const full = item.fullPrice ?? item.price ?? 50;
-  const disc = item.discountPrice;
-  const originalPrice = Math.round(full);
-  const salePrice = Math.round(disc ?? full);
+  const fullPrice = typeof item.fullPrice === "number" ? item.fullPrice : (typeof item.price === "number" ? item.price : 0);
+  const discountPrice = typeof item.discountPrice === "number" ? item.discountPrice : null;
+  const hasDiscount = discountPrice !== null && fullPrice > 0 && discountPrice < fullPrice;
+
+  const originalPrice = fullPrice;
+  const salePrice = hasDiscount ? discountPrice! : fullPrice;
   const discountPercent =
-    disc && originalPrice > salePrice
+    hasDiscount && originalPrice > 0
       ? Math.round(((originalPrice - salePrice) / originalPrice) * 100)
-      : 20;
+      : 0;
 
   const primaryImage =
     typeof item.thumbnailUri === "string"
@@ -118,33 +43,33 @@ function formatFlashDeal(item: any): FlashDealItem {
       : item.thumbnailUri?.uri ||
         item.images?.[0]?.uri ||
         item.images?.[0]?.url ||
-        "/picture/product_dress_blue_floral.jpg";
+        "";
 
   const thumbnails = (item.images || [])
     .map((img: any) => img?.uri || img?.url)
     .filter(Boolean);
-  if (thumbnails.length === 0) thumbnails.push(primaryImage);
+  if (thumbnails.length === 0 && primaryImage) thumbnails.push(primaryImage);
 
   return {
     id: item.uuid || item.id || "flash-1",
     slug: item.slug || item.uuid || "flash-deal",
     title: item.title || "Flash Sale Item",
     category: item.category?.name || "Featured",
-    storeName: item.sellerProfile?.businessName || "Phsar Store",
+    storeName: item.sellerProfile?.businessName || "",
     originalPrice,
     salePrice,
     discountPercent,
-    rating: item.averageRating ?? 4.9,
-    reviewCount: item.reviewCount ?? 18,
+    rating: item.averageRating ?? 0,
+    reviewCount: item.reviewCount ?? 0,
     badge: item.isFeatured ? "Hot Deal" : "Flash Sale",
     image: primaryImage,
     thumbnails,
+    isFavorite: Boolean(item.isFavorite),
   };
 }
 
 export function FlashDealsSection() {
   const [activeThumb, setActiveThumb] = React.useState(0);
-  const [savedItems, setSavedItems] = React.useState<Record<string, boolean>>({});
   const [timeLeft, setTimeLeft] = React.useState({
     days: "01",
     hours: "08",
@@ -152,7 +77,7 @@ export function FlashDealsSection() {
     seconds: "22",
   });
 
-  const { data: featuredResponse, isLoading } = useGetFeaturedListingsQuery();
+  const { data: featuredResponse } = useGetFeaturedListingsQuery();
 
   const apiListings =
     featuredResponse?.data || (featuredResponse as any)?.content || [];
@@ -160,12 +85,6 @@ export function FlashDealsSection() {
   const formattedItems = React.useMemo(() => {
     return (apiListings || []).map(formatFlashDeal);
   }, [apiListings]);
-
-  const toggleSave = (id: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setSavedItems((prev) => ({ ...prev, [id]: !prev[id] }));
-  };
 
   // Simple countdown timer
   React.useEffect(() => {
@@ -207,11 +126,11 @@ export function FlashDealsSection() {
   const featuredImg =
     featuredDeal?.thumbnails && featuredDeal.thumbnails[activeThumb]
       ? featuredDeal.thumbnails[activeThumb]
-      : featuredDeal?.image || "/picture/product_dress_blue_floral.jpg";
+      : featuredDeal?.image || "";
 
   return (
     <section className="mx-auto w-full max-w-[1280px] px-4 sm:px-6 py-5 font-sans">
-      {/* Section Header with Countdown Timer (Picture 3 style) */}
+      {/* Section Header with Countdown Timer */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-5 pb-3.5 border-b border-gray-100 dark:border-zinc-800">
         <div className="flex items-center gap-2.5">
           <h2 className="text-lg sm:text-xl font-bold text-[#111827] dark:text-white tracking-tight">
@@ -269,24 +188,33 @@ export function FlashDealsSection() {
                 <span className="rounded-full bg-[#E8F8F0] dark:bg-emerald-950/40 text-[#10B981] dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40 font-bold text-xs px-3 py-0.5">
                   {featuredDeal.badge}
                 </span>
-                <span className="rounded-full bg-[#FF3366] text-white font-extrabold text-xs px-2.5 py-0.5 shadow-xs">
-                  -{featuredDeal.discountPercent}%
-                </span>
+                {featuredDeal.discountPercent > 0 && (
+                  <span className="rounded-full bg-[#FF3366] text-white font-extrabold text-xs px-2.5 py-0.5 shadow-xs">
+                    -{featuredDeal.discountPercent}%
+                  </span>
+                )}
               </div>
 
-              {/* Main Featured Image - Large and Prominent */}
+              {/* Main Featured Image */}
               <div className="relative aspect-[16/11] w-full overflow-hidden rounded-xl bg-slate-50 dark:bg-zinc-800">
-                <Image
-                  src={featuredImg}
-                  alt={featuredDeal.title}
-                  fill
-                  sizes="(max-width: 1024px) 100vw, 400px"
-                  className="object-cover transition-transform duration-300 hover:scale-105"
-                />
+                {featuredImg ? (
+                  <Image
+                    src={featuredImg}
+                    alt={featuredDeal.title}
+                    fill
+                    sizes="(max-width: 1024px) 100vw, 400px"
+                    className="object-cover transition-transform duration-300 hover:scale-105"
+                    unoptimized={Boolean(featuredImg.startsWith("http"))}
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-gray-300">
+                    No image
+                  </div>
+                )}
               </div>
 
               {/* Gallery Thumbnail Row */}
-              {featuredDeal.thumbnails && (
+              {featuredDeal.thumbnails && featuredDeal.thumbnails.length > 1 && (
                 <div className="flex items-center gap-2 pt-0.5">
                   {featuredDeal.thumbnails.map((thumb: string, idx: number) => (
                     <button
@@ -298,7 +226,7 @@ export function FlashDealsSection() {
                           : "border-transparent opacity-70 hover:opacity-100"
                       }`}
                     >
-                      <Image src={thumb} alt="thumbnail" fill className="object-cover" />
+                      <Image src={thumb} alt="thumbnail" fill className="object-cover" unoptimized={Boolean(thumb.startsWith("http"))} />
                     </button>
                   ))}
                 </div>
@@ -309,7 +237,7 @@ export function FlashDealsSection() {
                 <span className="text-[11px] font-bold text-[#6C4CD8] dark:text-[#A78BFA] uppercase tracking-wider">
                   {featuredDeal.category}
                 </span>
-                <Link href={`/products/${featuredDeal.slug}`}>
+                <Link href={`/products/${featuredDeal.id || featuredDeal.slug}`}>
                   <h3 className="text-[16px] sm:text-[17px] font-bold text-[#111827] dark:text-white line-clamp-2 hover:text-[#6C4CD8] transition-colors leading-snug">
                     {featuredDeal.title}
                   </h3>
@@ -330,15 +258,17 @@ export function FlashDealsSection() {
             <div className="flex items-center justify-between pt-3.5 mt-3.5 border-t border-gray-100 dark:border-zinc-800">
               <div className="flex items-baseline gap-2">
                 <span className="text-xl sm:text-2xl font-black text-[#6C4CD8]">
-                  ${featuredDeal.salePrice}.00
+                  ${featuredDeal.salePrice.toFixed(2)}
                 </span>
-                <span className="text-xs font-semibold text-gray-400 line-through">
-                  ${featuredDeal.originalPrice}.00
-                </span>
+                {featuredDeal.discountPercent > 0 && (
+                  <span className="text-xs font-semibold text-gray-400 line-through">
+                    ${featuredDeal.originalPrice.toFixed(2)}
+                  </span>
+                )}
               </div>
 
               <Link
-                href={`/products/${featuredDeal.slug}`}
+                href={`/products/${featuredDeal.id || featuredDeal.slug}`}
                 className="inline-flex items-center gap-1.5 rounded-xl bg-[#111827] dark:bg-[#6C4CD8] text-white px-4 py-2 text-xs font-bold hover:bg-[#6C4CD8] transition-colors shadow-xs"
               >
                 <ShoppingBag className="size-3.5" />
@@ -351,7 +281,6 @@ export function FlashDealsSection() {
         {/* ================= RIGHT: 2x2 COMPACT & SMALLER REGULAR PRODUCT CARDS ================= */}
         <div className="grid grid-cols-2 gap-2.5 sm:gap-3 items-stretch">
           {flashItems.map((item: FlashDealItem) => {
-            const isFav = Boolean(savedItems[item.id]);
             return (
               <motion.div
                 key={item.id}
@@ -359,59 +288,59 @@ export function FlashDealsSection() {
                 transition={{ duration: 0.15 }}
                 className="group relative flex flex-col justify-between overflow-hidden rounded-xl border border-[#EDEBF3] dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs hover:shadow-md transition-all hover:border-[#6C4CD8]/40"
               >
-                <Link href={`/products/${item.slug}`} className="flex flex-col h-full justify-between">
-                  {/* Top Image Container - Compact Height */}
+                <Link href={`/products/${item.id || item.slug}`} className="flex flex-col h-full justify-between">
+                  {/* Top Image Container */}
                   <div className="relative aspect-[16/10] w-full overflow-hidden bg-[#F8F7FB] dark:bg-zinc-800">
-                    <Image
-                      src={item.image}
-                      alt={item.title}
-                      fill
-                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw"
-                      className="object-cover transition-transform duration-500 group-hover:scale-106"
-                    />
+                    {item.image ? (
+                      <Image
+                        src={item.image}
+                        alt={item.title}
+                        fill
+                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw"
+                        className="object-cover transition-transform duration-500 group-hover:scale-106"
+                        unoptimized={Boolean(item.image.startsWith("http"))}
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-gray-300">
+                        No image
+                      </div>
+                    )}
 
-                    {/* Top-Left Purple Discount Badge */}
-                    {item.discountPercent && (
+                    {/* Top-Left Discount Badge */}
+                    {item.discountPercent > 0 && (
                       <span className="absolute left-2 top-2 z-10 rounded-sm bg-[#6C4CD8] px-1.5 py-0.5 text-[9.5px] font-black text-white shadow-xs">
                         -{item.discountPercent}%
                       </span>
                     )}
 
                     {/* Top-Right Heart Save Button */}
-                    <button
-                      onClick={(e) => toggleSave(item.id, e)}
-                      aria-label="Save item"
-                      className={`absolute right-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full shadow-xs transition-all ${
-                        isFav ? "bg-[#6C4CD8] text-white" : "bg-white/90 dark:bg-zinc-900/90 text-[#6C4CD8] hover:bg-[#F2F0FC]"
-                      }`}
-                    >
-                      <Heart
-                        size={11.5}
-                        className={isFav ? "fill-white text-white" : "text-[#6C4CD8]"}
-                      />
-                    </button>
+                    <SavedButton
+                      listingId={item.id}
+                      initialSaved={item.isFavorite}
+                      className="absolute right-2 top-2 z-10 shadow-xs"
+                    />
                   </div>
 
-                  {/* Card Content Below Image - Compact & Sized Down */}
+                  {/* Card Content Below Image */}
                   <div className="p-2 sm:p-2.5 flex flex-col justify-between flex-1 space-y-1 font-sans">
                     {/* 1. Title */}
                     <h3 className="text-[13px] sm:text-[13.5px] font-bold text-[#111827] dark:text-white line-clamp-1 leading-snug group-hover:text-[#6C4CD8] transition-colors">
                       {item.title}
                     </h3>
 
-                    {/* 2. Price Row (Original Price strikethrough + Current Purple Price) */}
+                    {/* 2. Price Row */}
                     <div className="flex items-baseline gap-1.5 flex-wrap pt-0.5">
-                      {item.originalPrice && (
+                      <span className="text-[13.5px] sm:text-[14px] font-black text-[#6C4CD8] dark:text-[#A78BFA]">
+                        ${item.salePrice.toFixed(2)}
+                      </span>
+                      {item.discountPercent > 0 && (
                         <span className="text-[10.5px] font-semibold text-[#9B94B4] line-through">
-                          ${item.originalPrice}.00
+                          ${item.originalPrice.toFixed(2)}
                         </span>
                       )}
-                      <span className="text-[13.5px] sm:text-[14px] font-black text-[#6C4CD8] dark:text-[#A78BFA]">
-                        ${item.salePrice}.00
-                      </span>
                     </div>
 
-                    {/* 3. Rating Row (5 Stars + Review Count) */}
+                    {/* 3. Rating Row */}
                     <div className="flex items-center gap-1 text-xs">
                       <div className="flex items-center gap-0.5 text-amber-400">
                         {Array.from({ length: 5 }).map((_, i) => (
@@ -432,9 +361,11 @@ export function FlashDealsSection() {
                     </div>
 
                     {/* 4. Store Name */}
-                    <p className="text-[10px] font-medium text-[#7C7596] truncate">
-                      {item.storeName || "Store1Name"}
-                    </p>
+                    {item.storeName && (
+                      <p className="text-[10px] font-medium text-[#7C7596] truncate">
+                        {item.storeName}
+                      </p>
+                    )}
                   </div>
                 </Link>
               </motion.div>

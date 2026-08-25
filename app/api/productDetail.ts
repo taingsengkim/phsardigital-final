@@ -231,112 +231,29 @@ export const getListing = cache(async function getListing(
           ? data.images
           : [{ uri: primaryImage, sortOrder: 0 }];
 
+      const fullPrice = typeof data.fullPrice === "number" ? data.fullPrice : (data.price ?? 0);
+      const discountPrice = typeof data.discountPrice === "number" ? data.discountPrice : null;
+      const effectivePrice =
+        discountPrice !== null && fullPrice !== null && discountPrice < fullPrice
+          ? discountPrice
+          : fullPrice;
+
       return {
         ...data,
-        thumbnailUri: { uri: primaryImage, sortOrder: 0 },
+        thumbnailUri: data.thumbnailUri?.uri ? data.thumbnailUri : { uri: primaryImage, sortOrder: 0 },
         images: gallery,
-        price:
-          typeof data.discountPrice === "number" && data.discountPrice > 0
-            ? data.discountPrice
-            : (typeof data.fullPrice === "number" && data.fullPrice > 0
-              ? data.fullPrice
-              : (typeof data.price === "number" && data.price > 0 ? data.price : 25)),
-        fullPrice: typeof data.fullPrice === "number" && data.fullPrice > 0 ? data.fullPrice : 25,
-        discountPrice: typeof data.discountPrice === "number" && data.discountPrice > 0 ? data.discountPrice : null,
+        price: effectivePrice,
+        fullPrice,
+        discountPrice,
+        averageRating: data.averageRating ?? null,
+        reviewCount: data.reviewCount ?? 0,
       };
     }
   } catch (err) {
-    console.warn("Live API listing fetch failed, checking curated listings:", identifier);
+    console.warn("Live API listing fetch failed for identifier:", identifier, err);
   }
 
-  const normalizedKey = decodeURIComponent(identifier).toLowerCase();
-
-  // Search curated products first
-  const curated = CURATED_PRODUCTS.find(
-    (p) =>
-      p.uuid.toLowerCase() === normalizedKey ||
-      p.slug.toLowerCase() === normalizedKey ||
-      normalizedKey.includes(p.slug.toLowerCase()) ||
-      p.slug.toLowerCase().includes(normalizedKey)
-  );
-
-  if (curated) {
-    return {
-      id: 100,
-      uuid: curated.uuid,
-      slug: curated.slug,
-      title: curated.title,
-      description: curated.description,
-      price: curated.discountPrice ?? curated.fullPrice,
-      fullPrice: curated.fullPrice,
-      discountPrice: curated.discountPrice,
-      stockQty: curated.stockQty,
-      sold: curated.sold ?? 50,
-      status: curated.status,
-      isFeatured: curated.isFeatured,
-      isFavorite: curated.isFavorite,
-      thumbnailUri: { uri: curated.image, sortOrder: 0 },
-      images: [
-        { uri: curated.image, sortOrder: 0 },
-      ],
-      category: {
-        id: 1,
-        uuid: curated.category.slug,
-        name: curated.category.name,
-        slug: curated.category.slug,
-      },
-      sellerProfile: {
-        sellerId: curated.sellerProfile.sellerId,
-        businessName: curated.sellerProfile.businessName,
-        logoUri: "/picture/logo.png",
-      },
-      averageRating: curated.averageRating,
-      reviewCount: curated.reviewCount,
-      listingAttributes: [
-        { key: "Category", value: curated.category.name },
-        { key: "Seller", value: curated.sellerProfile.businessName },
-        { key: "Availability", value: "In Stock" },
-        { key: "Shipping", value: "Express Phnom Penh Delivery" },
-      ],
-    };
-  }
-
-  // Fallback to demo listings
-  if (DEMO_LISTINGS[normalizedKey]) {
-    return DEMO_LISTINGS[normalizedKey];
-  }
-
-  for (const [key, val] of Object.entries(DEMO_LISTINGS)) {
-    if (normalizedKey.includes(key) || key.includes(normalizedKey)) {
-      return val;
-    }
-  }
-
-  // Default curated fallback (Hoodie)
-  const defaultItem = CURATED_PRODUCTS[0];
-  return {
-    id: 999,
-    uuid: identifier,
-    slug: identifier,
-    title: identifier
-      .split("-")
-      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-      .join(" "),
-    description: defaultItem.description,
-    price: defaultItem.discountPrice ?? defaultItem.fullPrice,
-    fullPrice: defaultItem.fullPrice,
-    discountPrice: defaultItem.discountPrice,
-    stockQty: 25,
-    sold: 50,
-    status: "ACTIVE",
-    isFeatured: true,
-    thumbnailUri: { uri: defaultItem.image, sortOrder: 0 },
-    images: [{ uri: defaultItem.image, sortOrder: 0 }],
-    category: { id: 1, uuid: defaultItem.category.slug, name: defaultItem.category.name, slug: defaultItem.category.slug },
-    sellerProfile: { sellerId: defaultItem.sellerProfile.sellerId, businessName: defaultItem.sellerProfile.businessName, logoUri: "/picture/logo.png" },
-    averageRating: 4.9,
-    reviewCount: 24,
-  };
+  return null;
 });
 
 
@@ -364,8 +281,8 @@ export function summariseReviews(
     typeof listing?.reviewCount === "number" ? listing.reviewCount : null;
 
   return {
-    average: serverAverage ?? (counted > 0 ? sum / counted : 4.9),
-    total: serverCount ?? (reviews.length > 0 ? reviews.length : 24),
+    average: serverAverage ?? (counted > 0 ? sum / counted : null),
+    total: serverCount ?? (reviews.length > 0 ? reviews.length : 0),
     breakdown,
   };
 }

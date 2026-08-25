@@ -45,11 +45,8 @@ function buildGallery(
   const gallery: GalleryImage[] = [];
 
   ordered.forEach((image, index) => {
-    let url = image.uri as string;
-    if (url && url.includes("51.79.146.203")) {
-      url = getPrimaryImage({ title });
-    }
-    if (seen.has(url)) return;
+    const url = image.uri as string;
+    if (!url || seen.has(url)) return;
     seen.add(url);
     gallery.push({
       key: image.uuid ?? `${url}-${index}`,

@@ -32,7 +32,7 @@ function fromListing(listing: ApiListing): RailItem {
 
   return {
     uuid: listing.uuid,
-    href: `/products/${listing.slug || listing.uuid}`,
+    href: `/products/${listing.uuid || listing.slug}`,
     title: listing.title || "Untitled product",
     image,
     price: getListingPrice(listing),
@@ -53,7 +53,7 @@ function fromListing(listing: ApiListing): RailItem {
 function fromRelated(related: RelatedListing): RailItem {
   return {
     uuid: related.uuid,
-    href: `/products/${related.slug || related.uuid}`,
+    href: `/products/${related.uuid || related.slug}`,
     title: related.title || "Untitled product",
     // note: RelatedListingResponse returns thumbnailUri as a plain URL string
     image: related.thumbnailUri ?? null,

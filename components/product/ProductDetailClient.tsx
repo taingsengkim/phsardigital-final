@@ -256,7 +256,7 @@ export default function ProductDetailClient({
           {listing.title || "Product details"}
         </h1>
         <div className="flex shrink-0 items-center gap-2 pt-1">
-          <SavedButton listingId={listingId} />
+          <SavedButton listingId={listingId} initialSaved={Boolean(listing.isFavorite)} />
           <button
             type="button"
             onClick={handleShare}
@@ -305,15 +305,15 @@ export default function ProductDetailClient({
       <div className="rounded-2xl bg-[#F6F5FA] px-6 py-5">
         <div className="flex flex-wrap items-baseline gap-3">
           <span className="text-[36px] font-black leading-none text-[#6C4CD8]">
-            {formatUsd(fullPrice)}
+            {formatUsd(price)}
           </span>
           {hasDiscount && (
-            <span className="text-[15px] font-semibold text-emerald-600">
-              Discount price: {formatUsd(price)}
+            <span className="text-[16px] font-semibold text-[#8B85A0] line-through">
+              {formatUsd(fullPrice)}
             </span>
           )}
           <span className="text-[15px] font-medium text-[#8B85A0]">
-            ≈ {formatKhr(fullPrice)}
+            ≈ {formatKhr(price)}
           </span>
         </div>
 

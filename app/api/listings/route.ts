@@ -93,6 +93,10 @@ export async function GET(request: NextRequest) {
   // 1. Fetch live products from Swagger upstream API
   let liveItems: any[] = [];
   try {
+    const authHeader = await getAuthHeader(request);
+    const headers: Record<string, string> = { Accept: "application/json" };
+    if (authHeader) headers["Authorization"] = authHeader;
+
     const params = new URLSearchParams();
     params.set("pageNumber", "0");
     params.set("pageSize", "100");
@@ -101,95 +105,40 @@ export async function GET(request: NextRequest) {
     if (sort) params.set("sort", sort);
     const upstreamUrl = `${BASE_URL}/api/v1/listings?${params.toString()}`;
     const res = await fetch(upstreamUrl, {
-      headers: { Accept: "application/json" },
+      headers,
       cache: "no-store",
     });
     if (res.ok) {
       const data = await res.json();
       const rawList = data?.content || data?.data || (Array.isArray(data) ? data : []);
       liveItems = rawList.map((item: any) => {
-        const titleLower = (item.title || "").toLowerCase();
-        let normalizedTitle = item.title;
-        let normalizedCat = item.category?.name || "General";
-        let normalizedCatSlug = item.category?.slug || "general";
-        let normalizedPrice =
-          typeof item.fullPrice === "number" && item.fullPrice > 0 && item.fullPrice < 500
-            ? item.fullPrice
-            : 29.99;
-        let normalizedDiscount =
-          typeof item.discountPrice === "number" && item.discountPrice > 0 && item.discountPrice < 500
-            ? item.discountPrice
-            : null;
-
-        // Clean up test names from backend with unique realistic titles
-        if (titleLower === "cat") {
-          normalizedTitle = "True Wireless Bluetooth Noise-Cancelling Earbuds";
-          normalizedCat = "Electronics";
-          normalizedCatSlug = "electronics";
-          normalizedPrice = 49.99;
-          normalizedDiscount = 35.0;
-        } else if (titleLower === "cats") {
-          normalizedTitle = "Ultra-Slim Ergonomic Optical Mouse";
-          normalizedCat = "Electronics";
-          normalizedCatSlug = "electronics";
-          normalizedPrice = 28.0;
-          normalizedDiscount = 18.0;
-        } else if (titleLower === "this is cat") {
-          normalizedTitle = "Fast-Charging 65W GaN USB-C Wall Charger";
-          normalizedCat = "Electronics";
-          normalizedCatSlug = "electronics";
-          normalizedPrice = 35.0;
-          normalizedDiscount = 24.99;
-        } else if (titleLower.includes("testing")) {
-          normalizedTitle = "Multi-Compartment Desk Storage Organizer";
-          normalizedCat = "Home & Living";
-          normalizedCatSlug = "home-and-living";
-          normalizedPrice = 20.0;
-          normalizedDiscount = 14.5;
-        } else if (titleLower === "product one") {
-          normalizedTitle = "Magnetic Car Air Vent Phone Mount";
-          normalizedCat = "Vehicles & Auto";
-          normalizedCatSlug = "vehicles";
-          normalizedPrice = 16.0;
-          normalizedDiscount = 11.99;
-        } else if (titleLower.includes("vengroth")) {
-          normalizedTitle = "Universal HD Car Dashcam & GPS Mount";
-          normalizedCat = "Vehicles & Auto";
-          normalizedCatSlug = "vehicles";
-          normalizedPrice = 65.0;
-          normalizedDiscount = 49.0;
-        } else if (titleLower.includes("floral midi wrap dress") && normalizedCatSlug.includes("book")) {
-          normalizedTitle = "Clean Architecture: A Craftsman's Guide to Software Structure";
-          normalizedPrice = 36.0;
-          normalizedDiscount = 27.99;
-        }
+        const fullPrice = typeof item.fullPrice === "number" ? item.fullPrice : (typeof item.price === "number" ? item.price : 0);
+        const discountPrice = typeof item.discountPrice === "number" ? item.discountPrice : null;
+        const effectivePrice =
+          discountPrice !== null && fullPrice > 0 && discountPrice < fullPrice
+            ? discountPrice
+            : fullPrice;
 
         return {
           uuid: item.uuid || item.id,
+          id: item.id || item.uuid,
           slug: item.slug || item.uuid,
-          title: normalizedTitle,
-          description: item.description || "High quality product on Phsar Digital marketplace.",
-          fullPrice: normalizedPrice,
-          discountPrice: normalizedDiscount,
-          price: normalizedDiscount ?? normalizedPrice,
-          stockQty: item.stockQty ?? 20,
+          title: item.title || "Untitled Product",
+          description: item.description || "",
+          fullPrice,
+          discountPrice,
+          price: effectivePrice,
+          stockQty: item.stockQty ?? 0,
           status: item.status || "ACTIVE",
-          isFeatured: item.isFeatured ?? true,
-          // The upstream image fields have to survive this remap — without them
-          // getPrimaryImage() falls through to its placeholder and every card
-          // renders the same stock photo.
+          isFeatured: item.isFeatured ?? false,
           thumbnailUri: item.thumbnailUri ?? null,
           images: item.images ?? null,
-          category: { name: normalizedCat, slug: normalizedCatSlug },
-          sellerProfile: {
-            businessName: item.sellerProfile?.businessName || "Phsar Digital Store",
-            sellerId: item.sellerProfile?.sellerId || "seller-live",
-            logoUri: item.sellerProfile?.logoUri ?? null,
-          },
-          averageRating: item.averageRating ?? 4.9,
-          reviewCount: item.reviewCount ?? 18,
-          isFavorite: item.isFavorite ?? false,
-          sold: item.sold ?? 45,
+          category: item.category || { name: "General", slug: "general" },
+          sellerProfile: item.sellerProfile || null,
+          averageRating: item.averageRating ?? null,
+          reviewCount: item.reviewCount ?? 0,
+          isFavorite: typeof item.isFavorite === "boolean" ? item.isFavorite : Boolean(item.isFavorite),
+          sold: item.sold ?? 0,
         };
       });
     }

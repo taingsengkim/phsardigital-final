@@ -18,9 +18,9 @@ export function SellerProfileCard({ seller }: { seller: any }) {
   const coverImage =
     seller.coverUrl || seller.coverUri || seller.bannerImage || "/picture/seller_cover_electronics.jpg";
 
-  const rating = seller.averageRating ?? seller.rating ?? 4.9;
-  const reviewCount = seller.review_count ?? seller.reviewCount ?? 120;
-  const productCount = seller.product_count ?? seller.productCount ?? 45;
+  const rating = seller.averageRating ?? seller.rating ?? 0;
+  const reviewCount = seller.review_count ?? seller.reviewCount ?? 0;
+  const productCount = seller.product_count ?? seller.productCount ?? 0;
   const verified = seller.verified !== false;
 
   return (

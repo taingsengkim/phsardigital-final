@@ -16,61 +16,6 @@ import {
 } from "@/lib/api/homeApi";
 import ProductCard from "../ProductCard";
 
-const FALLBACK_TRENDING = [
-  {
-    uuid: "t-1",
-    title: "French Toile De Jouy Blue Vintage Puff Sleeve Mini Dress",
-    slug: "french-toile-blue-porcelain-vintage-mini-dress",
-    fullPrice: 72,
-    discountPrice: 52,
-    sellerProfile: { businessName: "Dance skirts" },
-    category: { name: "Women's Fashion", slug: "womens-fashion" },
-    thumbnailUri: { uri: "/picture/product_dress_toile_blue.jpg" },
-    averageRating: 4.9,
-    reviewCount: 38,
-    isFavorite: false,
-  },
-  {
-    uuid: "t-2",
-    title: "Beige Floral Sweetheart Neckline Midi Dress with Leg Slit",
-    slug: "beige-floral-slit-sweetheart-midi-dress",
-    fullPrice: 85,
-    discountPrice: 58,
-    sellerProfile: { businessName: "Fashion By Srey" },
-    category: { name: "Women's Fashion", slug: "womens-fashion" },
-    thumbnailUri: { uri: "/picture/product_dress_beige_slit.jpg" },
-    averageRating: 4.8,
-    reviewCount: 42,
-    isFavorite: true,
-  },
-  {
-    uuid: "t-3",
-    title: "Aura Botanical Restoring Serum & Night Moisture Cream",
-    slug: "aura-botanical-restoring-serum",
-    fullPrice: 95,
-    discountPrice: 65,
-    sellerProfile: { businessName: "Aura Naturals" },
-    category: { name: "Health & Beauty", slug: "health-beauty" },
-    thumbnailUri: { uri: "/picture/hero_natural_care.jpg" },
-    averageRating: 5.0,
-    reviewCount: 56,
-    isFavorite: false,
-  },
-  {
-    uuid: "t-4",
-    title: "Minimalist Essential Nasal Inhaler & Lifestyle Case",
-    slug: "minimalist-nasal-inhaler-case",
-    fullPrice: 35,
-    discountPrice: 24,
-    sellerProfile: { businessName: "Aura Naturals" },
-    category: { name: "Health & Beauty", slug: "health-beauty" },
-    thumbnailUri: { uri: "/picture/hero_inhaler_promo.jpg" },
-    averageRating: 4.7,
-    reviewCount: 18,
-    isFavorite: false,
-  },
-];
-
 export function TrendingSection() {
   const { data: topRatedResponse } = useGetBestSellingListingsQuery();
 

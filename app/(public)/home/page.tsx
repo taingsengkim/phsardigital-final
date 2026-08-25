@@ -18,8 +18,8 @@ export default function HomePage() {
 
       {/* 2. Popular Categories Horizontal Strip */}
       <PopularCategoriesStrip />
-
-      {/* 3. Flash Deals with Live Countdown & Big Deal Card */}
+      
+      {/* Today best deals section */}
       <FlashDealsSection />
 
       {/* 4. Top Sellers 4-Card Marketplace Stores */}

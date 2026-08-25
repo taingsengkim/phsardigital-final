@@ -16,8 +16,17 @@ export default function SavedPageClient() {
   async function fetchSavedItems() {
     setLoading(true);
     try {
-      const data = await getFavorites();
-      setListings(Array.isArray(data) ? data : []);
+      const rawData = await getFavorites();
+      const items = Array.isArray(rawData) ? rawData : [];
+      const unwrapped = items.map((item: any) => {
+        const listing = item.listing || item;
+        return {
+          ...listing,
+          uuid: listing.uuid || item.uuid || listing.id,
+          isFavorite: true,
+        };
+      });
+      setListings(unwrapped);
     } catch {
       setListings([]);
     } finally {
