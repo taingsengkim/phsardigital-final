@@ -143,6 +143,22 @@ export function ListingGalleryManager({
     (coverObjectName !== null && image.objectName === coverObjectName) ||
     (coverObjectName === null && coverUri !== null && image.uri === coverUri)
 
+  /**
+   * The cover is a field on the listing, not necessarily a gallery entry, and
+   * on older products it is the only photo there is — `images` comes back empty
+   * while `thumbnailUri` holds the picture the seller uploaded. Showing nothing
+   * in that case reads as "your photo is gone".
+   *
+   * It is rendered as its own read-only tile rather than folded into the
+   * sortable set: its uuid identifies a file, not a listing image, so the
+   * reorder call (which must name every gallery image exactly once) and the
+   * delete call would both reject it.
+   */
+  const standaloneCover =
+    coverUri && !images.some((image) => isCover(image))
+      ? { uri: coverUri, objectName: coverObjectName }
+      : null
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     // Long-press to lift, so a drag never fights the page scroll on touch.
@@ -351,7 +367,9 @@ export function ListingGalleryManager({
           </h3>
           <p className="mt-0.5 text-sm text-slate-500">
             {images.length === 0
-              ? "No photos yet."
+              ? standaloneCover
+                ? "Only a cover photo so far — add gallery photos below."
+                : "No photos yet."
               : canReorder
                 ? `${images.length} photos — drag to reorder, or focus one and use the arrow buttons.`
                 : `${images.length} photo.`}
@@ -404,6 +422,31 @@ export function ListingGalleryManager({
       <p aria-live="polite" role="status" className="sr-only">
         {announcement}
       </p>
+
+      {standaloneCover && (
+        <div className="flex flex-wrap items-center gap-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <figure className="relative size-24 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-white">
+            <Image
+              src={standaloneCover.uri}
+              alt="Current cover photo"
+              fill
+              sizes="96px"
+              quality={90}
+              className="object-cover"
+            />
+            <figcaption className="absolute inset-x-0 bottom-0 inline-flex items-center justify-center gap-1 bg-violet-600 py-0.5 text-[11px] font-bold text-white">
+              <Star className="size-3 fill-current" />
+              Cover
+            </figcaption>
+          </figure>
+          <p className="min-w-[15rem] flex-1 text-sm text-slate-600">
+            This is the product&apos;s cover photo. It is stored separately from
+            the gallery below, so it cannot be dragged or deleted here — add
+            photos to the gallery and use <strong>Set as cover</strong> to
+            replace it.
+          </p>
+        </div>
+      )}
 
       {images.length === 0 && uploads.length === 0 ? (
         <EmptyDropzone
@@ -792,7 +835,7 @@ function EmptyDropzone({
     return (
       <div className="grid min-h-52 place-items-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 px-6 text-center">
         <p className="text-sm text-slate-500">
-          This listing has no photos, and its gallery is read-only.
+          No gallery photos, and this listing is read-only.
         </p>
       </div>
     )
