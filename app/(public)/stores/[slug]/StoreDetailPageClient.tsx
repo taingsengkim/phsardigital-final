@@ -26,6 +26,7 @@ import { MOCK_STORES, DEFAULT_STORE_DETAILS } from "../mockStores";
 import type { StoreDetails, StoreProduct } from "../types";
 import { ProductCard } from "@/app/(public)/home/ProductCard";
 import { getFileUrl } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function StoreDetailPageClient({ slug }: { slug?: string }) {
   const safeSlug = slug || "storee-corner";
@@ -195,12 +196,7 @@ export default function StoreDetailPageClient({ slug }: { slug?: string }) {
   });
 
   if (loading && !sellerProfile) {
-    return (
-      <div className="flex flex-col items-center justify-center py-28 space-y-4">
-        <Loader2 className="size-10 animate-spin text-[#6C4CD8]" />
-        <p className="text-sm font-bold text-[#7C7596]">Loading store details...</p>
-      </div>
-    );
+    return <StoreDetailSkeleton />;
   }
 
   return (
@@ -625,6 +621,81 @@ export default function StoreDetailPageClient({ slug }: { slug?: string }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function StoreDetailSkeleton() {
+  return (
+    <div className="space-y-8 font-sans animate-in fade-in duration-300">
+      {/* Store Header Profile Card Skeleton */}
+      <div className="relative overflow-hidden rounded-3xl border border-[#EDEBF3] bg-white p-6 sm:p-8 space-y-6 shadow-sm">
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+          {/* Avatar & Store Info Skeleton */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+            <Skeleton className="h-24 w-24 sm:h-28 sm:w-28 shrink-0 rounded-3xl bg-[#F1EFFA]" />
+
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-8 sm:h-9 w-48 sm:w-64 rounded-xl bg-[#E8E3FA]" />
+                <Skeleton className="h-6 w-28 rounded-full bg-[#F1EFFA]" />
+              </div>
+              <Skeleton className="h-5 w-40 sm:w-60 rounded-lg bg-[#F1EFFA]" />
+              <div className="flex flex-wrap items-center gap-4 pt-1">
+                <Skeleton className="h-4 w-24 rounded-md bg-[#F1EFFA]" />
+                <Skeleton className="h-4 w-24 rounded-md bg-[#F1EFFA]" />
+                <Skeleton className="h-4 w-32 rounded-md bg-[#F1EFFA]" />
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons Skeleton */}
+          <div className="flex items-center gap-3 shrink-0 pt-2 sm:pt-0">
+            <Skeleton className="h-12 w-36 rounded-full bg-[#E8E3FA]" />
+            <Skeleton className="h-12 w-24 rounded-full bg-[#F1EFFA]" />
+            <Skeleton className="h-12 w-12 rounded-full bg-[#F1EFFA]" />
+          </div>
+        </div>
+
+        {/* Tabs Bar Skeleton */}
+        <div className="flex items-center border-t border-[#EDEBF3] pt-4 gap-6 overflow-hidden">
+          <Skeleton className="h-9 w-36 rounded-lg bg-[#E8E3FA]" />
+          <Skeleton className="h-9 w-28 rounded-lg bg-[#F1EFFA]" />
+          <Skeleton className="h-9 w-36 rounded-lg bg-[#F1EFFA]" />
+          <Skeleton className="h-9 w-28 rounded-lg bg-[#F1EFFA]" />
+        </div>
+      </div>
+
+      {/* Search & Filter Bar Skeleton */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-3xl bg-white p-5 border border-[#EDEBF3] shadow-xs">
+        <Skeleton className="h-11 w-full max-w-md rounded-full bg-[#F1EFFA]" />
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-9 w-16 rounded-full bg-[#E8E3FA]" />
+          <Skeleton className="h-9 w-24 rounded-full bg-[#F1EFFA]" />
+          <Skeleton className="h-9 w-24 rounded-full bg-[#F1EFFA]" />
+          <Skeleton className="h-9 w-24 rounded-full bg-[#F1EFFA]" />
+        </div>
+      </div>
+
+      {/* Product Cards Grid Skeleton */}
+      <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-5">
+        {Array.from({ length: 10 }).map((_, i) => (
+          <div
+            key={i}
+            className="flex flex-col overflow-hidden rounded-2xl border border-[#EDEBF3] bg-white p-3 space-y-3 shadow-xs"
+          >
+            <Skeleton className="aspect-square w-full rounded-xl bg-[#F1EFFA]" />
+            <div className="space-y-2 pt-1">
+              <Skeleton className="h-4 w-4/5 rounded-md bg-[#E8E3FA]" />
+              <Skeleton className="h-3 w-3/5 rounded-md bg-[#F1EFFA]" />
+              <div className="flex items-center justify-between pt-2">
+                <Skeleton className="h-5 w-20 rounded-md bg-[#E8E3FA]" />
+                <Skeleton className="h-8 w-8 rounded-full bg-[#F1EFFA]" />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
