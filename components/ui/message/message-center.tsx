@@ -2,130 +2,468 @@
 
 import * as React from "react"
 import Image from "next/image"
-import { CloudUpload, MoreHorizontal, Search, Send, Smile } from "lucide-react"
-
+import { ArrowLeft, Loader2, MessageSquare, Search, Send } from "lucide-react"
 import { cn } from "@/lib/utils"
+import {
+  PENDING_SENDER_ID,
+  useGetConversationsQuery,
+  useGetConversationMessagesQuery,
+  useMarkConversationReadMutation,
+  useSendConversationMessageMutation,
+} from "@/lib/redux/service/sellerMessageApi"
+import { useMessageWebSocket } from "@/lib/hooks/use-message-websocket"
+import type { ConversationMessage } from "@/lib/types/seller-message"
 
-type Contact = {
-  id: number
-  name: string
-  time: string
-  image: string
-  online: boolean
+const PAGE_SIZE = 30
+
+/** Thread-list stamp: clock time for today, "Yesterday", then a short date. */
+function threadStamp(iso?: string): string {
+  if (!iso) return ""
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ""
+  const now = new Date()
+  if (date.toDateString() === now.toDateString()) {
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+  }
+  const yesterday = new Date(now)
+  yesterday.setDate(now.getDate() - 1)
+  if (date.toDateString() === yesterday.toDateString()) return "Yesterday"
+  return date.toLocaleDateString([], { month: "short", day: "2-digit" })
 }
 
-type ChatMessage = {
-  id: number
-  sender: "customer" | "seller"
-  text: React.ReactNode
+function bubbleStamp(iso?: string): string {
+  if (!iso) return ""
+  const date = new Date(iso)
+  return Number.isNaN(date.getTime())
+    ? ""
+    : date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
 }
 
-const contacts: Contact[] = [
-  { id: 1, name: "Taing Sengkim", time: "03:30PM", image: "/picture/menghor.jpg", online: true },
-  { id: 2, name: "Sim Menghor", time: "11:59AM", image: "/picture/bunleang.jpg", online: false },
-  { id: 3, name: "Lor Vengroth", time: "09:30AM", image: "/picture/sokhim.JPG", online: true },
-  { id: 4, name: "Kimlay", time: "08:00AM", image: "/picture/lisa.PNG", online: false },
-]
+/** A day divider so a long thread does not read as one undated run. */
+function dayLabel(iso?: string): string {
+  if (!iso) return ""
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ""
+  const now = new Date()
+  if (date.toDateString() === now.toDateString()) return "Today"
+  const yesterday = new Date(now)
+  yesterday.setDate(now.getDate() - 1)
+  if (date.toDateString() === yesterday.toDateString()) return "Yesterday"
+  return date.toLocaleDateString([], {
+    month: "long",
+    day: "numeric",
+    year: date.getFullYear() === now.getFullYear() ? undefined : "numeric",
+  })
+}
 
-const initialMessages: ChatMessage[] = [
-  {
-    id: 1,
-    sender: "customer",
-    text: <>When do you release the coded for the Fleet - Travel kit?<br /><a className="text-[#1683ff]" href="#">https://ui8.net/product-link</a></>,
-  },
-  {
-    id: 2,
-    sender: "seller",
-    text: <>Hi @menghor, thanks for contacting.<br />Yes, I&apos;m working on it. It would be released next 2 weeks. You could check the progress here: <a className="text-[#1683ff]" href="#">https://ui8.net/progress</a><br /><br />Thanks for your patience and understanding. 🙌<br />Regards,<br /><br />Taing Sengkim</>,
-  },
-]
+/** The API pages messages newest-first; a chat log has to read oldest-first. */
+function inChatOrder(messages: ConversationMessage[]): ConversationMessage[] {
+  return [...messages].sort(
+    (a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime(),
+  )
+}
+
+/** Unlike the buyer view, the other party here is a person — show them as one. */
+function CustomerAvatar({
+  name,
+  avatar,
+  size,
+}: {
+  name?: string
+  avatar?: string
+  size: number
+}) {
+  const initial = (name?.trim() || "C").charAt(0).toUpperCase()
+  return (
+    <div
+      className="relative grid shrink-0 place-items-center overflow-hidden rounded-full bg-primary/10 font-bold text-primary"
+      style={{ height: size, width: size, fontSize: Math.round(size * 0.38) }}
+    >
+      {avatar ? (
+        <Image
+          src={avatar}
+          alt={name || "Customer"}
+          fill
+          unoptimized
+          sizes={`${size}px`}
+          className="object-cover"
+        />
+      ) : (
+        initial
+      )}
+    </div>
+  )
+}
 
 export function MessageCenter() {
-  const [selectedId, setSelectedId] = React.useState(2)
-  const [query, setQuery] = React.useState("")
-  const [draft, setDraft] = React.useState("P/s: One more thing I need to tell you")
-  const [messages, setMessages] = React.useState(initialMessages)
-  const selected = contacts.find((contact) => contact.id === selectedId) ?? contacts[0]
-  const visibleContacts = contacts.filter((contact) => contact.name.toLowerCase().includes(query.toLowerCase()))
+  const connectionState = useMessageWebSocket()
+  const {
+    data: conversations = [],
+    isLoading: conversationsLoading,
+    isError,
+    refetch,
+  } = useGetConversationsQuery()
+  const [sendMessage, { isLoading: isSending }] = useSendConversationMessageMutation()
+  const [markRead] = useMarkConversationReadMutation()
 
-  function sendMessage() {
-    const message = draft.trim()
-    if (!message) return
-    setMessages((current) => [...current, { id: Date.now(), sender: "seller", text: message }])
-    setDraft("")
+  const [selectedId, setSelectedId] = React.useState("")
+  const [query, setQuery] = React.useState("")
+  const [draft, setDraft] = React.useState("")
+  const [mobilePane, setMobilePane] = React.useState<"list" | "thread">("list")
+  /* Kept per conversation so switching threads resets the window without an
+     effect that would fight the render. */
+  const [sizes, setSizes] = React.useState<Record<string, number>>({})
+
+  const activeId = selectedId || conversations[0]?.uuid || ""
+  const active = conversations.find((item) => item.uuid === activeId)
+
+  const pageSize = sizes[activeId] ?? PAGE_SIZE
+  const {
+    data: messagePage,
+    isLoading: messagesLoading,
+    isFetching: messagesFetching,
+  } = useGetConversationMessagesQuery(
+    { conversationUuid: activeId, pageSize },
+    { skip: !activeId },
+  )
+  const messages = React.useMemo(
+    () => inChatOrder(messagePage?.content ?? []),
+    [messagePage],
+  )
+  const totalMessages = messagePage?.page?.totalElements ?? 0
+  const hasMore = messages.length < totalMessages
+
+  /* Opening a thread clears its unread badge. */
+  React.useEffect(() => {
+    if (!activeId) return
+    const conversation = conversations.find((item) => item.uuid === activeId)
+    if (conversation && conversation.unreadCount > 0) markRead(activeId)
+  }, [activeId, conversations, markRead])
+
+  /* Follow new messages, but never yank the view while history is being read. */
+  const logRef = React.useRef<HTMLDivElement>(null)
+  const stickToBottom = React.useRef(true)
+  React.useEffect(() => {
+    const node = logRef.current
+    if (node && stickToBottom.current) node.scrollTop = node.scrollHeight
+  }, [messages, activeId])
+
+  function handleLogScroll() {
+    const node = logRef.current
+    if (!node) return
+    stickToBottom.current =
+      node.scrollHeight - node.scrollTop - node.clientHeight < 80
   }
 
+  function openConversation(uuid: string) {
+    stickToBottom.current = true
+    setSelectedId(uuid)
+    setMobilePane("thread")
+  }
+
+  async function submitMessage(event?: React.FormEvent) {
+    event?.preventDefault()
+    const body = draft.trim()
+    if (!body || !activeId || isSending) return
+    setDraft("")
+    stickToBottom.current = true
+    try {
+      await sendMessage({ conversationUuid: activeId, body }).unwrap()
+    } catch {
+      setDraft(body) // keep what they typed so the send can be retried
+    }
+  }
+
+  const needle = query.trim().toLowerCase()
+  const visibleConversations = needle
+    ? conversations.filter((item) =>
+        (item.otherUserName ?? "").toLowerCase().includes(needle),
+      )
+    : conversations
+
+  const customerName = active?.otherUserName || "Customer"
+  const showThread = mobilePane === "thread"
+
   return (
-    <section className="min-h-[calc(100vh-72px)] bg-muted/50 px-4 py-6 text-foreground sm:px-7 lg:px-10">
-      <div className="mx-auto max-w-[1280px]">
-        <h1 className="mb-6 text-[32px] font-bold leading-none tracking-[-0.7px]">Message center</h1>
-
-        <div className="grid min-h-[720px] overflow-hidden rounded-xl border border-border bg-card shadow-sm md:grid-cols-[320px_minmax(0,1fr)]">
-          <aside className="flex min-h-[320px] flex-col border-b border-border md:border-b-0 md:border-r">
-            <div className="max-h-[420px] overflow-y-auto p-3 md:max-h-none md:flex-1">
-              {visibleContacts.map((contact) => (
-                <button key={contact.id} type="button" onClick={() => setSelectedId(contact.id)} className={cn("flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors hover:bg-muted", selectedId === contact.id && "bg-muted")}>
-                  <div className="relative shrink-0">
-                    <Image src={contact.image} alt="" width={50} height={50} className="size-[50px] rounded-full object-cover" />
-                    <span className={cn("absolute left-0 top-0 size-3 rounded-full border-2 border-card", contact.online ? "bg-[#7bcf68]" : "bg-transparent")} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <strong className="truncate text-[13px]">{contact.name}</strong>
-                      <time className="ml-auto shrink-0 text-[10px] text-muted-foreground">{contact.time}</time>
-                      <span className={cn("size-2.5 shrink-0 rounded-full", contact.online ? "bg-[#3688ff]" : "bg-[#a8afb7]")} />
-                    </div>
-                    <p className="mt-2 truncate text-[12px] text-muted-foreground">When do you release the coded...</p>
-                  </div>
-                </button>
-              ))}
-            </div>
-            <label className="relative m-4 mt-auto block">
-              <Search className="absolute left-3 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
-              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search message" className="h-12 w-full rounded-xl border-0 bg-muted pl-11 pr-3 text-[12px] outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20" />
-            </label>
-          </aside>
-
-          <div className="flex min-h-[600px] min-w-0 flex-col">
-            <header className="flex min-h-[94px] items-center gap-4 border-b border-border bg-muted/40 px-6 py-4">
-              <div className="min-w-0">
-                <h2 className="truncate text-[19px] font-semibold">{selected.name}</h2>
-                <p className="mt-2 flex flex-wrap gap-x-3 text-[10px] text-muted-foreground">
-                  <span>Customer since: Sep 2044</span><span>|</span><span>Purchased: <b className="text-foreground">21 items</b></span><span>|</span><span>Lifetime: <b className="text-foreground">$1,235.00</b></span>
-                </p>
+    <div className="min-h-screen bg-background p-4 sm:p-6">
+      <div className="flex h-[calc(100dvh-8.5rem)] min-h-[460px] w-full overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+        {/* ── LEFT: customer threads ── */}
+        <aside
+          className={cn(
+            "h-full w-full shrink-0 flex-col overflow-hidden border-border md:flex md:w-[320px] md:border-r",
+            showThread ? "hidden" : "flex",
+          )}
+        >
+          <div className="shrink-0 space-y-3 border-b border-border p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="size-[18px] text-primary" />
+                <h2 className="text-base font-bold text-foreground">Messages</h2>
               </div>
-              <button type="button" aria-label="Conversation actions" className="ml-auto grid size-10 shrink-0 place-items-center rounded-full bg-card text-muted-foreground"><MoreHorizontal className="size-5" /></button>
-            </header>
+              <span className="rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-bold text-primary-foreground">
+                {conversations.length}
+              </span>
+            </div>
+            <label className="relative block">
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search customers…"
+                className="h-10 w-full rounded-xl bg-muted pl-9 pr-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/25"
+              />
+            </label>
+          </div>
 
-            <div className="flex-1 overflow-y-auto px-5 py-5 sm:px-8">
-              <div className="mb-8 flex justify-center"><button type="button" className="h-10 rounded-lg border border-border bg-card px-4 text-[11px] font-semibold shadow-sm hover:bg-muted">Load conversation</button></div>
-              <div className="space-y-7">
-                {messages.map((message) => {
-                  const customer = message.sender === "customer"
-                  return (
-                    <div key={message.id} className="flex items-start gap-3">
-                      <Image src={customer ? selected.image : "/picture/lisa.PNG"} alt="" width={38} height={38} className="size-[38px] shrink-0 rounded-full object-cover" />
-                      <div className="min-w-0 max-w-[720px]">
-                        <p className="mb-1.5 text-[11px] text-muted-foreground"><span className="mr-4 font-semibold">{customer ? selected.name : "Taing Sengkim"}</span>11:59AM</p>
-                        <div className="text-[13px] leading-[1.6] text-foreground">{message.text}</div>
+          <div className="flex-1 divide-y divide-border overflow-y-auto">
+            {conversationsLoading ? (
+              <div className="flex justify-center py-14">
+                <Loader2 className="size-5 animate-spin text-primary" />
+              </div>
+            ) : isError ? (
+              <div className="px-4 py-14 text-center text-xs text-muted-foreground">
+                <p>Could not load conversations.</p>
+                <button
+                  type="button"
+                  onClick={() => refetch()}
+                  className="mt-3 font-bold text-primary"
+                >
+                  Try again
+                </button>
+              </div>
+            ) : visibleConversations.length === 0 ? (
+              <p className="px-6 py-14 text-center text-xs leading-relaxed text-muted-foreground">
+                {conversations.length === 0
+                  ? "No messages yet. When a buyer contacts your shop, the conversation appears here."
+                  : "No customers match your search."}
+              </p>
+            ) : (
+              visibleConversations.map((conversation) => {
+                const isActive = conversation.uuid === activeId
+                return (
+                  <button
+                    key={conversation.uuid}
+                    type="button"
+                    onClick={() => openConversation(conversation.uuid)}
+                    className={cn(
+                      "flex w-full items-center gap-3 p-4 text-left transition-colors",
+                      isActive ? "bg-primary/10" : "hover:bg-muted",
+                    )}
+                  >
+                    <CustomerAvatar
+                      name={conversation.otherUserName}
+                      avatar={conversation.otherUserAvatar}
+                      size={40}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <strong
+                          className={cn(
+                            "truncate text-sm",
+                            isActive ? "text-primary" : "text-foreground",
+                          )}
+                        >
+                          {conversation.otherUserName || "Customer"}
+                        </strong>
+                        <span className="shrink-0 text-[10px] text-muted-foreground">
+                          {threadStamp(conversation.lastMessageAt)}
+                        </span>
                       </div>
+                      <p
+                        className={cn(
+                          "mt-0.5 truncate text-xs",
+                          conversation.unreadCount > 0
+                            ? "font-semibold text-foreground"
+                            : "text-muted-foreground",
+                        )}
+                      >
+                        {conversation.lastMessage || "No messages yet"}
+                      </p>
                     </div>
+                    {conversation.unreadCount > 0 && (
+                      <span className="grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-primary px-1.5 text-[10px] font-bold text-primary-foreground">
+                        {conversation.unreadCount}
+                      </span>
+                    )}
+                  </button>
+                )
+              })
+            )}
+          </div>
+        </aside>
+
+        {/* ── RIGHT: active conversation ── */}
+        <div
+          className={cn(
+            "h-full w-full min-w-0 flex-1 flex-col overflow-hidden bg-muted/30 md:flex",
+            showThread ? "flex" : "hidden",
+          )}
+        >
+          <header className="flex shrink-0 items-center gap-3 border-b border-border bg-card px-4 py-3.5 sm:px-6">
+            <button
+              type="button"
+              onClick={() => setMobilePane("list")}
+              aria-label="Back to conversations"
+              className="-ml-1 shrink-0 rounded-lg p-1.5 text-primary hover:bg-muted md:hidden"
+            >
+              <ArrowLeft className="size-5" />
+            </button>
+
+            {active && (
+              <>
+                <CustomerAvatar
+                  name={active.otherUserName}
+                  avatar={active.otherUserAvatar}
+                  size={40}
+                />
+                <div className="min-w-0">
+                  <h3 className="truncate text-base font-bold text-foreground">
+                    {customerName}
+                  </h3>
+                  <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <span
+                      className={cn(
+                        "size-2 shrink-0 rounded-full",
+                        connectionState === "connected"
+                          ? "bg-emerald-500"
+                          : "bg-amber-500",
+                      )}
+                    />
+                    {connectionState === "connected"
+                      ? "Live"
+                      : connectionState === "connecting"
+                        ? "Connecting…"
+                        : "Reconnecting…"}
+                  </p>
+                </div>
+              </>
+            )}
+          </header>
+
+          <div
+            ref={logRef}
+            onScroll={handleLogScroll}
+            className="flex-1 space-y-3 overflow-y-auto p-4 sm:p-6"
+          >
+            {!activeId ? (
+              <p className="pt-24 text-center text-sm text-muted-foreground">
+                Select a conversation to read it.
+              </p>
+            ) : messagesLoading ? (
+              <div className="flex justify-center pt-24">
+                <Loader2 className="size-5 animate-spin text-primary" />
+              </div>
+            ) : messages.length === 0 ? (
+              <p className="pt-24 text-center text-sm text-muted-foreground">
+                No messages yet — say hello to {customerName}.
+              </p>
+            ) : (
+              <>
+                {hasMore && (
+                  <div className="flex justify-center pb-1">
+                    <button
+                      type="button"
+                      disabled={messagesFetching}
+                      onClick={() => {
+                        stickToBottom.current = false
+                        setSizes((prev) => ({
+                          ...prev,
+                          [activeId]: pageSize + PAGE_SIZE,
+                        }))
+                      }}
+                      className="rounded-full bg-card px-4 py-1.5 text-xs font-bold text-primary shadow-sm ring-1 ring-border transition hover:bg-muted disabled:opacity-60"
+                    >
+                      {messagesFetching
+                        ? "Loading…"
+                        : `Load earlier messages (${totalMessages - messages.length})`}
+                    </button>
+                  </div>
+                )}
+
+                {messages.map((message, index) => {
+                  const fromCustomer = message.senderId === active?.otherUserId
+                  const isPending = message.senderId === PENDING_SENDER_ID
+                  const showDay =
+                    index === 0 ||
+                    dayLabel(messages[index - 1].sentAt) !== dayLabel(message.sentAt)
+
+                  return (
+                    <React.Fragment key={message.uuid}>
+                      {showDay && (
+                        <div className="flex justify-center py-2">
+                          <span className="rounded-full bg-card px-3 py-1 text-[11px] font-semibold text-muted-foreground ring-1 ring-border">
+                            {dayLabel(message.sentAt)}
+                          </span>
+                        </div>
+                      )}
+                      <div
+                        className={cn(
+                          "flex max-w-[85%] flex-col sm:max-w-[70%]",
+                          fromCustomer ? "mr-auto items-start" : "ml-auto items-end",
+                        )}
+                      >
+                        <div
+                          className={cn(
+                            "rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-sm",
+                            fromCustomer
+                              ? "rounded-tl-none border border-border bg-card text-foreground"
+                              : "rounded-tr-none bg-primary text-primary-foreground",
+                            isPending && "opacity-70",
+                          )}
+                        >
+                          <p className="whitespace-pre-wrap break-words">
+                            {message.body}
+                          </p>
+                        </div>
+                        <span className="mt-1 px-1 text-[11px] text-muted-foreground">
+                          {isPending ? "Sending…" : bubbleStamp(message.sentAt)}
+                        </span>
+                      </div>
+                    </React.Fragment>
                   )
                 })}
-              </div>
-            </div>
-
-            <footer className="flex items-center gap-3 border-t border-border px-4 py-4 sm:px-6">
-              <button type="button" aria-label="Upload attachment" className="grid size-9 shrink-0 place-items-center text-muted-foreground"><CloudUpload className="size-5" /></button>
-              <button type="button" aria-label="Add emoji" className="grid size-9 shrink-0 place-items-center text-muted-foreground"><Smile className="size-5" /></button>
-              <div className="flex min-w-0 flex-1 items-center rounded-xl border border-border bg-muted/60 p-1">
-                <input value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") sendMessage() }} aria-label="Message" className="h-10 min-w-0 flex-1 bg-transparent px-3 text-[12px] outline-none" />
-                <button type="button" onClick={sendMessage} className="flex h-10 shrink-0 items-center gap-2 rounded-lg bg-[#8068e8] px-5 text-[11px] font-semibold text-white hover:bg-[#7057df]">Send <Send className="size-3.5 sm:hidden" /></button>
-              </div>
-            </footer>
+              </>
+            )}
           </div>
+
+          <form
+            onSubmit={submitMessage}
+            className="flex shrink-0 items-end gap-2.5 border-t border-border bg-card p-3 sm:p-4"
+          >
+            <textarea
+              rows={1}
+              value={draft}
+              disabled={!activeId}
+              onChange={(event) => setDraft(event.target.value)}
+              onKeyDown={(event) => {
+                // Enter sends; Shift+Enter starts a new line.
+                if (event.key === "Enter" && !event.shiftKey) {
+                  event.preventDefault()
+                  submitMessage()
+                }
+              }}
+              placeholder={
+                activeId
+                  ? `Reply to ${customerName}…`
+                  : "Select a conversation to reply"
+              }
+              className="max-h-32 min-h-[44px] min-w-0 flex-1 resize-none rounded-xl bg-muted px-4 py-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/25 disabled:opacity-60"
+            />
+            <button
+              type="submit"
+              disabled={!draft.trim() || !activeId || isSending}
+              aria-label="Send message"
+              className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm transition hover:opacity-90 disabled:opacity-50"
+            >
+              {isSending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Send className="size-4" />
+              )}
+            </button>
+          </form>
         </div>
       </div>
-    </section>
+    </div>
   )
 }

@@ -1,428 +1,641 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
+import * as React from "react";
+import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 import {
+  ArrowLeft,
+  Loader2,
   MessageSquare,
   Search,
-  Store,
   Send,
-  FileText,
-  QrCode,
-  ArrowLeft,
-  Check,
+  ShieldCheck,
+  Store,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { authClient, useSession } from "@/lib/auth-client";
+import {
+  PENDING_SENDER_ID,
+  useGetConversationMessagesQuery,
+  useGetConversationsQuery,
+  useMarkConversationReadMutation,
+  useSendConversationMessageMutation,
+  useStartConversationMutation,
+} from "@/lib/redux/service/sellerMessageApi";
+import { useMessageWebSocket } from "@/lib/hooks/use-message-websocket";
+import { useStoreProfiles } from "@/lib/hooks/use-store-profiles";
+import type {
+  ConversationMessage,
+  SellerConversation,
+} from "@/lib/types/seller-message";
 
-type ChatMessage = {
-  id: string;
-  sender: "seller" | "buyer";
-  text?: string;
-  time: string;
-  isInvoiceCard?: boolean;
-  isQrCard?: boolean;
-};
+const PAGE_SIZE = 30;
 
-type ChatThread = {
-  id: string;
-  storeName: string;
-  lastMessage: string;
-  lastTime: string;
-  unreadCount?: number;
-};
+/** Thread-list stamp: clock time for today, "Yesterday", then a short date. */
+function threadStamp(iso?: string): string {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  const now = new Date();
+  if (date.toDateString() === now.toDateString()) {
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
+  return date.toLocaleDateString([], { month: "short", day: "2-digit" });
+}
 
-const INITIAL_CHAT_THREADS: ChatThread[] = [
-  {
-    id: "t1",
-    storeName: "Sneaker World",
-    lastMessage: "Invoice #ORD-95508 has been received and confirmed.",
-    lastTime: "10:14 AM",
-    unreadCount: 0,
-  },
-  {
-    id: "t2",
-    storeName: "TechHub KH",
-    lastMessage: "Invoice status updated to PAID & VERIFIED!",
-    lastTime: "10:17 AM",
-    unreadCount: 0,
-  },
-  {
-    id: "t3",
-    storeName: "Van Shop",
-    lastMessage: "Your Fitbit Versa 4 smartwatch is dispatched!",
-    lastTime: "Yesterday",
-    unreadCount: 1,
-  },
-  {
-    id: "t4",
-    storeName: "Fashion By Srey",
-    lastMessage: "Thank you for confirming your delivery location.",
-    lastTime: "Aug 15",
-    unreadCount: 0,
-  },
-  {
-    id: "t5",
-    storeName: "Leather Craft Co.",
-    lastMessage: "Welcome to Leather Craft Co.! How can we help?",
-    lastTime: "Aug 08",
-    unreadCount: 0,
-  },
-  {
-    id: "t6",
-    storeName: "Angkor Artisan Crafts",
-    lastMessage: "Handcrafted stone carving items are packed.",
-    lastTime: "Aug 05",
-    unreadCount: 2,
-  },
-  {
-    id: "t7",
-    storeName: "Phnom Penh Tech Market",
-    lastMessage: "Thank you for buying 5G Dual SIM Phone!",
-    lastTime: "Aug 01",
-    unreadCount: 0,
-  },
-  {
-    id: "t8",
-    storeName: "Khmer Silk & Fashion",
-    lastMessage: "Your traditional Khmer silk dress order is complete.",
-    lastTime: "Jul 28",
-    unreadCount: 0,
-  },
-  {
-    id: "t9",
-    storeName: "Siem Reap Souvenir Hub",
-    lastMessage: "Order delivered safely to Siem Reap House.",
-    lastTime: "Jul 20",
-    unreadCount: 0,
-  },
-  {
-    id: "t10",
-    storeName: "Battambang Organic Market",
-    lastMessage: "Fresh organic dried fruit package sent!",
-    lastTime: "Jul 14",
-    unreadCount: 0,
-  },
-  {
-    id: "t11",
-    storeName: "Kampot Pepper Official",
-    lastMessage: "Organic black pepper shipment processed.",
-    lastTime: "Jul 10",
-    unreadCount: 0,
-  },
-  {
-    id: "t12",
-    storeName: "Kep Seafood Express",
-    lastMessage: "Fresh crab package arrives in Phnom Penh at 4 PM.",
-    lastTime: "Jul 02",
-    unreadCount: 1,
-  },
-  {
-    id: "t13",
-    storeName: "Mekong Craft Store",
-    lastMessage: "Handmade bamboo lanterns shipped.",
-    lastTime: "Jun 25",
-    unreadCount: 0,
-  },
-  {
-    id: "t14",
-    storeName: "Ratanakiri Gemstones",
-    lastMessage: "Custom gemstone ring certificate attached.",
-    lastTime: "Jun 18",
-    unreadCount: 0,
-  },
-  {
-    id: "t15",
-    storeName: "Koh Kong Electronics",
-    lastMessage: "Warranty card uploaded for your Bluetooth speaker.",
-    lastTime: "Jun 10",
-    unreadCount: 0,
-  },
-];
+function bubbleStamp(iso?: string): string {
+  if (!iso) return "";
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime())
+    ? ""
+    : date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
 
-const INITIAL_MESSAGES: Record<string, ChatMessage[]> = {
-  "Sneaker World": [
-    {
-      id: "m1",
-      sender: "buyer",
-      isInvoiceCard: true,
-      time: "10:14 AM",
-    },
-    {
-      id: "m2",
-      sender: "seller",
-      text: "Hello Vanneth Sok! Invoice #ORD-95508 has been received and confirmed by Sneaker World.",
-      isQrCard: true,
-      time: "10:15 AM",
-    },
-    {
-      id: "m3",
-      sender: "buyer",
-      text: "📷 [Payment Receipt Slip Attached: $518.00 via ABA PAY KHQR]",
-      time: "10:16 AM",
-    },
-    {
-      id: "m4",
-      sender: "seller",
-      text: "Invoice status updated to PAID & VERIFIED! Your order is being dispatched via Express Delivery (Tracking #EX-94820). Thank you for shopping with Sneaker World!",
-      time: "10:17 AM",
-    },
-  ],
-};
+/** A day divider so a long thread does not read as one undated run. */
+function dayLabel(iso?: string): string {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  const now = new Date();
+  if (date.toDateString() === now.toDateString()) return "Today";
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
+  return date.toLocaleDateString([], {
+    month: "long",
+    day: "numeric",
+    year: date.getFullYear() === now.getFullYear() ? undefined : "numeric",
+  });
+}
+
+/** The API pages messages newest-first; a chat log has to read oldest-first. */
+function inChatOrder(messages: ConversationMessage[]): ConversationMessage[] {
+  return [...messages].sort(
+    (a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime(),
+  );
+}
+
+/* The navbar is sticky and its height changes with the breakpoint, so the panel
+   sizes off the viewport instead of a hardcoded offset, and stays in normal
+   flow so the page footer is still reachable below it. */
+const PAGE = "mx-auto w-full max-w-[1400px] px-3 py-4 sm:px-6";
+const PANEL_HEIGHT = "h-[calc(100dvh-11rem)] min-h-[460px]";
 
 export default function MessagesClient() {
-  const [chatThreads] = useState<ChatThread[]>(INITIAL_CHAT_THREADS);
-  const [activeStore, setActiveStore] = useState<string>("Sneaker World");
-  const [searchChat, setSearchChat] = useState("");
-  const [chatInput, setChatInput] = useState("");
+  const searchParams = useSearchParams();
+  const sellerParam = searchParams.get("seller")?.trim() ?? "";
+  const { data: session, isPending } = useSession();
 
-  const [messagesMap, setMessagesMap] = useState<Record<string, ChatMessage[]>>(INITIAL_MESSAGES);
-
-  const filteredThreads = chatThreads.filter((t) =>
-    t.storeName.toLowerCase().includes(searchChat.toLowerCase())
-  );
-
-  const currentMessages = messagesMap[activeStore] || [
-    {
-      id: "default_1",
-      sender: "buyer",
-      text: `Hello ${activeStore}! I have a question regarding my order.`,
-      time: "Yesterday",
-    },
-    {
-      id: "default_2",
-      sender: "seller",
-      text: `Hello Vanneth Sok! Thank you for reaching out to ${activeStore}. How can we assist you today?`,
-      time: "Yesterday",
-    },
-  ];
-
-  function handleSendMessage(e?: React.FormEvent) {
-    if (e) e.preventDefault();
-    if (!chatInput.trim()) return;
-
-    const newMsg: ChatMessage = {
-      id: `msg_${Date.now()}`,
-      sender: "buyer",
-      text: chatInput.trim(),
-      time: "Just now",
-    };
-
-    setMessagesMap((prev) => ({
-      ...prev,
-      [activeStore]: [...(prev[activeStore] || currentMessages), newMsg],
-    }));
-
-    const textSent = chatInput;
-    setChatInput("");
-
-    setTimeout(() => {
-      setMessagesMap((prev) => ({
-        ...prev,
-        [activeStore]: [
-          ...(prev[activeStore] || []),
-          {
-            id: `reply_${Date.now()}`,
-            sender: "seller",
-            text: `Received: "${textSent}". Thank you, Vanneth Sok! ${activeStore} team will assist you shortly.`,
-            time: "Just now",
-          },
-        ],
-      }));
-    }, 1200);
+  if (isPending) {
+    return (
+      <div className={PAGE}>
+        <div
+          className={cn(
+            PANEL_HEIGHT,
+            "flex items-center justify-center rounded-3xl border border-[#EDEBF3] bg-white",
+          )}
+        >
+          <Loader2 className="animate-spin text-[#6C4CD8]" size={30} />
+        </div>
+      </div>
+    );
   }
 
+  if (!session?.user) return <SignInPrompt />;
+
+  return <BuyerChat sellerParam={sellerParam} />;
+}
+
+function SignInPrompt() {
   return (
-    <div className="fixed inset-x-0 bottom-0 top-[108px] z-40 bg-[#F6F5FA] p-4 md:p-6 flex flex-col overflow-hidden">
-      {/* FULL PAGE FLOATING CHAT APP CONTAINER */}
-      <div className="flex flex-col md:flex-row flex-1 h-full overflow-hidden rounded-3xl border border-[#EDEBF3] bg-white shadow-[0_12px_40px_rgba(26,19,48,0.08)] w-full">
-        {/* ── LEFT SIDEBAR: SHOP CHATS LIST WITH SMOOTH SCROLL ── */}
-        <div className="w-full md:w-[320px] shrink-0 flex flex-col border-r border-[#EDEBF3] bg-white h-full overflow-hidden">
-          {/* Sidebar Header */}
-          <div className="border-b border-[#F0EDFB] bg-[#F8F7FC] p-4 space-y-2.5 shrink-0">
+    <div className={PAGE}>
+      <div
+        className={cn(
+          PANEL_HEIGHT,
+          "flex items-center justify-center rounded-3xl border border-[#EDEBF3] bg-white px-4",
+        )}
+      >
+        <div className="w-full max-w-md text-center">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F3F0FC] text-[#6C4CD8]">
+            <MessageSquare size={26} />
+          </div>
+          <h2 className="mt-4 text-[20px] font-extrabold text-[#1A1330]">
+            Sign in to message sellers
+          </h2>
+          <p className="mt-2 text-[13.5px] leading-relaxed text-[#8B85A0]">
+            Chat directly with any store on Phsar Digital — ask about stock,
+            sizing, delivery or bulk orders before you buy.
+          </p>
+          <button
+            type="button"
+            onClick={() =>
+              authClient.signIn.oauth2({
+                providerId: "keycloak",
+                callbackURL:
+                  typeof window !== "undefined"
+                    ? window.location.href
+                    : "/messages",
+              })
+            }
+            className="mt-6 w-full rounded-2xl bg-[#6C4CD8] px-6 py-3.5 text-[15px] font-extrabold text-white shadow-md transition hover:bg-[#5B3DC0]"
+          >
+            Sign in to continue
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BuyerChat({ sellerParam }: { sellerParam: string }) {
+  const connectionState = useMessageWebSocket();
+
+  const {
+    data: conversations = [],
+    isLoading: conversationsLoading,
+    isError,
+    refetch,
+  } = useGetConversationsQuery();
+  const [startConversation, { isLoading: isStarting }] =
+    useStartConversationMutation();
+  const [sendMessage, { isLoading: isSending }] =
+    useSendConversationMessageMutation();
+  const [markRead] = useMarkConversationReadMutation();
+
+  const [selectedId, setSelectedId] = React.useState("");
+  const [createdId, setCreatedId] = React.useState("");
+  const [query, setQuery] = React.useState("");
+  const [draft, setDraft] = React.useState("");
+  const [startError, setStartError] = React.useState("");
+  /* "auto" follows the deep link; Back and thread taps pin it explicitly. */
+  const [mobilePane, setMobilePane] = React.useState<"auto" | "list" | "thread">(
+    "auto",
+  );
+  /* Kept per conversation so switching threads resets the window without an
+     effect that would fight the render. */
+  const [sizes, setSizes] = React.useState<Record<string, number>>({});
+
+  /* Arriving from a "Chat" button with ?seller=<id>: if there is no thread with
+     that seller yet, open one. The ref stops a re-render from posting twice;
+     once the list refetches, the new thread resolves through deepLinkedId. */
+  const startedFor = React.useRef("");
+  React.useEffect(() => {
+    if (!sellerParam || conversationsLoading) return;
+    if (conversations.some((item) => item.otherUserId === sellerParam)) return;
+    if (startedFor.current === sellerParam) return;
+    startedFor.current = sellerParam;
+
+    startConversation({ participantId: sellerParam })
+      .unwrap()
+      .then((created) => setCreatedId(created.uuid))
+      .catch(() =>
+        setStartError(
+          "Could not open a chat with this seller. Please try again.",
+        ),
+      );
+  }, [sellerParam, conversationsLoading, conversations, startConversation]);
+
+  /* A thread the buyer clicked wins over the one the link pointed at. */
+  const deepLinkedId = sellerParam
+    ? conversations.find((item) => item.otherUserId === sellerParam)?.uuid
+    : undefined;
+  const activeId =
+    selectedId || deepLinkedId || createdId || conversations[0]?.uuid || "";
+  const active = conversations.find((item) => item.uuid === activeId);
+
+  const pageSize = sizes[activeId] ?? PAGE_SIZE;
+  const {
+    data: messagePage,
+    isLoading: messagesLoading,
+    isFetching: messagesFetching,
+  } = useGetConversationMessagesQuery(
+    { conversationUuid: activeId, pageSize },
+    { skip: !activeId },
+  );
+  const messages = React.useMemo(
+    () => inChatOrder(messagePage?.content ?? []),
+    [messagePage],
+  );
+  const totalMessages = messagePage?.page?.totalElements ?? 0;
+  const hasMore = messages.length < totalMessages;
+
+  /* Opening a thread clears its unread badge. */
+  React.useEffect(() => {
+    if (!activeId) return;
+    const conversation = conversations.find((item) => item.uuid === activeId);
+    if (conversation && conversation.unreadCount > 0) markRead(activeId);
+  }, [activeId, conversations, markRead]);
+
+  /* Follow new messages, but never yank the view while history is being read. */
+  const logRef = React.useRef<HTMLDivElement>(null);
+  const stickToBottom = React.useRef(true);
+  React.useEffect(() => {
+    const node = logRef.current;
+    if (node && stickToBottom.current) node.scrollTop = node.scrollHeight;
+  }, [messages, activeId]);
+
+  function handleLogScroll() {
+    const node = logRef.current;
+    if (!node) return;
+    stickToBottom.current =
+      node.scrollHeight - node.scrollTop - node.clientHeight < 80;
+  }
+
+  function openConversation(uuid: string) {
+    stickToBottom.current = true;
+    setSelectedId(uuid);
+    setMobilePane("thread");
+  }
+
+  async function submitMessage(event?: React.FormEvent) {
+    event?.preventDefault();
+    const body = draft.trim();
+    if (!body || !activeId || isSending) return;
+    setDraft("");
+    stickToBottom.current = true;
+    try {
+      await sendMessage({ conversationUuid: activeId, body }).unwrap();
+    } catch {
+      setDraft(body); // keep what they typed so the send can be retried
+    }
+  }
+
+  /* The API names the other *user*; a buyer expects the shop behind them. */
+  const otherUserIds = React.useMemo(
+    () => conversations.map((item) => item.otherUserId),
+    [conversations],
+  );
+  const storeProfiles = useStoreProfiles(otherUserIds);
+  const identityOf = React.useCallback(
+    (conversation?: SellerConversation) => {
+      const profile = conversation
+        ? storeProfiles[conversation.otherUserId]
+        : undefined;
+      return {
+        name: profile?.businessName || conversation?.otherUserName || "Store",
+        avatar: profile?.logoUri || conversation?.otherUserAvatar,
+      };
+    },
+    [storeProfiles],
+  );
+
+  const needle = query.trim().toLowerCase();
+  const visibleConversations = needle
+    ? conversations.filter((item) =>
+        identityOf(item).name.toLowerCase().includes(needle),
+      )
+    : conversations;
+
+  const storeName = identityOf(active).name;
+  // One pane at a time on phones; both side by side from md up.
+  const showThread =
+    mobilePane === "auto" ? Boolean(sellerParam) : mobilePane === "thread";
+
+  return (
+    <div className={PAGE}>
+      <div
+        className={cn(
+          PANEL_HEIGHT,
+          "flex w-full overflow-hidden rounded-3xl border border-[#EDEBF3] bg-white shadow-[0_12px_40px_rgba(26,19,48,0.08)]",
+        )}
+      >
+        {/* ── LEFT: shop threads ── */}
+        <div
+          className={cn(
+            "h-full w-full shrink-0 flex-col overflow-hidden border-[#EDEBF3] bg-white md:flex md:w-[320px] md:border-r",
+            showThread ? "hidden" : "flex",
+          )}
+        >
+          <div className="shrink-0 space-y-2.5 border-b border-[#F0EDFB] bg-[#F8F7FC] p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-[#1A1330]">
                 <MessageSquare size={18} className="text-[#6C4CD8]" />
                 <h3 className="text-[16px] font-extrabold">Shop Chats</h3>
               </div>
               <span className="rounded-full bg-[#6C4CD8] px-2.5 py-0.5 text-[11px] font-extrabold text-white">
-                {chatThreads.length}
+                {conversations.length}
               </span>
             </div>
 
-            {/* Search Box */}
             <div className="relative">
-              <Search size={14} className="absolute left-3 top-2.5 text-[#8B85A0]" />
+              <Search
+                size={14}
+                className="absolute left-3 top-2.5 text-[#8B85A0]"
+              />
               <input
                 type="text"
-                value={searchChat}
-                onChange={(e) => setSearchChat(e.target.value)}
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
                 placeholder="Search shops or chats…"
-                className="w-full rounded-xl border border-[#E2DFEC] bg-white pl-8 pr-3 py-1.5 text-[12px] text-[#1A1330] outline-none focus:border-[#6C4CD8]"
+                className="w-full rounded-xl border border-[#E2DFEC] bg-white py-1.5 pl-8 pr-3 text-[12px] text-[#1A1330] outline-none focus:border-[#6C4CD8]"
               />
             </div>
           </div>
 
-          {/* Chat Threads List — 15 Shops with Sleek Scrollbar */}
-          <div className="flex-1 overflow-y-auto divide-y divide-[#F0EDFB] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-purple-200/80 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-purple-400">
-            {filteredThreads.map((thread) => {
-              const isActive = thread.storeName === activeStore;
-              return (
-                <div
-                  key={thread.id}
-                  onClick={() => setActiveStore(thread.storeName)}
-                  className={cn(
-                    "flex cursor-pointer items-center gap-3 p-4 transition-all",
-                    isActive
-                      ? "bg-[#F3F0FC] border-l-4 border-[#6C4CD8]"
-                      : "hover:bg-[#F8F7FC]"
-                  )}
+          <div className="flex-1 divide-y divide-[#F0EDFB] overflow-y-auto [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-purple-200/80 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-1.5 hover:[&::-webkit-scrollbar-thumb]:bg-purple-400">
+            {conversationsLoading || isStarting ? (
+              <div className="flex justify-center py-14">
+                <Loader2 className="animate-spin text-[#6C4CD8]" />
+              </div>
+            ) : isError ? (
+              <div className="px-4 py-14 text-center text-[12.5px] text-[#8B85A0]">
+                <p>Could not load your chats.</p>
+                <button
+                  type="button"
+                  onClick={() => refetch()}
+                  className="mt-3 font-extrabold text-[#6C4CD8]"
                 >
-                  <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#6C4CD8] font-bold text-white shadow-xs">
-                    <Store size={18} />
-                    <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-white" />
-                  </div>
+                  Try again
+                </button>
+              </div>
+            ) : visibleConversations.length === 0 ? (
+              <p className="px-6 py-14 text-center text-[12.5px] leading-relaxed text-[#8B85A0]">
+                {conversations.length === 0
+                  ? "No chats yet. Open any product or store and tap Chat to message the seller."
+                  : "No shops match your search."}
+              </p>
+            ) : (
+              visibleConversations.map((conversation) => {
+                const isActive = conversation.uuid === activeId;
+                const identity = identityOf(conversation);
+                return (
+                  <button
+                    key={conversation.uuid}
+                    type="button"
+                    onClick={() => openConversation(conversation.uuid)}
+                    className={cn(
+                      "flex w-full cursor-pointer items-center gap-3 p-4 text-left transition-all",
+                      isActive
+                        ? "border-l-4 border-[#6C4CD8] bg-[#F3F0FC]"
+                        : "hover:bg-[#F8F7FC]",
+                    )}
+                  >
+                    <StoreAvatar
+                      name={identity.name}
+                      avatar={identity.avatar}
+                      size={40}
+                    />
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <p className={cn("text-[13.5px] truncate", isActive ? "font-black text-[#6C4CD8]" : "font-bold text-[#1A1330]")}>
-                        {thread.storeName}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <p
+                          className={cn(
+                            "truncate text-[13.5px]",
+                            isActive
+                              ? "font-black text-[#6C4CD8]"
+                              : "font-bold text-[#1A1330]",
+                          )}
+                        >
+                          {identity.name}
+                        </p>
+                        <span className="shrink-0 text-[10px] text-[#8B85A0]">
+                          {threadStamp(conversation.lastMessageAt)}
+                        </span>
+                      </div>
+                      <p
+                        className={cn(
+                          "mt-0.5 truncate text-[11.5px]",
+                          conversation.unreadCount > 0
+                            ? "font-semibold text-[#1A1330]"
+                            : "text-[#8B85A0]",
+                        )}
+                      >
+                        {conversation.lastMessage || "No messages yet"}
                       </p>
-                      <span className="text-[10px] text-[#8B85A0] shrink-0 ml-1">{thread.lastTime}</span>
                     </div>
-                    <p className="text-[11.5px] text-[#8B85A0] truncate mt-0.5">
-                      {thread.lastMessage}
-                    </p>
-                  </div>
 
-                  {thread.unreadCount && thread.unreadCount > 0 ? (
-                    <span className="flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full bg-purple-600 text-[10px] font-bold text-white">
-                      {thread.unreadCount}
-                    </span>
-                  ) : null}
-                </div>
-              );
-            })}
+                    {conversation.unreadCount > 0 && (
+                      <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-[#6C4CD8] px-1.5 text-[10px] font-bold text-white">
+                        {conversation.unreadCount}
+                      </span>
+                    )}
+                  </button>
+                );
+              })
+            )}
           </div>
         </div>
 
-        {/* ── RIGHT MAIN CHAT AREA (EXPANDED TO FULL RIGHT BOUNDARY) ── */}
-        <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#F8F7FC] w-full">
-          {/* Active Chat Header */}
-          <div className="flex items-center justify-between border-b border-[#EDEBF3] bg-white px-8 py-4 shrink-0 w-full">
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#6C4CD8] text-white font-extrabold text-[18px] shadow-xs">
-                <Store size={20} />
-              </div>
-              <div>
-                <h3 className="text-[18px] font-extrabold text-[#1A1330]">{activeStore}</h3>
-                <p className="text-[12.5px] text-[#8B85A0] flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500"></span> Online Official Merchant · Response Rate: 99%
+        {/* ── RIGHT: active conversation ── */}
+        <div
+          className={cn(
+            "h-full w-full min-w-0 flex-1 flex-col overflow-hidden bg-[#F8F7FC] md:flex",
+            showThread ? "flex" : "hidden",
+          )}
+        >
+          <div className="flex w-full shrink-0 items-center justify-between gap-3 border-b border-[#EDEBF3] bg-white px-4 py-3.5 sm:px-6">
+            <div className="flex min-w-0 items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setMobilePane("list")}
+                aria-label="Back to chats"
+                className="-ml-1 shrink-0 rounded-lg p-1.5 text-[#6C4CD8] hover:bg-[#F1EFFA] md:hidden"
+              >
+                <ArrowLeft size={20} />
+              </button>
+
+              <StoreAvatar
+                name={storeName}
+                avatar={identityOf(active).avatar}
+                size={42}
+              />
+              <div className="min-w-0">
+                <h3 className="truncate text-[16px] font-extrabold text-[#1A1330] sm:text-[18px]">
+                  {activeId ? storeName : "Your messages"}
+                </h3>
+                <p className="flex items-center gap-1.5 text-[12px] text-[#8B85A0]">
+                  <span
+                    className={cn(
+                      "h-2 w-2 shrink-0 rounded-full",
+                      connectionState === "connected"
+                        ? "bg-emerald-500"
+                        : "bg-amber-500",
+                    )}
+                  />
+                  {connectionState === "connected"
+                    ? "Live · messages arrive instantly"
+                    : connectionState === "connecting"
+                      ? "Connecting…"
+                      : "Reconnecting…"}
                 </p>
               </div>
             </div>
 
-            <span className="rounded-xl bg-emerald-100 px-3.5 py-1.5 text-[12.5px] font-extrabold text-emerald-700">
+            <span className="hidden shrink-0 items-center gap-1.5 rounded-xl bg-emerald-100 px-3.5 py-1.5 text-[12.5px] font-extrabold text-emerald-700 lg:inline-flex">
+              <ShieldCheck size={14} />
               Direct Seller Line
             </span>
           </div>
 
-          {/* MESSAGES BODY WITH SLEEK FLUSH SCROLLBAR */}
-          <div className="flex-1 overflow-y-auto p-8 space-y-4 w-full [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-purple-300/60 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-purple-500/80">
-            {currentMessages.map((msg) => (
-              <div
-                key={msg.id}
-                className={cn(
-                  "flex flex-col max-w-[80%]",
-                  msg.sender === "buyer" ? "ml-auto items-end" : "mr-auto items-start"
-                )}
-              >
-                {/* Detailed Invoice Card Bubble */}
-                {msg.isInvoiceCard ? (
-                  <div className="rounded-3xl border border-purple-200 bg-white p-6 shadow-sm text-[#1A1330] space-y-3.5 w-full max-w-lg">
-                    <div className="flex items-center justify-between border-b border-[#F0EDFB] pb-3">
-                      <div className="flex items-center gap-2 text-[#6C4CD8]">
-                        <FileText size={20} />
-                        <span className="text-[14px] font-extrabold uppercase tracking-wide">Purchase Invoice Ticket</span>
-                      </div>
-                      <span className="rounded-md bg-[#6C4CD8] px-2.5 py-1 text-[12px] font-bold text-white">
-                        #ORD-95508
-                      </span>
-                    </div>
+          {startError && (
+            <p className="shrink-0 bg-rose-50 px-6 py-2.5 text-[12.5px] font-semibold text-rose-600">
+              {startError}
+            </p>
+          )}
 
-                    {/* Items List */}
-                    <div className="space-y-2 py-1">
-                      <div className="flex justify-between text-[13.5px]">
-                        <span className="font-bold text-[#1A1330] truncate max-w-[280px]">MacBook Laptop — M2 Chip (16GB RAM)</span>
-                        <span className="font-extrabold text-[#6C4CD8]">$399.00</span>
-                      </div>
-                      <div className="flex justify-between text-[13.5px]">
-                        <span className="font-bold text-[#1A1330] truncate max-w-[280px]">Iphone 12 Pro Pacific Blue 128gb (x1)</span>
-                        <span className="font-extrabold text-[#6C4CD8]">$129.00</span>
-                      </div>
-                    </div>
-
-                    <div className="border-t border-[#F0EDFB] pt-3 text-[12.5px] text-[#8B85A0] space-y-1">
-                      <p><strong>Deliver To:</strong> Vanneth Sok (096 888 7777)</p>
-                      <p><strong>Address:</strong> House #42B, Street 271, Tuol Sangkae 2, Ruessei Kaev, Phnom Penh</p>
-                      <p><strong>Payment Option:</strong> Pay Now (KHQR)</p>
-                    </div>
-
-                    <div className="border-t border-[#EDEBF3] pt-3 flex justify-between font-extrabold text-[16px] text-[#1A1330]">
-                      <span>Total Invoice Amount</span>
-                      <span className="text-[#6C4CD8] text-[18px]">$518.00</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div
-                    className={cn(
-                      "rounded-2xl p-4.5 text-[15px] leading-relaxed shadow-xs space-y-3",
-                      msg.sender === "buyer"
-                        ? "bg-[#6C4CD8] text-white rounded-tr-none"
-                        : "bg-white text-[#1A1330] rounded-tl-none border border-[#EDEBF3]"
-                    )}
-                  >
-                    <p>{msg.text}</p>
-
-                    {/* Inline KHQR Scan Code inside Seller Response */}
-                    {msg.isQrCard && (
-                      <div className="mt-3 rounded-2xl border border-purple-200 bg-[#F8F7FC] p-5 text-center shadow-xs">
-                        <p className="text-[13px] font-extrabold text-[#6C4CD8] uppercase tracking-wide">
-                          ABA PAY / KHQR Code for {activeStore}
-                        </p>
-                        <div className="my-3 mx-auto h-40 w-40 relative rounded-2xl bg-white p-3 border border-purple-200 flex items-center justify-center">
-                          <QrCode size={115} className="text-[#6C4CD8]" />
-                        </div>
-                        <p className="text-[12.5px] text-[#8B85A0]">Scan with ABA, ACLEDA, Wing, or any KHQR banking app</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                <span className="mt-1 text-[11px] text-[#8B85A0]">{msg.time}</span>
+          <div
+            ref={logRef}
+            onScroll={handleLogScroll}
+            className="w-full flex-1 space-y-3 overflow-y-auto p-4 sm:p-6 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-purple-300/60 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-2 hover:[&::-webkit-scrollbar-thumb]:bg-purple-500/80"
+          >
+            {!activeId ? (
+              <p className="pt-24 text-center text-[13px] text-[#8B85A0]">
+                Select a shop on the left to read the conversation.
+              </p>
+            ) : messagesLoading ? (
+              <div className="flex justify-center pt-24">
+                <Loader2 className="animate-spin text-[#6C4CD8]" />
               </div>
-            ))}
+            ) : messages.length === 0 ? (
+              <p className="pt-24 text-center text-[13px] text-[#8B85A0]">
+                Say hello to {storeName} — ask about stock, sizing or delivery.
+              </p>
+            ) : (
+              <>
+                {hasMore && (
+                  <div className="flex justify-center pb-1">
+                    <button
+                      type="button"
+                      disabled={messagesFetching}
+                      onClick={() => {
+                        stickToBottom.current = false;
+                        setSizes((prev) => ({
+                          ...prev,
+                          [activeId]: pageSize + PAGE_SIZE,
+                        }));
+                      }}
+                      className="rounded-full bg-white px-4 py-1.5 text-[12px] font-bold text-[#6C4CD8] shadow-xs ring-1 ring-[#EDEBF3] transition hover:bg-[#F1EFFA] disabled:opacity-60"
+                    >
+                      {messagesFetching
+                        ? "Loading…"
+                        : `Load earlier messages (${totalMessages - messages.length})`}
+                    </button>
+                  </div>
+                )}
+
+                {messages.map((message, index) => {
+                  const fromSeller = message.senderId === active?.otherUserId;
+                  const isPending = message.senderId === PENDING_SENDER_ID;
+                  const showDay =
+                    index === 0 ||
+                    dayLabel(messages[index - 1].sentAt) !==
+                      dayLabel(message.sentAt);
+
+                  return (
+                    <React.Fragment key={message.uuid}>
+                      {showDay && (
+                        <div className="flex justify-center py-2">
+                          <span className="rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-[#8B85A0] ring-1 ring-[#EDEBF3]">
+                            {dayLabel(message.sentAt)}
+                          </span>
+                        </div>
+                      )}
+
+                      <div
+                        className={cn(
+                          "flex max-w-[85%] flex-col sm:max-w-[75%]",
+                          fromSeller
+                            ? "mr-auto items-start"
+                            : "ml-auto items-end",
+                        )}
+                      >
+                        <div
+                          className={cn(
+                            "rounded-2xl px-4 py-2.5 text-[14.5px] leading-relaxed shadow-xs",
+                            fromSeller
+                              ? "rounded-tl-none border border-[#EDEBF3] bg-white text-[#1A1330]"
+                              : "rounded-tr-none bg-[#6C4CD8] text-white",
+                            isPending && "opacity-70",
+                          )}
+                        >
+                          <p className="whitespace-pre-wrap break-words">
+                            {message.body}
+                          </p>
+                        </div>
+                        <span className="mt-1 px-1 text-[11px] text-[#8B85A0]">
+                          {isPending ? "Sending…" : bubbleStamp(message.sentAt)}
+                        </span>
+                      </div>
+                    </React.Fragment>
+                  );
+                })}
+              </>
+            )}
           </div>
 
-          {/* Input Bar */}
-          <div className="border-t border-[#EDEBF3] bg-white p-5 shrink-0 w-full">
-            <form onSubmit={handleSendMessage} className="flex items-center gap-3 w-full">
-              <input
-                type="text"
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                placeholder={`Type your message to ${activeStore}…`}
-                className="flex-1 rounded-2xl border border-[#E2DFEC] bg-[#F6F5FA] px-6 py-4 text-[15px] text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
+          <div className="w-full shrink-0 border-t border-[#EDEBF3] bg-white p-3 sm:p-4">
+            <form
+              onSubmit={submitMessage}
+              className="flex w-full items-end gap-2.5"
+            >
+              <textarea
+                rows={1}
+                value={draft}
+                disabled={!activeId}
+                onChange={(event) => setDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  // Enter sends; Shift+Enter starts a new line.
+                  if (event.key === "Enter" && !event.shiftKey) {
+                    event.preventDefault();
+                    submitMessage();
+                  }
+                }}
+                placeholder={
+                  activeId
+                    ? `Message ${storeName}…`
+                    : "Select a chat to start messaging"
+                }
+                className="max-h-32 min-h-[46px] min-w-0 flex-1 resize-none rounded-2xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[14.5px] text-[#1A1330] outline-none transition focus:border-[#6C4CD8] focus:bg-white disabled:opacity-60"
               />
               <button
                 type="submit"
-                className="flex h-13 w-13 items-center justify-center rounded-2xl bg-[#6C4CD8] text-white shadow-md hover:bg-[#5B3DC0] transition"
+                disabled={!draft.trim() || !activeId || isSending}
+                className="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-2xl bg-[#6C4CD8] text-white shadow-md transition hover:bg-[#5B3DC0] disabled:opacity-50"
+                aria-label="Send message"
               >
-                <Send size={22} />
+                {isSending ? (
+                  <Loader2 size={20} className="animate-spin" />
+                ) : (
+                  <Send size={20} />
+                )}
               </button>
             </form>
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Store logo when the seller has one, otherwise the storefront mark. */
+function StoreAvatar({
+  name,
+  avatar,
+  size,
+}: {
+  name?: string;
+  avatar?: string;
+  size: number;
+}) {
+  return (
+    <div
+      className="relative flex shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#6C4CD8] font-bold text-white shadow-xs"
+      style={{ height: size, width: size }}
+    >
+      {avatar ? (
+        <Image
+          src={avatar}
+          alt={name || "Store"}
+          fill
+          sizes={`${size}px`}
+          className="object-cover"
+        />
+      ) : (
+        <Store size={Math.round(size * 0.45)} />
+      )}
     </div>
   );
 }

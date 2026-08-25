@@ -6,8 +6,8 @@ import { Check, Heart, LoaderCircle, Search, Smile, Trash2 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { getFileUrl } from "@/lib/utils"
-import { useGetSellerReviewsQuery } from "@/lib/redux/service/sellerDashboardApi"
-import type { SellerReview } from "@/lib/types/seller-dashboard"
+import { useDeleteCommentMutation, useGetSellerCommentsQuery, useReplyToCommentMutation } from "@/lib/redux/service/sellerCommentApi"
+import type { SellerComment } from "@/lib/types/seller-comment"
 
 type CommentItem = {
   id: string | number
@@ -42,8 +42,10 @@ function ProductArt({ art, index }: { art: string; index: number }) {
 }
 
 export function Comment() {
-  const { data, isLoading, isError } = useGetSellerReviewsQuery({ pageNumber: 0, pageSize: 100 })
-  const apiComments = React.useMemo<CommentItem[]>(() => (data?.content ?? []).map((review: SellerReview, index) => ({
+  const { data, isLoading, isError } = useGetSellerCommentsQuery({ page: 0, size: 100 })
+  const [replyToComment] = useReplyToCommentMutation()
+  const [deleteComment] = useDeleteCommentMutation()
+  const apiComments = React.useMemo<CommentItem[]>(() => (data?.content ?? []).map((review: SellerComment, index) => ({
     id: review.uuid,
     name: review.buyer?.fullName || [review.buyer?.firstName, review.buyer?.lastName].filter(Boolean).join(" ") || review.buyer?.username || "Buyer",
     message: review.comment || "",
@@ -74,10 +76,19 @@ export function Comment() {
     setReplyingTo(id)
     setDraftReply(replies[id] ?? "")
   }
-  function saveReply(id: string | number) {
-    if (draftReply.trim()) setReplies((current) => ({ ...current, [id]: draftReply.trim() }))
+  async function saveReply(id: string | number) {
+    const comment = draftReply.trim()
+    if (!comment) return
+    await replyToComment({ reviewUuid: String(id), comment }).unwrap()
+    setReplies((current) => ({ ...current, [id]: comment }))
     setReplyingTo(null)
     setDraftReply("")
+  }
+  async function removeComment(id: string | number) {
+    if (!window.confirm("Delete this comment?")) return
+    await deleteComment(String(id)).unwrap()
+    setComments((items) => items.filter((item) => item.id !== id))
+    setSelected((items) => { const next = new Set(items); next.delete(id); return next })
   }
 
   return (
@@ -98,7 +109,7 @@ export function Comment() {
                 <p className="mt-[3px] text-[11px] text-[#34383d]">{comment.message}</p>
                 {replies[comment.id] && replyingTo !== comment.id && <div className="mt-[12px] flex items-start gap-[9px]"><Image src="/picture/lisa.PNG" alt="Your avatar" width={34} height={34} className="size-[34px] rounded-full object-cover" /><p className="pt-[4px] text-[11px]"><span className="font-semibold text-[#3182e5]">@elva</span> {replies[comment.id]}</p></div>}
                 {replyingTo === comment.id && <div className="mt-[12px] flex items-start gap-[9px]"><Image src="/picture/lisa.PNG" alt="Your avatar" width={34} height={34} className="size-[34px] rounded-full object-cover" /><div className="flex-1"><div className="flex items-center border-b border-[#dfe2e5] pb-[5px] text-[11px]"><span className="mr-[4px] font-semibold text-[#3182e5]">@elva</span><input autoFocus value={draftReply} onChange={(event) => setDraftReply(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") saveReply(comment.id) }} placeholder="Leave something to reply" className="min-w-0 flex-1 bg-transparent outline-none" /></div><div className="mt-[10px] flex gap-[8px]"><button type="button" onClick={() => saveReply(comment.id)} className="h-[35px] rounded-[7px] bg-[#7654e8] px-[17px] text-[11px] font-semibold text-white">Reply</button><button type="button" onClick={() => setReplyingTo(null)} className="h-[35px] rounded-[7px] border border-[#dfe2e5] bg-white px-[15px] text-[11px] font-semibold">Cancel</button></div></div></div>}
-                {replyingTo !== comment.id && !replies[comment.id] && <div className="mt-[10px] flex gap-[20px] text-[#7b858e] opacity-100 md:opacity-0 md:group-hover:opacity-100"><button type="button" onClick={() => startReply(comment.id)} aria-label="Reply"><Heart className="size-[17px]" /></button><button type="button" onClick={() => { setComments((items) => items.filter((item) => item.id !== comment.id)); setSelected((items) => { const next = new Set(items); next.delete(comment.id); return next }) }} aria-label="Delete comment"><Trash2 className="size-[16px]" /></button><button type="button" onClick={() => startReply(comment.id)} aria-label="React to comment"><Smile className="size-[17px]" /></button></div>}
+                {replyingTo !== comment.id && !replies[comment.id] && <div className="mt-[10px] flex gap-[20px] text-[#7b858e] opacity-100 md:opacity-0 md:group-hover:opacity-100"><button type="button" onClick={() => startReply(comment.id)} aria-label="Reply"><Heart className="size-[17px]" /></button><button type="button" onClick={() => removeComment(comment.id)} aria-label="Delete comment"><Trash2 className="size-[16px]" /></button><button type="button" onClick={() => startReply(comment.id)} aria-label="React to comment"><Smile className="size-[17px]" /></button></div>}
               </div>
             </div>
             <span className="hidden w-[52px] pt-[6px] text-[10px] text-[#858c95] md:block">{comment.time}</span>

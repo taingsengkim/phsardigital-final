@@ -21,6 +21,8 @@ export interface PurchaseItem {
 export interface SellerOrder {
   uuid: string
   buyerId: string
+  buyerName?: string
+  buyerPhone?: string
   sellerId: string
   businessName: string
   totalPrice: number
@@ -68,14 +70,11 @@ export interface DashboardListing {
   lastModifiedAt?: string
 }
 
+/** Mirrors ReviewAuthorResponse — the API sends only these three fields. */
 export interface ReviewBuyer {
   id: string
-  username?: string
-  firstName?: string
-  lastName?: string
-  fullName?: string
-  email?: string
-  avatarFile?: { uri?: string }
+  displayName?: string
+  avatarUrl?: string
 }
 
 export interface SellerReview {

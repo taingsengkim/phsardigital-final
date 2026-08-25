@@ -4,13 +4,16 @@ import * as React from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, Package, Sparkles } from "lucide-react";
-import { ProductCard } from "../ProductCard";
 import { cn } from "@/lib/utils";
 import { useGetListingsQuery } from "@/lib/api/homeApi";
+import ProductCard from "../ProductCard";
 
-import { CURATED_PRODUCTS } from "@/lib/curated-products";
-
-const TABS = ["Featured Products", "Best Selling", "Latest Arrivals", "Hot Deals"] as const;
+const TABS = [
+  "Featured Products",
+  "Best Selling",
+  "Latest Arrivals",
+  "Hot Deals",
+] as const;
 type Tab = (typeof TABS)[number];
 
 export function RecommendedSection() {
@@ -20,8 +23,7 @@ export function RecommendedSection() {
   const apiListings =
     listingsResponse?.data || (listingsResponse as any)?.content || [];
 
-  const rawListings =
-    apiListings && apiListings.length >= 4 ? apiListings : CURATED_PRODUCTS;
+  const rawListings = apiListings || [];
 
   // Filter listings based on active tab
   const filteredListings = React.useMemo(() => {
@@ -30,7 +32,10 @@ export function RecommendedSection() {
       return list.filter((p: any) => p.isFeatured !== false);
     }
     if (activeTab === "Best Selling") {
-      return list.sort((a: any, b: any) => (b.sold ?? b.reviewCount ?? 0) - (a.sold ?? a.reviewCount ?? 0));
+      return list.sort(
+        (a: any, b: any) =>
+          (b.sold ?? b.reviewCount ?? 0) - (a.sold ?? a.reviewCount ?? 0),
+      );
     }
     if (activeTab === "Latest Arrivals") {
       return list.slice().reverse();
@@ -56,7 +61,8 @@ export function RecommendedSection() {
           Recommended For You
         </h2>
         <p className="text-xs sm:text-sm text-gray-500 dark:text-zinc-400 max-w-md mx-auto">
-          Handpicked top products tailored to your preferences and seasonal trends
+          Handpicked top products tailored to your preferences and seasonal
+          trends
         </p>
 
         {/* Tab Pills */}
@@ -69,7 +75,7 @@ export function RecommendedSection() {
                 "relative rounded-full px-5 py-2 text-xs sm:text-sm font-semibold transition-all duration-200 cursor-pointer",
                 activeTab === tab
                   ? "bg-[#6C4CD8] text-white shadow-sm"
-                  : "text-gray-600 dark:text-zinc-300 hover:text-[#111827] dark:hover:text-white"
+                  : "text-gray-600 dark:text-zinc-300 hover:text-[#111827] dark:hover:text-white",
               )}
             >
               {tab}
@@ -93,12 +99,14 @@ export function RecommendedSection() {
             transition={{ duration: 0.25 }}
             className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
           >
-            {filteredListings.slice(0, 15).map((listing: any, index: number) => (
-              <ProductCard
-                key={listing.uuid || listing.id || index}
-                listing={listing}
-              />
-            ))}
+            {filteredListings
+              .slice(0, 15)
+              .map((listing: any, index: number) => (
+                <ProductCard
+                  key={listing.uuid || listing.id || index}
+                  listing={listing}
+                />
+              ))}
           </motion.div>
         </AnimatePresence>
       )}

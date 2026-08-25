@@ -345,23 +345,25 @@ export default function Navbar() {
 
           <div className="flex-1" />
 
-          {/* Seller Link in Nav Rail */}
-          {isSeller ? (
-            <Link
-              href="/seller-dashboard/home"
-              className="flex shrink-0 items-center gap-1.5 rounded-full bg-white px-4 py-1 text-xs font-bold text-[#6C4CD8] transition hover:bg-white/90 shadow-sm"
-            >
-              <Store size={14} />
-              <span>{storeName || "Seller Dashboard"}</span>
-            </Link>
-          ) : (
-            <Link
-              href="/account/seller-application"
-              className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/20 px-3.5 py-1 text-xs font-bold text-white transition hover:bg-white/30"
-            >
-              <Store size={14} />
-              <span>Become a Seller</span>
-            </Link>
+          {/* Seller Link in Nav Rail — only when logged in */}
+          {isLoggedIn && (
+            isSeller ? (
+              <Link
+                href="/seller-dashboard/home"
+                className="flex shrink-0 items-center gap-1.5 rounded-full bg-white px-4 py-1 text-xs font-bold text-[#6C4CD8] transition hover:bg-white/90 shadow-sm"
+              >
+                <Store size={14} />
+                <span>{storeName || "Seller Dashboard"}</span>
+              </Link>
+            ) : (
+              <Link
+                href="/account/seller-application"
+                className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/20 px-3.5 py-1 text-xs font-bold text-white transition hover:bg-white/30"
+              >
+                <Store size={14} />
+                <span>Become a Seller</span>
+              </Link>
+            )
           )}
 
           {/* location pill */}

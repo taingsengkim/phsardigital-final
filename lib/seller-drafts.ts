@@ -6,6 +6,7 @@ export type SellerProductDraft = {
   description: string
   categoryUuid: string
   price: string
+  discountPrice?: string
   stockQty: string
   imageNames: string[]
   thumbnailObjectName?: string

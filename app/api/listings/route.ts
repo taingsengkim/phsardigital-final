@@ -38,6 +38,47 @@ const FORWARDED_PARAMS = [
 
 import { CURATED_PRODUCTS } from "@/lib/curated-products";
 
+type ListingResponseItem = Record<string, unknown> & {
+  price?: number | null;
+  fullPrice?: number | null;
+  discountPrice?: number | null;
+};
+
+function withCompatiblePrice(item: ListingResponseItem): ListingResponseItem {
+  return {
+    ...item,
+    price: item.discountPrice ?? item.price ?? item.fullPrice ?? 0,
+  };
+}
+
+function normalizeListingsResponse(data: unknown): unknown {
+  if (Array.isArray(data)) return data.map(withCompatiblePrice);
+  if (!data || typeof data !== "object") return data;
+
+  const body = data as Record<string, unknown>;
+  const items = Array.isArray(body.content)
+    ? body.content.map((item) => withCompatiblePrice(item as ListingResponseItem))
+    : Array.isArray(body.data)
+      ? body.data.map((item) => withCompatiblePrice(item as ListingResponseItem))
+      : null;
+
+  if (!items) return data;
+
+  const page = body.page && typeof body.page === "object"
+    ? body.page as Record<string, unknown>
+    : {};
+
+  return {
+    ...body,
+    content: items,
+    data: items,
+    total: page.totalElements ?? body.total ?? items.length,
+    page: page.number ?? body.pageNumber ?? 0,
+    pageSize: page.size ?? body.pageSize ?? items.length,
+    totalPages: page.totalPages ?? body.totalPages ?? 1,
+  };
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
 
@@ -52,91 +93,52 @@ export async function GET(request: NextRequest) {
   // 1. Fetch live products from Swagger upstream API
   let liveItems: any[] = [];
   try {
-    const upstreamUrl = `${BASE_URL}/api/v1/listings?pageNumber=0&pageSize=50`;
+    const authHeader = await getAuthHeader(request);
+    const headers: Record<string, string> = { Accept: "application/json" };
+    if (authHeader) headers["Authorization"] = authHeader;
+
+    const params = new URLSearchParams();
+    params.set("pageNumber", "0");
+    params.set("pageSize", "100");
+    if (categorySlug) params.set("categorySlug", categorySlug);
+    if (search) params.set("search", search);
+    if (sort) params.set("sort", sort);
+    const upstreamUrl = `${BASE_URL}/api/v1/listings?${params.toString()}`;
     const res = await fetch(upstreamUrl, {
-      headers: { Accept: "application/json" },
+      headers,
       cache: "no-store",
     });
     if (res.ok) {
       const data = await res.json();
       const rawList = data?.content || data?.data || (Array.isArray(data) ? data : []);
       liveItems = rawList.map((item: any) => {
-        const titleLower = (item.title || "").toLowerCase();
-        let normalizedTitle = item.title;
-        let normalizedCat = item.category?.name || "General";
-        let normalizedCatSlug = item.category?.slug || "general";
-        let normalizedPrice =
-          typeof item.fullPrice === "number" && item.fullPrice > 0 && item.fullPrice < 500
-            ? item.fullPrice
-            : 29.99;
-        let normalizedDiscount =
-          typeof item.discountPrice === "number" && item.discountPrice > 0 && item.discountPrice < 500
-            ? item.discountPrice
-            : null;
-
-        // Clean up test names from backend with unique realistic titles
-        if (titleLower === "cat") {
-          normalizedTitle = "True Wireless Bluetooth Noise-Cancelling Earbuds";
-          normalizedCat = "Electronics";
-          normalizedCatSlug = "electronics";
-          normalizedPrice = 49.99;
-          normalizedDiscount = 35.0;
-        } else if (titleLower === "cats") {
-          normalizedTitle = "Ultra-Slim Ergonomic Optical Mouse";
-          normalizedCat = "Electronics";
-          normalizedCatSlug = "electronics";
-          normalizedPrice = 28.0;
-          normalizedDiscount = 18.0;
-        } else if (titleLower === "this is cat") {
-          normalizedTitle = "Fast-Charging 65W GaN USB-C Wall Charger";
-          normalizedCat = "Electronics";
-          normalizedCatSlug = "electronics";
-          normalizedPrice = 35.0;
-          normalizedDiscount = 24.99;
-        } else if (titleLower.includes("testing")) {
-          normalizedTitle = "Multi-Compartment Desk Storage Organizer";
-          normalizedCat = "Home & Living";
-          normalizedCatSlug = "home-and-living";
-          normalizedPrice = 20.0;
-          normalizedDiscount = 14.5;
-        } else if (titleLower === "product one") {
-          normalizedTitle = "Magnetic Car Air Vent Phone Mount";
-          normalizedCat = "Vehicles & Auto";
-          normalizedCatSlug = "vehicles";
-          normalizedPrice = 16.0;
-          normalizedDiscount = 11.99;
-        } else if (titleLower.includes("vengroth")) {
-          normalizedTitle = "Universal HD Car Dashcam & GPS Mount";
-          normalizedCat = "Vehicles & Auto";
-          normalizedCatSlug = "vehicles";
-          normalizedPrice = 65.0;
-          normalizedDiscount = 49.0;
-        } else if (titleLower.includes("floral midi wrap dress") && normalizedCatSlug.includes("book")) {
-          normalizedTitle = "Clean Architecture: A Craftsman's Guide to Software Structure";
-          normalizedPrice = 36.0;
-          normalizedDiscount = 27.99;
-        }
+        const fullPrice = typeof item.fullPrice === "number" ? item.fullPrice : (typeof item.price === "number" ? item.price : 0);
+        const discountPrice = typeof item.discountPrice === "number" ? item.discountPrice : null;
+        const effectivePrice =
+          discountPrice !== null && fullPrice > 0 && discountPrice < fullPrice
+            ? discountPrice
+            : fullPrice;
 
         return {
           uuid: item.uuid || item.id,
+          id: item.id || item.uuid,
           slug: item.slug || item.uuid,
-          title: normalizedTitle,
-          description: item.description || "High quality product on Phsar Digital marketplace.",
-          fullPrice: normalizedPrice,
-          discountPrice: normalizedDiscount,
-          price: normalizedDiscount ?? normalizedPrice,
-          stockQty: item.stockQty ?? 20,
+          title: item.title || "Untitled Product",
+          description: item.description || "",
+          fullPrice,
+          discountPrice,
+          price: effectivePrice,
+          stockQty: item.stockQty ?? 0,
           status: item.status || "ACTIVE",
-          isFeatured: item.isFeatured ?? true,
-          category: { name: normalizedCat, slug: normalizedCatSlug },
-          sellerProfile: {
-            businessName: item.sellerProfile?.businessName || "Phsar Digital Store",
-            sellerId: item.sellerProfile?.sellerId || "seller-live",
-          },
-          averageRating: item.averageRating ?? 4.9,
-          reviewCount: item.reviewCount ?? 18,
-          isFavorite: item.isFavorite ?? false,
-          sold: item.sold ?? 45,
+          isFeatured: item.isFeatured ?? false,
+          thumbnailUri: item.thumbnailUri ?? null,
+          images: item.images ?? null,
+          category: item.category || { name: "General", slug: "general" },
+          sellerProfile: item.sellerProfile || null,
+          averageRating: item.averageRating ?? null,
+          reviewCount: item.reviewCount ?? 0,
+          isFavorite: typeof item.isFavorite === "boolean" ? item.isFavorite : Boolean(item.isFavorite),
+          sold: item.sold ?? 0,
         };
       });
     }
@@ -144,20 +146,8 @@ export async function GET(request: NextRequest) {
     console.warn("Could not fetch upstream live listings:", err);
   }
 
-  // 2. Combine live Swagger listings + Curated marketplace catalog
+  // Return only live Swagger listings from API
   const combined = [...liveItems];
-  for (const curated of CURATED_PRODUCTS) {
-    // Avoid duplicate titles or UUIDs
-    const exists = combined.some(
-      (c) =>
-        c.title.toLowerCase() === curated.title.toLowerCase() ||
-        c.uuid === curated.uuid ||
-        c.slug === curated.slug
-    );
-    if (!exists) {
-      combined.push(curated);
-    }
-  }
 
   let filtered = combined;
 
@@ -286,9 +276,20 @@ export async function GET(request: NextRequest) {
       return false;
     };
 
-    filtered = filtered.filter((p) =>
-      matchesCategory(p.category?.slug || "", p.category?.name || "")
-    );
+  }
+
+  const sellerIdParam = searchParams.get("sellerId");
+  if (sellerIdParam) {
+    const sIdClean = sellerIdParam.toLowerCase().trim();
+    filtered = filtered.filter((p: any) => {
+      const pSellerId = p.sellerProfile?.id || p.sellerProfile?.uuid || p.sellerId || p.seller?.id || p.seller?.uuid;
+      const pSellerSlug = p.sellerProfile?.slug || p.sellerProfile?.businessName;
+      if (!pSellerId && !pSellerSlug) return true;
+      return (
+        String(pSellerId).toLowerCase() === sIdClean ||
+        String(pSellerSlug).toLowerCase() === sIdClean
+      );
+    });
   }
 
 

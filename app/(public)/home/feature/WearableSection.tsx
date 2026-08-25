@@ -5,82 +5,65 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, ArrowRight, Loader2 } from "lucide-react";
-import { ProductCard } from "../ProductCard";
-import { useGetListingsByCategoryQuery } from "@/lib/api/homeApi";
+import {
+  useGetCategoriesQuery,
+  useGetListingsByCategoryQuery,
+} from "@/lib/api/homeApi";
+import ProductCard from "../ProductCard";
 
 const CATEGORY_TABS = [
   { id: "womens-fashion", label: "Women's Dresses", slug: "womens-fashion" },
   { id: "health-beauty", label: "Health & Beauty", slug: "health-beauty" },
   { id: "mens-fashion", label: "Men's Wear", slug: "mens-fashion" },
   { id: "electronics", label: "Electronics", slug: "electronics" },
-  { id: "groceries-essentials", label: "Coffee & Food", slug: "groceries-essentials" },
-];
-
-const DRESS_PRODUCTS = [
   {
-    uuid: "dress-1",
-    title: "Vintage Floral Cottagecore Corset Lace-Up Mini Dress",
-    slug: "vintage-floral-cottagecore-corset-mini-dress",
-    fullPrice: 65,
-    discountPrice: 45,
-    sellerProfile: { businessName: "Dance skirts" },
-    category: { name: "Women's Dresses", slug: "womens-fashion" },
-    thumbnailUri: { uri: "/picture/product_dress_blue_floral.jpg" },
-    averageRating: 4.9,
-    reviewCount: 48,
-    isFavorite: true,
-  },
-  {
-    uuid: "dress-2",
-    title: "Beige Floral Sweetheart Neckline Midi Dress with High Slit",
-    slug: "beige-floral-slit-sweetheart-midi-dress",
-    fullPrice: 85,
-    discountPrice: 58,
-    sellerProfile: { businessName: "Fashion By Srey" },
-    category: { name: "Women's Dresses", slug: "womens-fashion" },
-    thumbnailUri: { uri: "/picture/product_dress_beige_slit.jpg" },
-    averageRating: 4.8,
-    reviewCount: 29,
-    isFavorite: false,
-  },
-  {
-    uuid: "dress-3",
-    title: "French Toile De Jouy Blue Porcelain Vintage Mini Dress",
-    slug: "french-toile-blue-porcelain-vintage-mini-dress",
-    fullPrice: 72,
-    discountPrice: 52,
-    sellerProfile: { businessName: "Dance skirts" },
-    category: { name: "Women's Dresses", slug: "womens-fashion" },
-    thumbnailUri: { uri: "/picture/product_dress_toile_blue.jpg" },
-    averageRating: 4.9,
-    reviewCount: 32,
-    isFavorite: false,
-  },
-  {
-    uuid: "dress-4",
-    title: "Rose Gold Square Watch & Elegant Bracelet Set",
-    slug: "rose-gold-square-watch-bracelet-set",
-    fullPrice: 129,
-    discountPrice: 89,
-    sellerProfile: { businessName: "Jewel & Co." },
-    category: { name: "Women's Fashion", slug: "womens-fashion" },
-    thumbnailUri: { uri: "/picture/pic5.jpg" },
-    averageRating: 4.8,
-    reviewCount: 15,
-    isFavorite: false,
+    id: "groceries-essentials",
+    label: "Coffee & Food",
+    slug: "groceries-essentials",
   },
 ];
 
 export function WearableSection() {
-  const [activeTab, setActiveTab] = React.useState(CATEGORY_TABS[0].slug);
+  /* Tabs come from the live category list so their slugs cannot drift from the
+     API's. The hardcoded set had "health-beauty" and "groceries-essentials"
+     where the API uses "health-and-beauty" and "groceries-and-essentials", so
+     those tabs always queried a slug that does not exist and showed nothing. */
+  const { data: categories = [] } = useGetCategoriesQuery();
+  const tabs = React.useMemo(() => {
+    const bySlug = new Map(
+      categories
+        .filter((category) => category?.slug)
+        .map((category) => [category.slug as string, category]),
+    );
+    const preferred = CATEGORY_TABS.map((tab) => bySlug.get(tab.slug)).filter(
+      Boolean,
+    );
+    const rest = categories.filter(
+      (category) =>
+        category?.slug &&
+        !CATEGORY_TABS.some((tab) => tab.slug === category.slug),
+    );
+    const chosen = [...preferred, ...rest].slice(0, 5);
+    return chosen.length > 0
+      ? chosen.map((category) => ({
+          id: category!.slug as string,
+          slug: category!.slug as string,
+          label: category!.name ?? (category!.slug as string),
+        }))
+      : CATEGORY_TABS;
+  }, [categories]);
 
-  const { data: categoryResponse, isLoading } = useGetListingsByCategoryQuery(activeTab);
+  const [selectedTab, setSelectedTab] = React.useState("");
+  const activeTab = selectedTab || tabs[0]?.slug || CATEGORY_TABS[0].slug;
+  const setActiveTab = setSelectedTab;
+
+  const { data: categoryResponse, isLoading } =
+    useGetListingsByCategoryQuery(activeTab, { skip: !activeTab });
 
   const apiListings =
     categoryResponse?.data || (categoryResponse as any)?.content || [];
 
-  const listings =
-    apiListings && apiListings.length > 0 ? apiListings : DRESS_PRODUCTS;
+  const listings = apiListings || [];
 
   return (
     <section className="mx-auto w-full max-w-[1380px] px-4 sm:px-6 py-6 font-sans">
@@ -97,7 +80,7 @@ export function WearableSection() {
 
         {/* Tab Buttons */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-          {CATEGORY_TABS.map((tab) => (
+          {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.slug)}
@@ -115,7 +98,6 @@ export function WearableSection() {
 
       {/* Grid: Left Collection Banner + Right Products */}
       <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-5 items-stretch">
-        
         {/* Left Side Banner */}
         <div className="relative min-h-[300px] rounded-2xl overflow-hidden bg-gradient-to-b from-[#FAF5EE] to-[#EFE7D8] dark:from-zinc-900 dark:to-zinc-800 p-6 flex flex-col justify-between border border-amber-100/60 dark:border-zinc-800 shadow-xs">
           <Image
@@ -174,7 +156,6 @@ export function WearableSection() {
             </motion.div>
           </AnimatePresence>
         )}
-
       </div>
     </section>
   );

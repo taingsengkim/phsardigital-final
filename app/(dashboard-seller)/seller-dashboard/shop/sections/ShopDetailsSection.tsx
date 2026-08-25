@@ -12,6 +12,7 @@ import {
 } from "@/lib/api/sellerApi";
 import { AuthToast, type ToastState } from "@/components/auth/AuthToast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { readApiError } from "@/lib/api/api-error";
 
 /** Field caps from SellerProfileUpdateRequest. */
 const MAX = {
@@ -50,13 +51,6 @@ function toDraft(profile: SellerProfile | null | undefined): Draft {
     logoObjectName: null,
     logoPreview: null,
   };
-}
-
-function readApiError(err: unknown, fallback: string): string {
-  const e = err as {
-    data?: { message?: string; errorDetails?: { fieldMessage?: string }[] };
-  };
-  return e?.data?.errorDetails?.[0]?.fieldMessage || e?.data?.message || fallback;
 }
 
 export default function ShopDetailsSection() {
@@ -160,7 +154,7 @@ export default function ShopDetailsSection() {
     } catch (err) {
       setToast({
         type: "error",
-        message: readApiError(err, "Could not save your shop details."),
+        message: readApiError(err, "Could not save your shop details.", "That shop name is already taken by another seller. Please choose a different name."),
       });
     }
   }

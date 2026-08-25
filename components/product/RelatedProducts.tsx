@@ -3,6 +3,7 @@ import Image from "next/image";
 import { ChevronRight, Star } from "lucide-react";
 import { getListings } from "@/app/api/listings";
 import type { Listing } from "@/lib/types";
+import { getListingPrice } from "@/lib/api/listing-price";
 
 type Props = {
   categorySlug?: string;
@@ -14,6 +15,7 @@ function ProductCard({ listing }: { listing: Listing }) {
     listing.images?.find((img) => img.is_primary) ??
     listing.images?.[0];
   const imgSrc = primary?.url;
+  const price = getListingPrice(listing);
 
   return (
     <article className="group relative flex flex-col overflow-hidden rounded-2xl bg-white shadow-[0_2px_12px_rgba(36,31,53,0.08)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_32px_rgba(108,76,216,0.18)]">
@@ -61,7 +63,7 @@ function ProductCard({ listing }: { listing: Listing }) {
         {/* price */}
         <div className="mt-auto pt-1">
           <span className="text-[18px] font-extrabold text-[#6C4CD8]">
-            ${listing.price.toFixed(2)}
+            ${price.toFixed(2)}
           </span>
         </div>
       </div>

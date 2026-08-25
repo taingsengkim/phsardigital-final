@@ -10,6 +10,7 @@ import {
 } from "@/lib/api/sellerApi";
 import { AuthToast, type ToastState } from "@/components/auth/AuthToast";
 import { cn } from "@/lib/utils";
+import { readApiError } from "@/lib/api/api-error";
 
 const MAX_PHONE = 20;
 const MAX_SOCIALS = 6;
@@ -26,12 +27,6 @@ function toDraft(profile: SellerProfile | null | undefined): Draft {
   };
 }
 
-function readApiError(err: unknown, fallback: string): string {
-  const e = err as {
-    data?: { message?: string; errorDetails?: { fieldMessage?: string }[] };
-  };
-  return e?.data?.errorDetails?.[0]?.fieldMessage || e?.data?.message || fallback;
-}
 
 /** Accepts a bare domain and normalises it, so sellers need not type https://. */
 function normaliseUrl(value: string): string {
@@ -100,10 +95,12 @@ export default function ShopContactSection() {
       return;
     }
 
-    // Blank rows are just UI scaffolding — drop them before sending.
-    const links = current.socialLink
-      .map(normaliseUrl)
-      .filter((link) => link !== "");
+    // Blank rows are just UI scaffolding — drop them before sending. Dedupe
+    // too: normalising turns "shop.com" and "https://shop.com" into the same
+    // link, and sending it twice trips a uniqueness constraint upstream.
+    const links = Array.from(
+      new Set(current.socialLink.map(normaliseUrl).filter((link) => link !== "")),
+    );
 
     const payload: UpdateSellerProfilePayload = {};
     if (current.phoneNumber !== saved.phoneNumber)
@@ -126,7 +123,7 @@ export default function ShopContactSection() {
     } catch (err) {
       setToast({
         type: "error",
-        message: readApiError(err, "Could not save your contact details."),
+        message: readApiError(err, "Could not save your contact details.", "That phone number or social link is already registered to another shop. Please use a different one."),
       });
     }
   }

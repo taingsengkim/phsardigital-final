@@ -28,6 +28,8 @@ type GalleryImage = {
  * thumbnail leads the gallery and the rest follow their `sortOrder`, which is
  * what PATCH /listings/{uuid}/images/order writes.
  */
+import { getPrimaryImage } from "@/app/(public)/home/listing-helpers";
+
 function buildGallery(
   images: ApiImage[] | null | undefined,
   thumbnail: ApiImage | null | undefined,
@@ -44,7 +46,7 @@ function buildGallery(
 
   ordered.forEach((image, index) => {
     const url = image.uri as string;
-    if (seen.has(url)) return;
+    if (!url || seen.has(url)) return;
     seen.add(url);
     gallery.push({
       key: image.uuid ?? `${url}-${index}`,
@@ -52,6 +54,15 @@ function buildGallery(
       alt: `${title} — image ${gallery.length + 1}`,
     });
   });
+
+  if (gallery.length === 0) {
+    const fallbackUrl = getPrimaryImage({ title });
+    gallery.push({
+      key: `fallback-${title}`,
+      url: fallbackUrl,
+      alt: `${title} — product image`,
+    });
+  }
 
   return gallery;
 }

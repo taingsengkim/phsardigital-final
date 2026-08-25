@@ -17,21 +17,7 @@ const CATEGORY_IMAGE_MAP: Record<string, string> = {
   "toys-and-baby-care": "/picture/pic8.jpg",
   "vehicles": "/picture/seller_cover_auto.jpg",
   "womens-fashion": "/picture/product_dress_blue_floral.jpg",
-  "mens-fashion": "/picture/pic6.jpg",
 };
-
-const FALLBACK_CATEGORIES = [
-  { id: "1", name: "Women's Fashion", slug: "womens-fashion" },
-  { id: "2", name: "Men's Fashion", slug: "mens-fashion" },
-  { id: "3", name: "Health & Beauty", slug: "health-and-beauty" },
-  { id: "4", name: "Electronics", slug: "electronics" },
-  { id: "5", name: "Groceries & Essentials", slug: "groceries-and-essentials" },
-  { id: "6", name: "Vehicles & Auto", slug: "vehicles" },
-  { id: "7", name: "Home & Living", slug: "home-and-living" },
-  { id: "8", name: "Books & Stationery", slug: "books-and-stationery" },
-  { id: "9", name: "Sports & Outdoors", slug: "sports-and-outdoors" },
-  { id: "10", name: "Toys & Baby Care", slug: "toys-and-baby-care" },
-];
 
 function getCategoryPicture(slug: string, name: string, customImage?: string): string {
   if (customImage && typeof customImage === "string" && (customImage.startsWith("/") || customImage.startsWith("http"))) {
@@ -63,17 +49,12 @@ export function PopularCategoriesStrip() {
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
 
   const categories =
-    apiCategories && apiCategories.length > 0
-      ? apiCategories.map((c: any) => ({
-          id: c.uuid || String(c.id),
-          name: c.name,
-          slug: c.slug || String(c.id),
-          image_url: getCategoryPicture(c.slug || "", c.name || "", c.image_url || c.imageUrl),
-        }))
-      : FALLBACK_CATEGORIES.map((c) => ({
-          ...c,
-          image_url: getCategoryPicture(c.slug, c.name),
-        }));
+    (apiCategories || []).map((c: any) => ({
+      id: c.uuid || String(c.id),
+      name: c.name,
+      slug: c.slug || String(c.id),
+      image_url: getCategoryPicture(c.slug || "", c.name || "", c.image_url || c.imageUrl),
+    }));
 
   const scroll = (direction: "left" | "right") => {
     if (scrollContainerRef.current) {

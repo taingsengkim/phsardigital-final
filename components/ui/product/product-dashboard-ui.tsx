@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { ChevronsUpDown, Activity, ShoppingBag, Loader2, Sparkles } from "lucide-react";
+import Link from "next/link";
+import { ChevronsUpDown, Activity, ShoppingBag, Loader2, Plus, Sparkles } from "lucide-react";
 import { OverviewCard } from "./overview-card";
 import { ProductActivity } from "./product-activity";
 import { ProductViews } from "./product-views";
@@ -79,7 +80,13 @@ export const ProductDashboardUI: React.FC = () => {
             Manage your store inventory, track listing sales, and add new products
           </p>
         </div>
-
+        <Link
+          href="/seller-dashboard/products/new"
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#6C4CD8] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#5d3fc4]"
+        >
+          <Plus className="size-4" />
+          Add new product
+        </Link>
       </div>
 
       {/* Overview Section */}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -20,17 +20,130 @@ import {
   Clock,
   ShieldCheck,
   Award,
+  Loader2,
 } from "lucide-react";
 import { MOCK_STORES, DEFAULT_STORE_DETAILS } from "../mockStores";
 import type { StoreDetails, StoreProduct } from "../types";
 import { ProductCard } from "@/app/(public)/home/ProductCard";
+import { getFileUrl } from "@/lib/utils";
 
 export default function StoreDetailPageClient({ slug }: { slug?: string }) {
   const safeSlug = slug || "storee-corner";
-  const store: StoreDetails = MOCK_STORES[safeSlug] ?? {
-    ...DEFAULT_STORE_DETAILS,
-    name: safeSlug.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
+  const mockStore = MOCK_STORES[safeSlug];
+
+  const [sellerProfile, setSellerProfile] = useState<any>(null);
+  const [sellerListings, setSellerListings] = useState<any[]>([]);
+  const [sellerReviews, setSellerReviews] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadStoreData() {
+      setLoading(true);
+      try {
+        const [profileRes, listingsRes, reviewsRes] = await Promise.all([
+          fetch(`/api/sellers/${encodeURIComponent(safeSlug)}`).catch(() => null),
+          fetch(`/api/sellers/${encodeURIComponent(safeSlug)}/listings`).catch(() => null),
+          fetch(`/api/reviews/sellers/${encodeURIComponent(safeSlug)}`).catch(() => null),
+        ]);
+
+        if (profileRes && profileRes.ok) {
+          const pData = await profileRes.json();
+          if (isMounted && pData) setSellerProfile(pData);
+        }
+
+        if (listingsRes && listingsRes.ok) {
+          const lData = await listingsRes.json();
+          const items = lData?.content || lData?.data || (Array.isArray(lData) ? lData : []);
+          if (isMounted) setSellerListings(items);
+        }
+
+        if (reviewsRes && reviewsRes.ok) {
+          const rData = await reviewsRes.json();
+          const items = rData?.content || rData?.data || (Array.isArray(rData) ? rData : []);
+          if (isMounted) setSellerReviews(items);
+        }
+      } catch (err) {
+        console.error("Error loading store details:", err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+
+    loadStoreData();
+    return () => { isMounted = false; };
+  }, [safeSlug]);
+
+  const name =
+    sellerProfile?.businessName ||
+    sellerProfile?.name ||
+    (mockStore ? mockStore.name : safeSlug.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()));
+
+  const avatarUrl =
+    sellerProfile?.logoUri ||
+    (sellerProfile?.logoObjectName ? getFileUrl(sellerProfile.logoObjectName) : null) ||
+    "/picture/pic1.jpg";
+
+  const tagline =
+    sellerProfile?.description ||
+    sellerProfile?.biography ||
+    "Official Verified Seller on Phsar Digital";
+
+  const location =
+    [sellerProfile?.address, sellerProfile?.city, sellerProfile?.province]
+      .filter(Boolean)
+      .join(", ") ||
+    sellerProfile?.googleMapUrl ||
+    "Phnom Penh, Cambodia";
+
+  const rating = sellerProfile?.averageRating ?? 5.0;
+  const reviewCount = sellerProfile?.reviewCount ?? sellerReviews.length ?? 0;
+
+  const rawProducts = sellerListings;
+
+  const formattedReviews = (
+    sellerReviews.length > 0
+      ? sellerReviews
+      : sellerProfile?.reviews || []
+  ).map((rev: any, idx: number) => ({
+    id: rev.uuid || rev.id || idx,
+    userName: rev.buyer?.fullName || rev.buyer?.username || rev.userName || "Verified Buyer",
+    rating: rev.rating ?? 5,
+    date: rev.createdAt
+      ? new Date(rev.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })
+      : (rev.date || "Recent"),
+    comment: rev.comment || rev.content || "Great quality product and excellent service!",
+    productName: rev.listing?.title || rev.productName || "Store Item",
+  }));
+
+  const store: StoreDetails = {
+    id: sellerProfile?.id || sellerProfile?.uuid || safeSlug,
     slug: safeSlug,
+    name,
+    tagline,
+    avatarUrl,
+    coverUrl: sellerProfile?.coverUri || sellerProfile?.coverUrl || "/picture/seller_cover_electronics.jpg",
+    verified: sellerProfile?.isActive !== false,
+    rating,
+    reviewCount,
+    productCount: rawProducts.length,
+    followersCount: sellerProfile?.followersCount ?? 0,
+    location,
+    joinedYear: sellerProfile?.createdAt ? String(new Date(sellerProfile.createdAt).getFullYear()) : "2024",
+    description: tagline,
+    fullStory: sellerProfile?.description || sellerProfile?.biography || `Welcome to ${name}! We offer high quality authentic products and direct seller support.`,
+    businessHours: sellerProfile?.businessHours || "Monday – Sunday: 8:00 AM – 8:30 PM",
+    responseRate: sellerProfile?.responseRate || "100% within 1 hour",
+    shippingTime: sellerProfile?.shippingTime || "Express (Same-day dispatch)",
+    categories: Array.from(
+      new Set(
+        rawProducts
+          .map((p: any) => p.category?.name || p.category)
+          .filter(Boolean)
+      )
+    ) as string[],
+    products: rawProducts as any,
+    reviews: formattedReviews as any,
   };
 
   const [isFollowing, setIsFollowing] = useState(false);
@@ -71,13 +184,24 @@ export default function StoreDetailPageClient({ slug }: { slug?: string }) {
   }
 
   // Filter products
-  const displayProducts = store.products.filter((p) => {
-    const matchesTab = activeTab !== "offers" || (p.discountPercent && p.discountPercent > 0);
-    const matchesCategory = selectedCategory === "All" || p.category === selectedCategory;
+  const displayProducts = store.products.filter((p: any) => {
+    const isDiscounted = (p.discountPrice && p.fullPrice && p.fullPrice > p.discountPrice) || (p.discountPercent && p.discountPercent > 0);
+    const matchesTab = activeTab !== "offers" || isDiscounted;
+    const catName = p.category?.name || p.category || "";
+    const matchesCategory = selectedCategory === "All" || catName === selectedCategory;
     const q = searchQuery.toLowerCase().trim();
-    const matchesSearch = !q || p.title.toLowerCase().includes(q);
+    const matchesSearch = !q || (p.title || "").toLowerCase().includes(q);
     return matchesTab && matchesCategory && matchesSearch;
   });
+
+  if (loading && !sellerProfile) {
+    return (
+      <div className="flex flex-col items-center justify-center py-28 space-y-4">
+        <Loader2 className="size-10 animate-spin text-[#6C4CD8]" />
+        <p className="text-sm font-bold text-[#7C7596]">Loading store details...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -162,7 +286,7 @@ export default function StoreDetailPageClient({ slug }: { slug?: string }) {
               )}
             </motion.button>
 
-            <Link href="/messages">
+            <Link href={`/messages?seller=${encodeURIComponent(safeSlug)}`}>
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.94 }}
@@ -253,9 +377,9 @@ export default function StoreDetailPageClient({ slug }: { slug?: string }) {
           {/* Product Grid */}
           {displayProducts.length > 0 ? (
             <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 font-sans">
-              {displayProducts.map((product) => (
+              {displayProducts.map((product: any, idx: number) => (
                 <ProductCard
-                  key={product.id}
+                  key={product.uuid || product.id || idx}
                   listing={{
                     ...product,
                     sellerProfile: { businessName: store.name },
@@ -483,7 +607,10 @@ export default function StoreDetailPageClient({ slug }: { slug?: string }) {
                   Have questions about products, sizing, or bulk orders? Chat directly with {store.name}&apos;s customer service.
                 </p>
 
-                <Link href="/messages" className="block">
+                <Link
+                  href={`/messages?seller=${encodeURIComponent(safeSlug)}`}
+                  className="block"
+                >
                   <motion.button
                     whileHover={{ scale: 1.03 }}
                     whileTap={{ scale: 0.95 }}

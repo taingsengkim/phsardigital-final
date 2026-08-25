@@ -27,46 +27,6 @@ interface BannerSlide {
   accentBg?: string;
 }
 
-const DEFAULT_SLIDES: BannerSlide[] = [
-  {
-    id: "natural-care",
-    tag: "GET IT NOW",
-    iconType: "leaf",
-    title: "NATURAL CARE THAT WORKS",
-    buttonText: "BUY NOW",
-    image: "/picture/hero_natural_care.jpg",
-    link: "/products?category=health-beauty",
-  },
-  {
-    id: "summer-sale",
-    tag: "SUMMER SALE",
-    iconType: "sun",
-    title: "LIMITED TIME OFFER",
-    description: "Premium skincare for a healthy, radiant you.",
-    buttonText: "BUY NOW →",
-    image: "/picture/hero_slide_summer_sale.jpg",
-    link: "/products",
-  },
-  {
-    id: "super-sale",
-    tag: "SUPER SALE",
-    iconType: "sparkle",
-    title: "BIGGEST SALE OF THE YEAR",
-    buttonText: "BUY NOW →",
-    image: "/picture/hero_slide_super_sale.jpg",
-    link: "/products",
-  },
-];
-
-const SIDE_PROMO = {
-  tag: "STYLE THAT SPEAKS",
-  iconType: "leaf" as const,
-  title: "THE NEW STANDARD",
-  buttonText: "BUY NOW →",
-  image: "/picture/hero_inhaler_promo.jpg",
-  link: "/products?category=health-beauty",
-};
-
 export function HeroBanner() {
   const [currentSlide, setCurrentSlide] = React.useState(0);
   const [isHovered, setIsHovered] = React.useState(false);
@@ -74,24 +34,58 @@ export function HeroBanner() {
 
   // Fetch real data from APIs
   const { data: featuredResponse, isLoading: isLoadingFeatured } = useGetFeaturedListingsQuery();
-  const { data: categories = [], isLoading: isLoadingCategories } = useGetCategoriesQuery();
+  const { data: categories = [] } = useGetCategoriesQuery();
 
   const featuredListings =
     featuredResponse?.data || (featuredResponse as any)?.content || [];
 
-  // Adapt slides if featured API listings are returned
-  const slides = React.useMemo(() => {
-    if (featuredListings && featuredListings.length >= 3) {
-      return DEFAULT_SLIDES.map((slide, idx) => {
-        const item = featuredListings[idx];
-        if (!item) return slide;
+  // Adapt slides dynamically from featured API listings
+  const slides: BannerSlide[] = React.useMemo(() => {
+    if (featuredListings && featuredListings.length > 0) {
+      return featuredListings.slice(0, 5).map((item: any, idx: number) => {
+        const primaryImage =
+          typeof item.thumbnailUri === "string"
+            ? item.thumbnailUri
+            : item.thumbnailUri?.uri ||
+              item.images?.[0]?.uri ||
+              item.images?.[0]?.url ||
+              "/picture/product_dress_blue_floral.jpg";
+
         return {
-          ...slide,
-          link: item.slug ? `/products/${item.slug}` : slide.link,
+          id: item.uuid || item.id || `slide-${idx}`,
+          tag: item.category?.name ? item.category.name.toUpperCase() : "FEATURED PRODUCT",
+          iconType: (idx % 3 === 0 ? "leaf" : idx % 3 === 1 ? "sun" : "sparkle") as "leaf" | "sun" | "sparkle",
+          title: item.title ? item.title.toUpperCase() : "SPECIAL OFFER",
+          description: item.description || null,
+          buttonText: "BUY NOW →",
+          image: primaryImage,
+          link: `/products/${item.uuid || item.slug || item.id}`,
         };
       });
     }
-    return DEFAULT_SLIDES;
+    return [];
+  }, [featuredListings]);
+
+  // Dynamic Side Promo using the 2nd API listing if available
+  const sidePromo = React.useMemo(() => {
+    if (featuredListings && featuredListings.length > 1) {
+      const item = featuredListings[1];
+      const primaryImage =
+        typeof item.thumbnailUri === "string"
+          ? item.thumbnailUri
+          : item.thumbnailUri?.uri ||
+            item.images?.[0]?.uri ||
+            item.images?.[0]?.url ||
+            "/picture/seller_cover_electronics.jpg";
+      return {
+        tag: item.category?.name ? item.category.name.toUpperCase() : "SPECIAL ITEM",
+        title: item.title ? item.title.toUpperCase() : "HOT DEAL",
+        buttonText: "SHOP NOW →",
+        image: primaryImage,
+        link: `/products/${item.uuid || item.slug || item.id}`,
+      };
+    }
+    return null;
   }, [featuredListings]);
 
   // Autoplay functionality
@@ -130,6 +124,23 @@ export function HeroBanner() {
         return <Sparkles className="size-3.5 text-[#1B2533]/70 dark:text-white/70 inline-block" />;
     }
   };
+
+  if (isLoadingFeatured && slides.length === 0) {
+    return (
+      <section className="mx-auto w-full max-w-[1380px] px-4 sm:px-6 py-4 lg:py-6 font-sans">
+        <div className="grid grid-cols-1 lg:grid-cols-[2.35fr_1fr] gap-4 sm:gap-5 items-stretch">
+          <div className="relative min-h-[380px] sm:min-h-[420px] md:min-h-[460px] lg:min-h-[480px] rounded-[24px] sm:rounded-[32px] overflow-hidden bg-slate-100 dark:bg-zinc-900 animate-pulse flex items-center justify-center">
+            <Loader2 className="size-8 animate-spin text-[#6C4CD8]" />
+          </div>
+          <div className="hidden lg:block min-h-[480px] rounded-[32px] bg-slate-100 dark:bg-zinc-900 animate-pulse" />
+        </div>
+      </section>
+    );
+  }
+
+  if (slides.length === 0) {
+    return null;
+  }
 
   return (
     <section className="mx-auto w-full max-w-[1380px] px-4 sm:px-6 py-4 lg:py-6 font-sans">
@@ -231,7 +242,7 @@ export function HeroBanner() {
 
           {/* Pagination Indicators (Bottom Center) */}
           <div className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
-            {slides.map((_, idx) => (
+            {slides.map((_: unknown, idx: number) => (
               <button
                 key={idx}
                 onClick={() => {
@@ -250,44 +261,46 @@ export function HeroBanner() {
         </div>
 
         {/* ================= RIGHT / SIDE PROMO BANNER ================= */}
-        <div className="relative min-h-[280px] sm:min-h-[340px] lg:min-h-[480px] rounded-[24px] sm:rounded-[32px] overflow-hidden shadow-sm border border-slate-200/60 dark:border-zinc-800/80 bg-[#DFEBF4] dark:bg-zinc-900 flex flex-col justify-between p-6 sm:p-8">
-          
-          {/* Background Image */}
-          <Image
-            src={SIDE_PROMO.image}
-            alt={SIDE_PROMO.title}
-            fill
-            sizes="(max-width: 1024px) 100vw, 30vw"
-            className="object-cover object-bottom sm:object-center select-none"
-          />
+        {sidePromo && (
+          <div className="relative min-h-[280px] sm:min-h-[340px] lg:min-h-[480px] rounded-[24px] sm:rounded-[32px] overflow-hidden shadow-sm border border-slate-200/60 dark:border-zinc-800/80 bg-[#DFEBF4] dark:bg-zinc-900 flex flex-col justify-between p-6 sm:p-8">
+            
+            {/* Background Image */}
+            <Image
+              src={sidePromo.image}
+              alt={sidePromo.title}
+              fill
+              sizes="(max-width: 1024px) 100vw, 30vw"
+              className="object-cover object-bottom sm:object-center select-none"
+            />
 
-          {/* Soft gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-b from-[#DFEBF4]/90 via-[#DFEBF4]/30 to-transparent dark:from-zinc-900/90 dark:via-zinc-900/30 dark:to-transparent" />
+            {/* Soft gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-b from-[#DFEBF4]/90 via-[#DFEBF4]/30 to-transparent dark:from-zinc-900/90 dark:via-zinc-900/30 dark:to-transparent" />
 
-          {/* Side Banner Content */}
-          <div className="relative z-10 space-y-2.5 sm:space-y-3 max-w-[260px]">
-            {/* Overline */}
-            <div className="flex items-center gap-1.5 text-[11px] font-semibold tracking-[0.2em] text-[#2D3748] dark:text-zinc-300 uppercase">
-              <Leaf className="size-3.5 text-[#1B2533]/70 dark:text-white/70 inline-block" />
-              <span>{SIDE_PROMO.tag}</span>
-            </div>
+            {/* Side Banner Content */}
+            <div className="relative z-10 space-y-2.5 sm:space-y-3 max-w-[260px]">
+              {/* Overline */}
+              <div className="flex items-center gap-1.5 text-[11px] font-semibold tracking-[0.2em] text-[#2D3748] dark:text-zinc-300 uppercase">
+                <Leaf className="size-3.5 text-[#1B2533]/70 dark:text-white/70 inline-block" />
+                <span>{sidePromo.tag}</span>
+              </div>
 
-            {/* Title */}
-            <h2 className="font-serif text-2xl sm:text-3xl font-medium leading-tight tracking-tight text-[#111827] dark:text-white uppercase">
-              {SIDE_PROMO.title}
-            </h2>
+              {/* Title */}
+              <h2 className="font-serif text-2xl sm:text-3xl font-medium leading-tight tracking-tight text-[#111827] dark:text-white uppercase line-clamp-3">
+                {sidePromo.title}
+              </h2>
 
-            {/* Button */}
-            <div className="pt-2">
-              <Link
-                href={SIDE_PROMO.link}
-                className="inline-flex items-center gap-2 rounded-full bg-[#111827] dark:bg-white text-white dark:text-[#111827] px-6 py-2.5 text-xs font-semibold tracking-wider uppercase transition-all duration-300 hover:bg-black dark:hover:bg-zinc-100 hover:scale-105 active:scale-95 shadow-sm"
-              >
-                <span>{SIDE_PROMO.buttonText}</span>
-              </Link>
+              {/* Button */}
+              <div className="pt-2">
+                <Link
+                  href={sidePromo.link}
+                  className="inline-flex items-center gap-2 rounded-full bg-[#111827] dark:bg-white text-white dark:text-[#111827] px-6 py-2.5 text-xs font-semibold tracking-wider uppercase transition-all duration-300 hover:bg-black dark:hover:bg-zinc-100 hover:scale-105 active:scale-95 shadow-sm"
+                >
+                  <span>{sidePromo.buttonText}</span>
+                </Link>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
       </div>
     </section>

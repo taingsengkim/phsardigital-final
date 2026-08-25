@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { MinusIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { updateCartItem, removeCartItem } from "@/app/api/cart";
 import { useState } from "react";
+import { getListingPrice } from "@/lib/api/listing-price";
 
 type Props = {
   item: CartItem;
@@ -17,6 +18,7 @@ export default function CartItemRow({ item, onUpdate }: Props) {
   const [loading, setLoading] = useState(false);
   const listing = item.listing;
   const image = listing?.images?.find((i) => i.is_primary) ?? listing?.images?.[0];
+  const unitPrice = listing ? getListingPrice(listing) : 0;
 
   async function changeQty(delta: number) {
     const next = item.quantity + delta;
@@ -78,7 +80,7 @@ export default function CartItemRow({ item, onUpdate }: Props) {
           </>
         )}
         <p className="mt-1 text-sm text-muted-foreground">
-          ${listing?.price.toFixed(2)} each
+          ${unitPrice.toFixed(2)} each
         </p>
 
         {/* quantity controls */}
@@ -111,8 +113,8 @@ export default function CartItemRow({ item, onUpdate }: Props) {
 
       {/* subtotal + remove */}
       <div className="flex flex-col items-end gap-2">
-        <p className="text-sm font-semibold">
-          ${((listing?.price ?? 0) * item.quantity).toFixed(2)}
+        <p className="text-sm font-[#6C4CD8] font-semibold">
+          ${(unitPrice * item.quantity).toFixed(2)}
         </p>
         <Button
           variant="ghost"

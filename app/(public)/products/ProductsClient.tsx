@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { useGetListingsQuery } from "@/lib/api/homeApi";
 import { MOCK_PRODUCTS } from "@/lib/mock-products";
 import { ProductCard } from "@/app/(public)/home/ProductCard";
+import { getPrimaryImage } from "@/app/(public)/home/listing-helpers";
 
 function usd(n: number) {
   return (n || 0).toLocaleString("en-US", { style: "currency", currency: "USD" });
@@ -69,11 +70,11 @@ export default function ProductsClient() {
       : !isLoading
         ? categorySlug
           ? MOCK_PRODUCTS.filter((p) => {
-              const raw = categorySlug.toLowerCase();
-              const cSlug = (p.category?.slug || "").toLowerCase();
-              const cName = (p.category?.name || "").toLowerCase();
-              return cSlug.includes(raw) || raw.includes(cSlug) || cName.includes(raw);
-            })
+            const raw = categorySlug.toLowerCase();
+            const cSlug = (p.category?.slug || "").toLowerCase();
+            const cName = (p.category?.name || "").toLowerCase();
+            return cSlug.includes(raw) || raw.includes(cSlug) || cName.includes(raw);
+          })
           : MOCK_PRODUCTS
         : [];
 
@@ -167,14 +168,7 @@ export default function ProductsClient() {
                 ? Math.round(((fullPrice - discountPrice) / fullPrice) * 100)
                 : item.discountPercent || null;
 
-            const image =
-              item.thumbnailUri?.uri ||
-              item.thumbnailUri?.url ||
-              (typeof item.thumbnailUri === "string" ? item.thumbnailUri : null) ||
-              item.images?.[0]?.uri ||
-              item.images?.[0]?.url ||
-              item.image ||
-              "/picture/pic1.jpg";
+            const image = getPrimaryImage(item);
 
             const storeName =
               item.sellerProfile?.businessName ||
@@ -182,8 +176,8 @@ export default function ProductsClient() {
               item.sellerName ||
               "Phsar Store";
 
-            const rating = item.averageRating ?? item.rating ?? 4.8;
-            const reviewCount = item.reviewCount ?? item.review_count ?? 12;
+            const rating = item.averageRating ?? item.rating ?? 0;
+            const reviewCount = item.reviewCount ?? item.review_count ?? 0;
             const isSaved =
               favoriteMap[itemUuid] !== undefined
                 ? favoriteMap[itemUuid]
@@ -194,7 +188,7 @@ export default function ProductsClient() {
                 key={itemUuid}
                 className="group relative flex gap-3 overflow-hidden rounded-xl bg-white shadow-[0_1px_4px_rgba(36,31,53,0.08)] transition hover:shadow-md"
               >
-                <Link href={`/products/${slug}`} className="flex flex-1 gap-3">
+                <Link href={`/products/${itemUuid || slug}`} className="flex flex-1 gap-3">
                   <div className="relative h-28 w-28 flex-shrink-0 overflow-hidden bg-[#F5F3FA]">
                     <Image
                       src={image}

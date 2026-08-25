@@ -64,8 +64,9 @@ export type Listing = {
   title: string;
   description: string;
   price: number;
-  fullPrice?: number;
-  discountPrice?: number;
+  /** Current API fields; `price` remains for legacy listing responses. */
+  fullPrice?: number | null;
+  discountPrice?: number | null;
   category_id?: number;
   categoryUuid?: string;
   stock?: number;
@@ -173,6 +174,11 @@ export type ApiListingAttribute = {
   listingUuid?: string;
 };
 
+export type ApiListingSpecificationGroup = {
+  name?: string | null;
+  attributes?: ApiListingAttribute[] | null;
+};
+
 export type ApiCategorySummary = {
   id?: number | string;
   uuid?: string;
@@ -208,6 +214,7 @@ export type ApiListing = {
   sold?: number | null;
   images?: ApiImage[] | null;
   listingAttributes?: ApiListingAttribute[] | null;
+  specifications?: ApiListingSpecificationGroup[] | null;
   createdAt?: string | null;
   lastModifiedAt?: string | null;
   /** server-computed aggregate — no need to derive it from fetched reviews */
@@ -280,6 +287,8 @@ export type RelatedListing = {
   title?: string | null;
   slug?: string | null;
   price?: number | null;
+  fullPrice?: number | null;
+  discountPrice?: number | null;
   stockQty?: number | null;
   sold?: number | null;
   thumbnailUri?: string | null;
