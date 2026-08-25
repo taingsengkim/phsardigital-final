@@ -1,35 +1,47 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
-/** Mirrors AddressResponse from the platform API. */
+/** Mirrors AddressResponse. */
 export interface Address {
   id: string;
+  /** Cambodian addressing splits at the capital: CITY means Phnom Penh. */
+  type?: "PROVINCE" | "CITY" | null;
   label?: string | null;
   recipient?: string | null;
   phone?: string | null;
-  line1?: string | null;
-  line2?: string | null;
-  city?: string | null;
+  locationName?: string | null;
+  streetNo?: string | null;
   province?: string | null;
+  district?: string | null;
+  commune?: string | null;
+  village?: string | null;
+  /** Server-composed one-line address; read-only. */
+  formattedAddress?: string | null;
   latitude?: number | null;
   longitude?: number | null;
   isDefault?: boolean | null;
+  landmarkPhotos?: { url?: string; caption?: string }[] | null;
 }
 
-/** Mirrors AddressRequest — `line1` is the only field the API requires. */
+/** Mirrors AddressRequest. Every field is optional. */
 export interface CreateAddressRequest {
+  type?: "PROVINCE" | "CITY";
   label?: string;
   recipient?: string;
   phone?: string;
-  line1: string;
-  line2?: string;
-  city?: string;
+  locationName?: string;
+  streetNo?: string;
   province?: string;
+  district?: string;
+  commune?: string;
+  village?: string;
   latitude?: number;
   longitude?: number;
   isDefault?: boolean;
+  /** objectName comes from a file upload; at most three. */
+  landmarkPhotos?: { objectName: string; caption?: string }[];
 }
 
-/** Mirrors UpdateAddressRequest — accepts isDefault since the 18 Aug 2026 update. */
+/** Mirrors UpdateAddressRequest — the same fields, all optional. */
 export type UpdateAddressRequest = Partial<CreateAddressRequest>;
 
 export const addressApi = createApi({

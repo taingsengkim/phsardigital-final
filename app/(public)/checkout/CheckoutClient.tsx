@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -39,6 +39,11 @@ import { cn, displayImageUrl } from "@/lib/utils";
 import { getListingBySlug } from "@/app/api/listings";
 import { getCart, getCarts, updateCartItemQty, deleteCartItem, deleteSellerCart } from "@/app/api/cart";
 import { useCheckoutMutation } from "@/lib/redux/service/purchaseApi";
+import {
+  useCreateAddressMutation,
+  useGetAddressesQuery,
+  type Address,
+} from "@/lib/api/addressApi";
 import type { Listing } from "@/lib/types";
 
 type CheckoutItem = {
@@ -90,6 +95,37 @@ type ChatThread = {
   lastTime: string;
   unreadCount?: number;
 };
+
+/**
+ * Address-book entries are uuids; this screen's built-in samples are "home",
+ * "office". Only a real one can be sent to the API as an addressId.
+ */
+function isServerAddressId(id: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+}
+
+/** AddressResponse -> the shape this screen renders. */
+function toSavedAddress(address: Address): SavedAddress {
+  const isCity = address.type === "CITY";
+  return {
+    id: address.id,
+    label: address.label?.trim() || address.locationName?.trim() || "Saved address",
+    isDefault: Boolean(address.isDefault),
+    fullName: address.recipient ?? "",
+    phone: address.phone ?? "",
+    locationType: isCity ? "city" : "province",
+    // The capital's khan/sangkat are the API's district/commune.
+    khan: isCity ? (address.district ?? "") : "",
+    sangkat: isCity ? (address.commune ?? "") : "",
+    district: isCity ? "" : (address.district ?? ""),
+    commune: isCity ? "" : (address.commune ?? ""),
+    village: address.village ?? "",
+    streetNo: address.streetNo ?? "",
+    province: address.province ?? "",
+    city: isCity ? "Phnom Penh" : (address.province ?? ""),
+    address: address.formattedAddress ?? "",
+  };
+}
 
 /** Orders are identified by uuid; show a short, quotable reference instead. */
 function orderRef(uuid?: string): string {
@@ -281,13 +317,21 @@ export default function CheckoutClient() {
 
   // Saved Addresses State
   const [checkout] = useCheckoutMutation();
+  const { data: serverAddresses } = useGetAddressesQuery();
+  const [createAddress] = useCreateAddressMutation();
   /* Checkout needs the cart's uuid and the seller's id, but the screen tracks
      the chosen shop by name — so keep the identifiers alongside it. */
   const [cartsByStore, setCartsByStore] = useState<
     Record<string, { cartUuid: string; sellerId: string }>
   >({});
-  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>(INITIAL_SAVED_ADDRESSES);
-  const [selectedAddressId, setSelectedAddressId] = useState<string>("home");
+  /* The buyer's real address book. INITIAL_SAVED_ADDRESSES stays only as the
+     shape reference for the form below; showing invented addresses would let
+     someone order to a place that is not theirs. */
+  const savedAddresses: SavedAddress[] = useMemo(
+    () => (serverAddresses ?? []).map(toSavedAddress),
+    [serverAddresses],
+  );
+  const [selectedAddressId, setSelectedAddressId] = useState<string>("new");
 
   // Form Input State (City vs Province)
   const [locationType, setLocationType] = useState<"city" | "province">("city");
@@ -675,28 +719,25 @@ export default function CheckoutClient() {
     setShowConfirmModal(false);
     setSubmitting(true);
 
-    // Save new location if requested
+    /* A new address the buyer asked to keep goes to the address book first, so
+       the order can reference it by id and the address is there next time.
+       Failing to save it must not block the order — the same details are sent
+       on the checkout body regardless. */
+    let savedAddressId =
+      selectedAddressId !== "new" && isServerAddressId(selectedAddressId)
+        ? selectedAddressId
+        : "";
+
     if (selectedAddressId === "new" && saveNewAddress) {
-      const createdAddr: SavedAddress = {
-        id: `addr_${Date.now()}`,
-        label: locationTitle.trim() || newLabel.trim() || "Saved Location",
-        fullName: fullName.trim(),
-        phone: phone.trim(),
-        locationType,
-        khan,
-        sangkat,
-        village,
-        streetNo,
-        province,
-        district,
-        commune,
-        googleMapLink,
-        photos: housePhotos,
-        city: locationType === "city" ? "Phnom Penh" : province,
-        address: fullAddressString,
-      };
-      setSavedAddresses((prev) => [...prev, createdAddr]);
-      setSelectedAddressId(createdAddr.id);
+      try {
+        const created = await createAddress(toAddressRequest()).unwrap();
+        if (created?.id) {
+          savedAddressId = created.id;
+          setSelectedAddressId(created.id);
+        }
+      } catch {
+        triggerToast("Your order is going through, but the address could not be saved to your address book.");
+      }
     }
 
     try {
@@ -710,12 +751,13 @@ export default function CheckoutClient() {
         );
       }
 
-      /* The address is sent as loose fields rather than an addressId: the list
-         this screen offers is local, so its ids are not address-book uuids the
-         API would recognise. Only cartUuid is required either way. */
+      /* An address-book id when we have one, and the written-out address
+         either way — the loose fields are what the seller actually reads on
+         the order, and they stay correct even if the address is edited later. */
       const order = await checkout({
         sellerId: target.sellerId,
         cartUuid: target.cartUuid,
+        ...(savedAddressId ? { addressId: savedAddressId } : {}),
         shippingAddress: fullAddressString,
         recipientName: fullName.trim(),
         recipientPhone: phone.trim(),
