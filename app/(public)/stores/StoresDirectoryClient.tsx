@@ -7,7 +7,10 @@ import { motion } from "framer-motion";
 import { Star, CheckCircle2, Search, ArrowRight, Store, MapPin } from "lucide-react";
 import { MOCK_STORES } from "./mockStores";
 
+import { useLanguage } from "@/lib/context/LanguageContext";
+
 export default function StoresDirectoryClient() {
+  const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
   const storesList = Object.values(MOCK_STORES);
 
@@ -27,9 +30,9 @@ export default function StoresDirectoryClient() {
       <div className="flex flex-col gap-4 border-b border-[#EDEBF3] pb-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-black text-[#1A1330] sm:text-4xl">Official Stores</h1>
+            <h1 className="text-3xl font-black text-[#1A1330] sm:text-4xl">{t("all_stores")}</h1>
             <span className="rounded-full bg-[#6C4CD8] px-4 py-1.5 text-sm font-extrabold text-white shadow-sm">
-              {storesList.length} Verified Stores
+              {storesList.length} Stores
             </span>
           </div>
           <p className="mt-2 text-base sm:text-lg font-medium text-[#7C7596]">
@@ -43,7 +46,7 @@ export default function StoresDirectoryClient() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search stores or brands..."
+            placeholder={t("search_store")}
             className="w-full rounded-full border border-[#E2DFEC] bg-white py-3 pl-11 pr-4 text-sm font-medium text-[#1A1330] outline-none shadow-xs transition-all focus:border-[#6C4CD8] focus:ring-2 focus:ring-[#6C4CD8]/20"
           />
           <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#6C4CD8]" />

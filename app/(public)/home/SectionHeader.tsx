@@ -17,7 +17,10 @@ type SectionHeaderProps = {
  * skip this file and just make sure it supports the same props — the home
  * sections below import { SectionHeader } from "@/components/shared/SectionHeader".
  */
+import { useLanguage } from "@/lib/context/LanguageContext";
+
 export function SectionHeader({ title, href = "#", onPrev, onNext, className }: SectionHeaderProps) {
+  const { t } = useLanguage();
   return (
     <div className={`flex items-center justify-between ${className ?? ""}`}>
       <h2 className="text-xl font-extrabold text-[#1A1330] sm:text-2xl dark:text-white">{title}</h2>
@@ -27,7 +30,7 @@ export function SectionHeader({ title, href = "#", onPrev, onNext, className }: 
             whileHover={{ x: 2 }}
             className="rounded-full bg-[#6C4CD8] px-4 py-1.5 text-sm font-bold text-white shadow-sm hover:bg-[#5B3DC0] transition-colors"
           >
-            View All
+            {t("view_all")}
           </motion.span>
         </Link>
         {(onPrev || onNext) && (

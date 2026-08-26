@@ -7,7 +7,10 @@ import { Heart, Trash2, ShoppingCart, Check, ShoppingBag, Loader2, AlertTriangle
 import { ProductCard } from "@/app/(public)/home/ProductCard";
 import { getFavorites, removeFavorites } from "@/app/api/favorites";
 
+import { useLanguage } from "@/lib/context/LanguageContext";
+
 export default function SavedPageClient() {
+  const { t, language } = useLanguage();
   const [listings, setListings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
@@ -286,9 +289,9 @@ export default function SavedPageClient() {
             <Heart size={36} className="fill-[#6C4CD8]" />
           </motion.div>
 
-          <h2 className="text-2xl font-bold text-[#1A1330]">Your Saved List is Empty</h2>
+          <h2 className="text-2xl font-bold text-[#1A1330]">{t("no_saved_items")}</h2>
           <p className="mt-2 text-sm text-[#7C7596] leading-relaxed">
-            You haven&apos;t saved any products to your wishlist yet. Explore Phsar Digital to find products you love!
+            {t("no_saved_desc")}
           </p>
 
           <div className="mt-6 flex flex-wrap items-center gap-3 justify-center">
@@ -298,7 +301,7 @@ export default function SavedPageClient() {
                 className="inline-flex items-center gap-2 rounded-full bg-[#6C4CD8] px-6 py-3 text-sm font-bold text-white shadow-md transition-all hover:bg-[#5B3EC4]"
               >
                 <ShoppingBag size={18} />
-                Browse Products
+                {t("explore_products")}
               </Link>
             </motion.div>
           </div>

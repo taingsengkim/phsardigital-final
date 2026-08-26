@@ -76,6 +76,37 @@ export const translations = {
     recommended_for_you: "Recommended for you",
     visit_store: "Visit Store",
 
+    // Cart & Checkout
+    shopping_cart: "Shopping Cart",
+    cart_empty: "Your Cart is Empty",
+    cart_empty_desc: "Looks like you haven't added any products to your cart yet.",
+    explore_products: "Explore Products",
+    order_summary: "Order Summary",
+    subtotal: "Subtotal",
+    total: "Total",
+    proceed_to_checkout: "Proceed to Checkout",
+    multi_vendor_note: "Orders are processed per store",
+
+    // Saved Items
+    saved_items: "Saved Items",
+    no_saved_items: "No Saved Items Yet",
+    no_saved_desc: "Save items you like by clicking the heart icon on any product.",
+
+    // Orders
+    my_orders: "My Orders",
+    no_orders: "No Orders Found",
+    no_orders_desc: "When you purchase items, your orders will appear here.",
+    order_id: "Order ID",
+    status: "Status",
+    pending: "Pending",
+    completed: "Completed",
+    cancelled: "Cancelled",
+
+    // Stores
+    all_stores: "All Stores",
+    top_sellers: "Top Rated Sellers",
+    search_store: "Search store name or description...",
+
     // Footer & Benefits
     company: "Company",
     about_us: "About Us",
@@ -109,6 +140,7 @@ export const translations = {
     acceptable_use: "Acceptable Use",
 
     // General
+    view_all: "View All",
     loading: "Loading...",
   },
   km: {
@@ -186,6 +218,37 @@ export const translations = {
     recommended_for_you: "ផលិតផលណែនាំសម្រាប់អ្នក",
     visit_store: "ចូលមើលហាង",
 
+    // Cart & Checkout
+    shopping_cart: "កន្ត្រកទំនិញ",
+    cart_empty: "កន្ត្រកទំនិញរបស់អ្នកទទេ",
+    cart_empty_desc: "អ្នកមិនទាន់បានបន្ថែមផលិតផលទៅក្នុងកន្ត្រកនៅឡើយទេ។",
+    explore_products: "ស្វែងរកផលិតផល",
+    order_summary: "សេចក្តីសង្ខេបនៃការបញ្ជាទិញ",
+    subtotal: "សរុបរង",
+    total: "សរុប",
+    proceed_to_checkout: "បន្តទៅការទូទាត់",
+    multi_vendor_note: "ការបញ្ជាទិញត្រូវធ្វើឡើងតាមហាងនីមួយៗ",
+
+    // Saved Items
+    saved_items: "ទំនិញដែលបានរក្សាទុក",
+    no_saved_items: "មិនទាន់មានទំនិញបានរក្សាទុក",
+    no_saved_desc: "ចុចលើរូបបេះដូងដើម្បីរក្សាទុកទំនិញដែលអ្នកចូលចិត្ត។",
+
+    // Orders
+    my_orders: "ការបញ្ជាទិញរបស់ខ្ញុំ",
+    no_orders: "មិនទាន់មានការបញ្ជាទិញ",
+    no_orders_desc: "នៅពេលអ្នកទិញទំនិញ ការបញ្ជាទិញរបស់អ្នកនឹងបង្ហាញនៅទីនេះ។",
+    order_id: "លេខកូដបញ្ជាទិញ",
+    status: "ស្ថានភាព",
+    pending: "កំពុងរង់ចាំ",
+    completed: "បានបញ្ចប់",
+    cancelled: "បានលុបចោល",
+
+    // Stores
+    all_stores: "ហាងទំនិញទាំងអស់",
+    top_sellers: "អ្នកលក់ឆ្នើម",
+    search_store: "ស្វែងរកឈ្មោះហាង ឬការពិពណ៌នា...",
+
     // Footer & Benefits
     company: "ក្រុមហ៊ុន",
     about_us: "អំពីយើង",
@@ -219,6 +282,7 @@ export const translations = {
     acceptable_use: "គោលការណ៍ប្រើប្រាស់",
 
     // General
+    view_all: "មើលទាំងអស់",
     loading: "កំពុងផ្ទុក...",
   },
 } as const;

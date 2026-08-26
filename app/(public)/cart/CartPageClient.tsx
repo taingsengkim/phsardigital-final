@@ -6,7 +6,10 @@ import Image from "next/image";
 import { Store, ShoppingBag, ArrowRight, ShieldCheck, Trash2, Plus, Minus } from "lucide-react";
 import { getCarts, removeCartItem, updateCartItem, type VendorCart, type ApiCartItem } from "@/app/api/cart";
 
+import { useLanguage } from "@/lib/context/LanguageContext";
+
 export default function CartPageClient() {
+  const { t } = useLanguage();
   const [vendorCarts, setVendorCarts] = useState<VendorCart[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -30,7 +33,7 @@ export default function CartPageClient() {
     return (
       <div className="py-24 text-center">
         <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-[#6C4CD8] border-t-transparent" />
-        <p className="mt-4 text-[16px] font-semibold text-[#8B85A0]">Loading your shopping cart…</p>
+        <p className="mt-4 text-[16px] font-semibold text-[#8B85A0]">{t("loading")}</p>
       </div>
     );
   }
@@ -46,15 +49,15 @@ export default function CartPageClient() {
         <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[#F1EFFA] text-[#6C4CD8]">
           <ShoppingBag size={40} />
         </div>
-        <h2 className="mt-6 text-[24px] font-extrabold text-[#1A1330]">Your Cart is Empty</h2>
+        <h2 className="mt-6 text-[24px] font-extrabold text-[#1A1330]">{t("cart_empty")}</h2>
         <p className="mt-2 text-[15px] text-[#8B85A0]">
-          Looks like you haven't added any products to your cart yet.
+          {t("cart_empty_desc")}
         </p>
         <Link
           href="/products"
           className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#6C4CD8] py-3.5 text-[16px] font-bold text-white shadow-md hover:bg-[#5B3DC0]"
         >
-          Explore Products
+          {t("explore_products")}
         </Link>
       </div>
     );
@@ -221,12 +224,12 @@ export default function CartPageClient() {
         <div>
           <div className="sticky top-24 rounded-3xl border border-[#EDEBF3] bg-white p-7 shadow-sm space-y-6">
             <h2 className="text-[20px] font-extrabold text-[#1A1330] border-b border-[#F0EDFB] pb-4">
-              Cart Overview
+              {t("order_summary")}
             </h2>
 
             <div className="space-y-3 text-[14px]">
               <div className="flex justify-between text-[#8B85A0]">
-                <span>Total Items</span>
+                <span>{t("subtotal")}</span>
                 <span className="font-bold text-[#1A1330]">{totalItemsCount} items</span>
               </div>
               <div className="flex justify-between text-[#8B85A0]">
@@ -234,7 +237,7 @@ export default function CartPageClient() {
                 <span className="font-bold text-[#6C4CD8]">{vendorCarts.length} shops</span>
               </div>
               <div className="border-t border-[#EDEBF3] pt-3 flex justify-between text-[18px] font-extrabold text-[#1A1330]">
-                <span>Total Value</span>
+                <span>{t("total")}</span>
                 <span className="text-[22px] text-[#6C4CD8]">${totalCartAmount.toFixed(2)}</span>
               </div>
             </div>
@@ -243,7 +246,7 @@ export default function CartPageClient() {
               href="/checkout"
               className="w-full flex items-center justify-center gap-2 rounded-2xl bg-[#6C4CD8] py-4 text-[17px] font-bold text-white shadow-[0_8px_25px_rgba(108,76,216,0.35)] transition-all hover:scale-[1.02] hover:bg-[#5B3DC0]"
             >
-              Check Out
+              {t("proceed_to_checkout")}
               <ArrowRight size={18} />
             </Link>
 

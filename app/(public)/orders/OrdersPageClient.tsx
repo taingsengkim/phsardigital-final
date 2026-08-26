@@ -27,7 +27,10 @@ import {
   useGetMyPurchasesQuery,
 } from "@/lib/redux/service/purchaseApi";
 
+import { useLanguage } from "@/lib/context/LanguageContext";
+
 export default function OrdersPageClient() {
+  const { t } = useLanguage();
   const {
     data: purchasePage,
     isLoading,
@@ -130,7 +133,7 @@ export default function OrdersPageClient() {
       <div className="flex flex-col gap-4 border-b border-[#EDEBF3] pb-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-black text-[#1A1330] sm:text-4xl">My Orders</h1>
+            <h1 className="text-3xl font-black text-[#1A1330] sm:text-4xl">{t("my_orders")}</h1>
             <span className="rounded-full bg-[#6C4CD8] px-4 py-1 text-sm font-extrabold text-white shadow-sm">
               {orders.length} {orders.length === 1 ? "Order" : "Orders"}
             </span>
