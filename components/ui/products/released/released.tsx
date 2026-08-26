@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   AlertTriangle,
+  BadgeCheck,
   Check,
   Eye,
   Loader2,
@@ -40,6 +41,8 @@ type ApiProduct = {
   title?: string;
   name?: string;
   description?: string;
+  categoryName?: string;
+  category?: { name?: string; slug?: string };
   price?: number;
   fullPrice?: number;
   discountPrice?: number | null;
@@ -63,6 +66,7 @@ type Product = {
   slug: string;
   title: string;
   description: string;
+  category: string;
   price: number;
   discountPrice: number | null;
   stockQty: number;
@@ -152,6 +156,7 @@ export function Released() {
           slug: item.slug ?? item.uuid ?? item.id ?? String(index),
           title: item.title ?? item.name ?? "Untitled product",
           description: item.description ?? "",
+          category: item.category?.name ?? item.categoryName ?? "Uncategorized",
           price: Number(item.fullPrice ?? item.price ?? 0),
           discountPrice:
             item.discountPrice == null ? null : Number(item.discountPrice),
@@ -192,7 +197,7 @@ export function Released() {
   const filteredProducts = releasedProducts.filter(
     (p) =>
       (!createdDate || p.createdAt?.slice(0, 10) === createdDate) &&
-      `${p.title} ${p.description} ${p.status}`
+      `${p.title} ${p.category} ${p.status}`
         .toLowerCase()
         .includes(query.trim().toLowerCase()),
   );
@@ -392,7 +397,7 @@ export function Released() {
                       <div className="min-w-0">
                         <p className="truncate text-base font-semibold">{p.title}</p>
                         <p className="truncate text-sm text-muted-foreground">
-                          {p.description || "No description"}
+                          {p.category}
                         </p>
                       </div>
                     </div>
@@ -426,15 +431,17 @@ export function Released() {
                   <TableCell
                     className={cn("text-center", !visibleColumns.has("status") && "hidden")}
                   >
-                    <span className="inline-flex items-center justify-center gap-2 text-sm font-medium">
-                      <span
-                        className={cn(
-                          "size-2 rounded-full",
-                          p.status.toUpperCase() === "ACTIVE"
-                            ? "bg-emerald-500"
-                            : "bg-slate-400",
-                        )}
-                      />
+                    <span
+                      className={cn(
+                        "inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold",
+                        p.status.toUpperCase() === "ACTIVE"
+                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400"
+                          : "bg-slate-100 text-slate-600 dark:bg-slate-500/15 dark:text-slate-300",
+                      )}
+                    >
+                      {p.status.toUpperCase() === "ACTIVE" && (
+                        <BadgeCheck className="size-5" strokeWidth={2.25} />
+                      )}
                       {p.status.toUpperCase() === "ARCHIVED" ? "Inactive" : p.status}
                     </span>
                   </TableCell>

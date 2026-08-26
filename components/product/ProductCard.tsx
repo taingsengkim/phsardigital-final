@@ -81,12 +81,12 @@ export function ProductCard({ listing, className, sellerName, onRemove }: Props)
   return (
     <article
       className={cn(
-        "group relative flex flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_2px_12px_rgba(36,31,53,0.06)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_32px_rgba(108,76,216,0.15)]",
+        "group relative flex flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_2px_12px_rgba(36,31,53,0.06)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_32px_rgba(108,76,216,0.15)] dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-[0_2px_14px_rgba(0,0,0,0.24)] dark:hover:border-primary/40 dark:hover:shadow-[0_12px_32px_rgba(0,0,0,0.35)]",
         className
       )}
     >
       {/* ── Top Image Container ── */}
-      <div className="relative aspect-square w-full overflow-hidden bg-[#F5F3FA]">
+      <div className="relative aspect-square w-full overflow-hidden bg-[#F5F3FA] dark:bg-zinc-800">
         {/* Discount Badge at top-left */}
         {hasDiscount && discountPercentage > 0 && (
           <span className="absolute left-2.5 top-2.5 z-10 inline-flex items-center rounded-full bg-red-500 px-2.5 py-0.5 text-[11px] font-bold text-white shadow-sm">
@@ -140,13 +140,13 @@ export function ProductCard({ listing, className, sellerName, onRemove }: Props)
         {/* Title */}
         <Link
           href={productUrl}
-          className="line-clamp-2 text-sm sm:text-base font-semibold leading-snug text-[#241F35] transition-colors hover:text-[#6C4CD8]"
+          className="line-clamp-2 text-sm sm:text-base font-semibold leading-snug text-[#241F35] transition-colors hover:text-[#6C4CD8] dark:text-zinc-100 dark:hover:text-violet-400"
         >
           {listing.title}
         </Link>
 
         {/* Ratings and Reviews */}
-        <div className="flex items-center gap-1.5 text-xs text-gray-500">
+        <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-zinc-400">
           <div className="flex items-center gap-0.5">
             {Array.from({ length: 5 }).map((_, i) => {
               const isFilled = filledStars > 0 && i < filledStars;
@@ -157,25 +157,25 @@ export function ProductCard({ listing, className, sellerName, onRemove }: Props)
                   className={cn(
                     isFilled
                       ? "fill-amber-400 text-amber-400"
-                      : "fill-gray-200 text-gray-200"
+                      : "fill-gray-200 text-gray-200 dark:fill-zinc-700 dark:text-zinc-700"
                   )}
                 />
               );
             })}
           </div>
-          <span className="font-semibold text-gray-700">
+          <span className="font-semibold text-gray-700 dark:text-zinc-200">
             {rating}
           </span>
-          <span className="text-gray-400">({reviewCount})</span>
+          <span className="text-gray-400 dark:text-zinc-500">({reviewCount})</span>
         </div>
 
         {/* Pricing Section */}
         <div className="mt-0.5 flex items-baseline gap-2">
-          <span className="text-base sm:text-lg font-extrabold text-[#6C4CD8]">
+          <span className="text-base sm:text-lg font-extrabold text-[#6C4CD8] dark:text-violet-400">
             ${activePrice.toFixed(2)}
           </span>
           {hasDiscount && fullPrice !== null && (
-            <span className="text-xs sm:text-sm font-medium text-gray-400 line-through">
+            <span className="text-xs sm:text-sm font-medium text-gray-400 line-through dark:text-zinc-500">
               ${fullPrice.toFixed(2)}
             </span>
           )}
@@ -183,9 +183,9 @@ export function ProductCard({ listing, className, sellerName, onRemove }: Props)
 
         {/* Seller Information */}
         {businessName && (
-          <div className="mt-auto pt-2 border-t border-gray-100 flex items-center gap-1.5 text-xs text-gray-500">
-            <Store size={13} className="flex-shrink-0 text-gray-400" />
-            <span className="truncate font-medium text-gray-600">
+          <div className="mt-auto flex items-center gap-1.5 border-t border-gray-100 pt-2 text-xs text-gray-500 dark:border-zinc-800 dark:text-zinc-400">
+            <Store size={13} className="flex-shrink-0 text-gray-400 dark:text-zinc-500" />
+            <span className="truncate font-medium text-gray-600 dark:text-zinc-400">
               {businessName}
             </span>
           </div>

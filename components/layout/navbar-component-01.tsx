@@ -33,6 +33,7 @@ import { useGetSellerApplicationQuery, useGetSellerProfileQuery } from "@/lib/ap
 import { useGetCategoriesQuery } from "@/lib/api/homeApi";
 import LoginButton from "@/components/auth/LoginButton";
 import RegisterButton from "@/components/auth/RegisterButton";
+import { ThemeToggle } from "@/components/themeToggle";
 import { NAV_PILL, NAV_RAIL_PILL } from "@/components/layout/nav-pill";
 import { cn, displayImageUrl } from "@/lib/utils";
 
@@ -106,7 +107,7 @@ export default function Navbar() {
   return (
     <header className="sticky top-0 z-50">
       {/* ── top bar: white ── */}
-      <div style={{ background: "#fff", borderBottom: "1px solid #EDEBF3" }}>
+      <div className="border-b border-[#EDEBF3] bg-white transition-colors dark:border-border dark:bg-card">
         <div className="mx-auto max-w-[1240px] px-4 py-2 sm:px-6 sm:py-3">
           {/* row 1: hamburger (mobile) + logo + search + icons */}
           <div className="flex items-center gap-2 sm:gap-4">
@@ -132,8 +133,7 @@ export default function Navbar() {
             >
               <PhsarDigitalLogo className="h-8 w-8 shrink-0 sm:h-9 sm:w-9" aria-hidden="true" />
               <span
-                className="hidden text-[15px] font-bold sm:inline sm:text-[17px]"
-                style={{ color: "#241F35" }}
+                className="hidden text-[15px] font-bold text-[#241F35] sm:inline sm:text-[17px] dark:text-foreground"
               >
                 Phsar Digital
               </span>
@@ -146,8 +146,7 @@ export default function Navbar() {
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search Products..."
                 aria-label="Search products"
-                className="w-full rounded-full border py-[9px] pl-[14px] pr-[40px] text-[13px] outline-none"
-                style={{ borderColor: "#E2DFEC", background: "#F8F7FB" }}
+                className="w-full rounded-full border border-[#E2DFEC] bg-[#F8F7FB] py-[9px] pl-[14px] pr-[40px] text-[13px] text-foreground outline-none placeholder:text-muted-foreground dark:border-border dark:bg-muted"
               />
               <Search
                 size={15}
@@ -160,6 +159,8 @@ export default function Navbar() {
 
             {/* icon buttons & User profile */}
             <div className="flex flex-shrink-0 items-center gap-1.5 sm:gap-2">
+              <ThemeToggle />
+
               {isPendingSeller && !isSeller && (
                 <Link
                   href="/account/seller-application"
@@ -178,14 +179,12 @@ export default function Navbar() {
                   <Link
                     href="/saved"
                     aria-label="Saved"
-                    className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9 transition hover:scale-105"
-                    style={{ background: "#F1EFFA" }}
+                    className="relative flex size-9 shrink-0 items-center justify-center rounded-full border border-primary/10 bg-primary/10 text-primary shadow-sm transition hover:scale-105 hover:border-primary/25 hover:bg-primary/15 dark:border-white/10 dark:bg-white/[0.07] dark:text-violet-400 dark:hover:bg-white/10"
                   >
-                    <Heart size={15} color={BRAND} />
+                    <Heart className="size-[17px]" strokeWidth={2} />
                     {savedCount > 0 && (
                       <span
-                        className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white"
-                        style={{ background: BRAND }}
+                        className="absolute -right-1 -top-1 grid size-[17px] place-items-center rounded-full bg-primary text-[10px] font-bold leading-none text-white ring-2 ring-white dark:ring-card"
                       >
                         {savedCount}
                       </span>
@@ -195,14 +194,12 @@ export default function Navbar() {
                   <Link
                     href="/cart"
                     aria-label="Cart"
-                    className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9 transition hover:scale-105"
-                    style={{ background: "#F1EFFA" }}
+                    className="relative flex size-9 shrink-0 items-center justify-center rounded-full border border-primary/10 bg-primary/10 text-primary shadow-sm transition hover:scale-105 hover:border-primary/25 hover:bg-primary/15 dark:border-white/10 dark:bg-white/[0.07] dark:text-violet-400 dark:hover:bg-white/10"
                   >
-                    <ShoppingCart size={15} color={BRAND} />
+                    <ShoppingCart className="size-[17px]" strokeWidth={2} />
                     {cartCount > 0 && (
                       <span
-                        className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white"
-                        style={{ background: BRAND }}
+                        className="absolute -right-1 -top-1 grid size-[17px] place-items-center rounded-full bg-primary text-[10px] font-bold leading-none text-white ring-2 ring-white dark:ring-card"
                       >
                         {cartCount}
                       </span>
@@ -307,8 +304,7 @@ export default function Navbar() {
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search Products..."
               aria-label="Search products"
-              className="w-full rounded-full border py-[9px] pl-[14px] pr-[40px] text-[13px] outline-none"
-              style={{ borderColor: "#E2DFEC", background: "#F8F7FB" }}
+              className="w-full rounded-full border border-[#E2DFEC] bg-[#F8F7FB] py-[9px] pl-[14px] pr-[40px] text-[13px] text-foreground outline-none placeholder:text-muted-foreground dark:border-border dark:bg-muted"
             />
             <Search
               size={15}
