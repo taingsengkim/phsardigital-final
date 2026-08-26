@@ -72,8 +72,9 @@ export default function Navbar() {
   );
   const isPendingSeller = sellerApp?.status === "PENDING";
 
-  const userAvatar =
-    profile?.avatarUrl || sellerProfile?.logoUri || sellerApp?.logoUri || session?.user?.image || "";
+  // Keep the account identity separate from the seller/store identity. Store
+  // logos are often wide and do not belong in the circular user avatar.
+  const userAvatar = profile?.avatarUrl || session?.user?.image || "";
   const storeName =
     sellerProfile?.businessName || sellerApp?.businessName;
 
