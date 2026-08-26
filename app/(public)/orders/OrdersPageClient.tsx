@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -21,10 +21,25 @@ import {
   Check,
 } from "lucide-react";
 import type { UserOrder, OrderStatus } from "./types";
-import { MOCK_USER_ORDERS } from "./mockOrders";
+import { adaptPurchase } from "./adapt-purchase";
+import {
+  useCancelPurchaseMutation,
+  useGetMyPurchasesQuery,
+} from "@/lib/redux/service/purchaseApi";
 
 export default function OrdersPageClient() {
-  const [orders, setOrders] = useState<UserOrder[]>(MOCK_USER_ORDERS);
+  const {
+    data: purchasePage,
+    isLoading,
+    isError,
+    refetch,
+  } = useGetMyPurchasesQuery({ pageSize: 50 });
+  const [cancelPurchase, { isLoading: isCancelling }] = useCancelPurchaseMutation();
+
+  const orders: UserOrder[] = useMemo(
+    () => (purchasePage?.content ?? []).map(adaptPurchase),
+    [purchasePage],
+  );
   const [activeTab, setActiveTab] = useState<"all" | OrderStatus>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [trackingOrder, setTrackingOrder] = useState<UserOrder | null>(null);
@@ -49,28 +64,28 @@ export default function OrdersPageClient() {
 
   const getStatusBadge = (status: OrderStatus) => {
     switch (status) {
-      case "processing":
+      case "PENDING":
         return (
           <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs sm:text-sm font-bold text-amber-700 border border-amber-200">
-            <Clock size={14} className="animate-spin" />
-            Processing
+            <Clock size={14} />
+            Awaiting seller
           </span>
         );
-      case "shipped":
+      case "CONFIRMED":
         return (
           <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-xs sm:text-sm font-bold text-blue-700 border border-blue-200">
             <Truck size={14} />
-            In Transit / Shipped
+            Confirmed
           </span>
         );
-      case "delivered":
+      case "COMPLETED":
         return (
           <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs sm:text-sm font-bold text-emerald-700 border border-emerald-200">
             <CheckCircle2 size={14} />
-            Delivered
+            Completed
           </span>
         );
-      case "cancelled":
+      case "CANCELLED":
         return (
           <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-3 py-1 text-xs sm:text-sm font-bold text-rose-700 border border-rose-200">
             <X size={14} />
@@ -82,6 +97,15 @@ export default function OrdersPageClient() {
 
   function handleReorder(order: UserOrder) {
     showToast(`Added ${order.items.length} item(s) from ${order.storeName} to your cart!`);
+  }
+
+  async function handleCancel(order: UserOrder) {
+    try {
+      await cancelPurchase(order.uuid).unwrap();
+      showToast(`Order ${order.id} cancelled.`);
+    } catch {
+      showToast(`Could not cancel ${order.id}. Please try again.`);
+    }
   }
 
   return (
@@ -133,9 +157,9 @@ export default function OrdersPageClient() {
       <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
         {[
           { id: "all", label: "All Orders", count: orders.length },
-          { id: "processing", label: "Processing", count: orders.filter((o) => o.status === "processing").length },
-          { id: "shipped", label: "In Transit", count: orders.filter((o) => o.status === "shipped").length },
-          { id: "delivered", label: "Delivered", count: orders.filter((o) => o.status === "delivered").length },
+          { id: "PENDING", label: "Awaiting seller", count: orders.filter((o) => o.status === "PENDING").length },
+          { id: "CONFIRMED", label: "Confirmed", count: orders.filter((o) => o.status === "CONFIRMED").length },
+          { id: "COMPLETED", label: "Completed", count: orders.filter((o) => o.status === "COMPLETED").length },
         ].map((tab) => (
           <motion.button
             key={tab.id}
@@ -161,7 +185,29 @@ export default function OrdersPageClient() {
       </div>
 
       {/* Orders List */}
-      {filteredOrders.length > 0 ? (
+      {isLoading ? (
+        <div className="space-y-4">
+          {[0, 1, 2].map((row) => (
+            <div
+              key={row}
+              className="h-40 animate-pulse rounded-3xl border border-[#EDEBF3] bg-[#F8F7FB]"
+            />
+          ))}
+        </div>
+      ) : isError ? (
+        <div className="rounded-3xl border border-[#EDEBF3] bg-white px-6 py-16 text-center">
+          <p className="text-base font-bold text-[#1A1330]">
+            Could not load your orders.
+          </p>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="mt-4 rounded-xl bg-[#6C4CD8] px-5 py-2.5 text-sm font-bold text-white hover:bg-[#5B3EC4]"
+          >
+            Try again
+          </button>
+        </div>
+      ) : filteredOrders.length > 0 ? (
         <div className="space-y-6">
           {filteredOrders.map((order) => (
             <motion.div
@@ -232,6 +278,19 @@ export default function OrdersPageClient() {
 
                 {/* Buttons */}
                 <div className="flex items-center gap-2 shrink-0">
+                  {order.status === "PENDING" && (
+                    <motion.button
+                      whileHover={{ scale: 1.04 }}
+                      whileTap={{ scale: 0.95 }}
+                      disabled={isCancelling}
+                      onClick={() => void handleCancel(order)}
+                      className="flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs sm:text-sm font-bold text-rose-700 hover:bg-rose-100 disabled:opacity-60"
+                    >
+                      <X size={16} />
+                      Cancel order
+                    </motion.button>
+                  )}
+
                   <motion.button
                     whileHover={{ scale: 1.04 }}
                     whileTap={{ scale: 0.95 }}
@@ -356,20 +415,20 @@ export default function OrdersPageClient() {
                   {
                     title: "Handed to Courier",
                     desc: `Picked up by ${trackingOrder.courier ?? "Courier"}`,
-                    time: trackingOrder.status === "shipped" || trackingOrder.status === "delivered" ? "In transit" : "Pending",
-                    completed: trackingOrder.status === "shipped" || trackingOrder.status === "delivered",
+                    time: trackingOrder.status === "CONFIRMED" || trackingOrder.status === "COMPLETED" ? "In transit" : "Pending",
+                    completed: trackingOrder.status === "CONFIRMED" || trackingOrder.status === "COMPLETED",
                   },
                   {
                     title: "Out for Delivery",
                     desc: "Driver is on the way to recipient address.",
-                    time: trackingOrder.status === "delivered" ? "Completed" : "Scheduled",
-                    completed: trackingOrder.status === "delivered",
+                    time: trackingOrder.status === "COMPLETED" ? "Completed" : "Scheduled",
+                    completed: trackingOrder.status === "COMPLETED",
                   },
                   {
                     title: "Delivered",
                     desc: "Package delivered to shipping location.",
-                    time: trackingOrder.status === "delivered" ? trackingOrder.estimatedDelivery : "Estimated",
-                    completed: trackingOrder.status === "delivered",
+                    time: trackingOrder.status === "COMPLETED" ? trackingOrder.estimatedDelivery : "Estimated",
+                    completed: trackingOrder.status === "COMPLETED",
                   },
                 ].map((step, i) => (
                   <div key={i} className="flex gap-4 relative">

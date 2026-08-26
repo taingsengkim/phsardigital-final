@@ -46,7 +46,7 @@ import {
 } from "@/lib/api/sellerApi";
 import AddressBook from "@/components/account/AddressBook";
 import { AuthToast, type ToastState } from "@/components/auth/AuthToast";
-import { cn } from "@/lib/utils";
+import { cn, displayImageUrl } from "@/lib/utils";
 
 export default function AccountPageClient() {
   const { data: session, isPending: sessionPending } = useSession();
@@ -295,7 +295,7 @@ export default function AccountPageClient() {
               >
                 {userAvatarUrl ? (
                   <img
-                    src={userAvatarUrl}
+                    src={displayImageUrl(userAvatarUrl)}
                     alt={userFullName}
                     className="h-20 w-20 rounded-2xl border-4 border-white/20 object-cover shadow-xl ring-2 ring-white/10"
                   />
@@ -388,7 +388,7 @@ export default function AccountPageClient() {
               <div className="flex min-w-0 items-start gap-4">
                 {storeLogo ? (
                   <img
-                    src={storeLogo}
+                    src={displayImageUrl(storeLogo)}
                     alt={storeName}
                     className="h-16 w-16 shrink-0 rounded-2xl object-cover ring-1 ring-black/5"
                   />
@@ -700,7 +700,7 @@ export default function AccountPageClient() {
                     <div className="flex items-center gap-4">
                       {userAvatarUrl ? (
                         <img
-                          src={userAvatarUrl}
+                          src={displayImageUrl(userAvatarUrl)}
                           alt={userFullName}
                           className="h-16 w-16 rounded-full object-cover ring-2 ring-[#6C4CD8]/30"
                         />

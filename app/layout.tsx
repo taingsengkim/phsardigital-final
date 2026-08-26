@@ -33,6 +33,7 @@ export default function RootLayout({
       lang="en"
       suppressHydrationWarning
       className={`${inter.variable} ${playfair.variable}`}
+      style={{ fontSize: "85%" }}
     >
       <body
         className={`${inter.className} ${playfair.variable} min-h-full flex flex-col text-base antialiased`}

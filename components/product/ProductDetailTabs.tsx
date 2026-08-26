@@ -1,16 +1,21 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import {
+  ChevronLeft,
+  ChevronRight,
   CornerDownRight,
+  Images,
   MapPin,
   RotateCcw,
   ShieldCheck,
   Truck,
   Star,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ModalPortal } from "@/components/ui/modal-portal";
 import RatingStars from "@/components/product/RatingStars";
 import type {
   ApiListingAttribute,
@@ -33,6 +38,32 @@ type Props = {
   sellerName?: string | null;
   storeCity?: string | null;
 };
+
+/** A buyer photo lifted out of its review, so the strip and the enlarged view
+    can share one index space. */
+type ReviewPhoto = {
+  reviewKey: string;
+  uri: string;
+  buyerName: string;
+  rating: number;
+  comment: string | null;
+};
+
+function collectReviewPhotos(reviews: ApiReview[]): ReviewPhoto[] {
+  return reviews.flatMap((review, index) => {
+    const uri = review.photo?.uri;
+    if (!uri) return [];
+    return [
+      {
+        reviewKey: review.uuid ?? `review-${index}`,
+        uri,
+        buyerName: review.buyer?.displayName?.trim() || "Verified buyer",
+        rating: review.rating ?? 0,
+        comment: review.comment ?? null,
+      },
+    ];
+  });
+}
 
 function formatDate(value?: string | null): string | null {
   if (!value) return null;
@@ -77,6 +108,14 @@ export default function ProductDetailTabs({
       breakdown,
     };
   }, [reviewSummary, submittedReviews]);
+
+  /* Every photo buyers attached, in the order the reviews are shown. `null`
+     means the enlarged view is closed. */
+  const reviewPhotos = useMemo(
+    () => collectReviewPhotos([...submittedReviews, ...reviews]),
+    [submittedReviews, reviews],
+  );
+  const [openPhoto, setOpenPhoto] = useState<number | null>(null);
 
   const sortedAttributes = [...(attributes ?? [])].sort(
     (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
@@ -169,16 +208,38 @@ export default function ProductDetailTabs({
           ) : (
             <>
               <ReviewSummaryCard summary={shownSummary} />
+              {reviewPhotos.length > 0 && (
+                <ReviewPhotoStrip photos={reviewPhotos} onOpen={setOpenPhoto} />
+              )}
               <div className="space-y-5">
-                {shownReviews.map((review, index) => (
-                  <ReviewRow
-                    key={review.uuid ?? index}
-                    review={review}
-                    sellerName={sellerName}
-                  />
-                ))}
+                {shownReviews.map((review, index) => {
+                  const key = review.uuid ?? `review-${index}`;
+                  return (
+                    <ReviewRow
+                      key={key}
+                      review={review}
+                      sellerName={sellerName}
+                      onOpenPhoto={() =>
+                        setOpenPhoto(
+                          reviewPhotos.findIndex(
+                            (photo) => photo.reviewKey === key,
+                          ),
+                        )
+                      }
+                    />
+                  );
+                })}
               </div>
             </>
+          )}
+
+          {openPhoto !== null && openPhoto >= 0 && reviewPhotos[openPhoto] && (
+            <ReviewPhotoLightbox
+              photos={reviewPhotos}
+              index={openPhoto}
+              onClose={() => setOpenPhoto(null)}
+              onNavigate={setOpenPhoto}
+            />
           )}
         </div>
       )}
@@ -388,12 +449,177 @@ function ReviewSummaryCard({ summary }: { summary: ReviewSummary }) {
   );
 }
 
+/** Buyer photos gathered above the list, so shoppers see the real thing
+    without scrolling every review to hunt for one. */
+function ReviewPhotoStrip({
+  photos,
+  onOpen,
+}: {
+  photos: ReviewPhoto[];
+  onOpen: (index: number) => void;
+}) {
+  return (
+    <section className="mb-6 rounded-2xl bg-white p-5 shadow-[0_1px_6px_rgba(36,31,53,0.07)]">
+      <div className="flex items-center gap-2">
+        <Images className="size-[18px] text-[#6C4CD8]" />
+        <h3 className="text-[16px] font-bold text-[#1A1330]">
+          Photos from buyers
+        </h3>
+        <span className="ml-auto text-[13px] text-[#8B85A0]">
+          {photos.length} {photos.length === 1 ? "photo" : "photos"}
+        </span>
+      </div>
+
+      <div className="mt-3.5 flex gap-2.5 overflow-x-auto pb-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-purple-200 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:h-1.5">
+        {photos.map((photo, index) => (
+          <button
+            key={`${photo.reviewKey}-${index}`}
+            type="button"
+            onClick={() => onOpen(index)}
+            aria-label={`View ${photo.buyerName}'s photo`}
+            className="group relative size-20 shrink-0 overflow-hidden rounded-xl border border-[#E2DFEC] transition hover:border-[#6C4CD8] sm:size-24"
+          >
+            <Image
+              src={photo.uri}
+              alt={`Photo from ${photo.buyerName}'s review`}
+              fill
+              sizes="96px"
+              quality={90}
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
+            />
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/** Full-size view of one buyer photo, with its review for context. */
+function ReviewPhotoLightbox({
+  photos,
+  index,
+  onClose,
+  onNavigate,
+}: {
+  photos: ReviewPhoto[];
+  index: number;
+  onClose: () => void;
+  onNavigate: (index: number) => void;
+}) {
+  const photo = photos[index];
+  const hasMany = photos.length > 1;
+
+  /* Esc closes and the arrows page, the way every other gallery behaves. The
+     body is locked so the page underneath does not scroll away behind it. */
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+      if (!hasMany) return;
+      if (event.key === "ArrowRight") onNavigate((index + 1) % photos.length);
+      if (event.key === "ArrowLeft")
+        onNavigate((index - 1 + photos.length) % photos.length);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [index, photos.length, hasMany, onClose, onNavigate]);
+
+  if (!photo) return null;
+
+  return (
+    <ModalPortal>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Photo from ${photo.buyerName}'s review`}
+        onClick={onClose}
+        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 p-4"
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close photo"
+          className="absolute right-4 top-4 grid size-10 place-items-center rounded-full bg-white/15 text-white transition hover:bg-white/25"
+        >
+          <X className="size-5" />
+        </button>
+  
+        {hasMany && (
+          <>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onNavigate((index - 1 + photos.length) % photos.length);
+              }}
+              aria-label="Previous photo"
+              className="absolute left-3 top-1/2 grid size-10 -translate-y-1/2 place-items-center rounded-full bg-white/15 text-white transition hover:bg-white/25 sm:left-6"
+            >
+              <ChevronLeft className="size-5" />
+            </button>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onNavigate((index + 1) % photos.length);
+              }}
+              aria-label="Next photo"
+              className="absolute right-3 top-1/2 grid size-10 -translate-y-1/2 place-items-center rounded-full bg-white/15 text-white transition hover:bg-white/25 sm:right-6"
+            >
+              <ChevronRight className="size-5" />
+            </button>
+          </>
+        )}
+  
+        <figure
+          onClick={(event) => event.stopPropagation()}
+          className="flex max-h-full w-full max-w-[820px] flex-col items-center gap-4"
+        >
+          <div className="relative flex max-h-[70vh] w-full items-center justify-center">
+            <Image
+              src={photo.uri}
+              alt={`Photo from ${photo.buyerName}'s review`}
+              width={1200}
+              height={1200}
+              quality={90}
+              className="max-h-[70vh] w-auto max-w-full rounded-2xl object-contain"
+            />
+          </div>
+  
+          <figcaption className="w-full rounded-2xl bg-white/10 px-5 py-3.5 text-center text-white backdrop-blur-md">
+            <div className="flex items-center justify-center gap-3">
+              <span className="text-[15px] font-bold">{photo.buyerName}</span>
+              <RatingStars rating={photo.rating} size={14} />
+              {hasMany && (
+                <span className="text-[13px] text-white/70">
+                  {index + 1} / {photos.length}
+                </span>
+              )}
+            </div>
+            {photo.comment && (
+              <p className="mt-1.5 line-clamp-3 text-[14px] leading-relaxed text-white/85">
+                {photo.comment}
+              </p>
+            )}
+          </figcaption>
+        </figure>
+      </div>
+    </ModalPortal>
+  );
+}
+
 function ReviewRow({
   review,
   sellerName,
+  onOpenPhoto,
 }: {
   review: ApiReview;
   sellerName?: string | null;
+  onOpenPhoto?: () => void;
 }) {
   const buyerName = review.buyer?.displayName?.trim() || "Verified buyer";
   const initial = buyerName.charAt(0).toUpperCase();
@@ -410,8 +636,8 @@ function ReviewRow({
               src={review.buyer.avatarUrl}
               alt=""
               fill
-              unoptimized
               sizes="48px"
+              quality={90}
               className="object-cover"
             />
           </div>
@@ -438,16 +664,21 @@ function ReviewRow({
           )}
 
           {photoUri && (
-            <div className="relative mt-3 h-28 w-28 overflow-hidden rounded-xl border border-[#E2DFEC]">
+            <button
+              type="button"
+              onClick={onOpenPhoto}
+              aria-label={`View ${buyerName}'s photo full size`}
+              className="group relative mt-3 block h-28 w-28 overflow-hidden rounded-xl border border-[#E2DFEC] transition hover:border-[#6C4CD8]"
+            >
               <Image
                 src={photoUri}
                 alt="Photo from the review"
                 fill
-                unoptimized
                 sizes="112px"
-                className="object-cover"
+                quality={90}
+                className="object-cover transition-transform duration-300 group-hover:scale-105"
               />
-            </div>
+            </button>
           )}
         </div>
       </div>

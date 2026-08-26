@@ -20,19 +20,6 @@ const CATEGORY_IMAGE_MAP: Record<string, string> = {
   "mens-fashion": "/picture/pic6.jpg",
 };
 
-const FALLBACK_CATEGORIES = [
-  { uuid: "6aaac71d-983c-4f72-abc2-50ead283b089", name: "Books & Stationery", slug: "books-and-stationery" },
-  { uuid: "9e970d23-0c2e-4b48-bc16-caa4ec59df9b", name: "Electronics", slug: "electronics" },
-  { uuid: "54fd238f-e326-4bf4-a3a8-fcf91dc8c80c", name: "Groceries & Essentials", slug: "groceries-and-essentials" },
-  { uuid: "4b932659-fe14-42e7-841d-e8d2bf9e3ae5", name: "Health & Beauty", slug: "health-and-beauty" },
-  { uuid: "c1cd451d-2222-46b2-a837-b0abecb2e2cb", name: "Home & Living", slug: "home-and-living" },
-  { uuid: "981705a1-fea0-4a99-9a7f-9064ba55bd6c", name: "Sports & Outdoors", slug: "sports-and-outdoors" },
-  { uuid: "993327fe-b998-402e-a4c8-169841bc6d84", name: "Toys & Baby Care", slug: "toys-and-baby-care" },
-  { uuid: "c7e88b48-dce6-4722-abf4-9a5c724edb4f", name: "Vehicles", slug: "vehicles" },
-  { uuid: "e17ad20e-db1a-4976-8b26-20755eee784f", name: "Women's Fashion", slug: "womens-fashion" },
-  { uuid: "5d6c4acb-bbdb-4c88-8596-c5b7576b4784", name: "Men's Fashion", slug: "mens-fashion" },
-];
-
 function getCategoryPicture(slug: string, name: string, customImage?: string): string {
   if (customImage && (customImage.startsWith("/") || customImage.startsWith("http"))) {
     return customImage;
@@ -65,8 +52,7 @@ export default function CategoryIconRow() {
 
   const { data: apiCategories = [], isLoading } = useGetCategoriesQuery();
 
-  const categories =
-    apiCategories && apiCategories.length > 0 ? apiCategories : FALLBACK_CATEGORIES;
+  const categories = apiCategories;
 
   function buildCategoryHref(slug: string) {
     const params = new URLSearchParams();

@@ -38,7 +38,7 @@ import {
   type SellerApplication,
 } from "@/lib/api/sellerApi";
 import { AuthToast, type ToastState } from "@/components/auth/AuthToast";
-import { cn } from "@/lib/utils";
+import { cn, displayImageUrl } from "@/lib/utils";
 
 function hasRequiredVerificationDocuments(application: SellerApplication) {
   const documents = application.documents || [];
@@ -912,7 +912,7 @@ export default function SellerApplicationClient() {
                   <div className="flex items-center gap-4">
                     {logoPreview || logoUri ? (
                       <img
-                        src={logoPreview || logoUri}
+                        src={displayImageUrl(logoPreview || logoUri)}
                         alt="Shop Logo"
                         className="h-20 w-20 rounded-2xl object-cover ring-2 ring-[#6C4CD8]/30 shadow-md"
                       />

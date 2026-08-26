@@ -26,7 +26,7 @@ export function ProductDetailModal({ uuid, onClose }: { uuid: string | null; onC
         ) : (
           <div className="grid gap-7 p-6 md:grid-cols-[260px_minmax(0,1fr)]">
             <div className="relative aspect-square overflow-hidden rounded-2xl bg-slate-100">
-              {image ? <Image src={getFileUrl(image)} alt={product.title || "Product"} fill unoptimized className="object-cover" /> : <div className="grid h-full place-items-center text-slate-300"><Package className="size-16" /></div>}
+              {image ? <Image src={getFileUrl(image)} alt={product.title || "Product"} fill className="object-cover" /> : <div className="grid h-full place-items-center text-slate-300"><Package className="size-16" /></div>}
             </div>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">{product.category?.name || "Uncategorized"}</span><span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">{product.status === "ARCHIVED" ? "Inactive" : product.status || "Unknown"}</span></div>

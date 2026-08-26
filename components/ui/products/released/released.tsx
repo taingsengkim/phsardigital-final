@@ -121,7 +121,7 @@ function ProductImage({ product, compact = false }: { product: Product; compact?
         alt={product.title}
         fill
         sizes={compact ? "56px" : "76px"}
-        unoptimized={product.image.startsWith("http")}
+
         className="object-cover"
       />
     </div>

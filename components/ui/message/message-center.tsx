@@ -150,7 +150,6 @@ function CustomerAvatar({
           src={avatar}
           alt={name || "Customer"}
           fill
-          unoptimized
           sizes={`${size}px`}
           className="object-cover"
         />
@@ -646,7 +645,6 @@ export function MessageCenter({ audience = "seller" }: { audience?: "seller" | "
                                   alt={file.name || "Shared image"}
                                   width={360}
                                   height={280}
-                                  unoptimized
                                   className="max-h-72 w-auto max-w-full rounded-2xl object-contain"
                                 />
                               </a>
@@ -894,7 +892,6 @@ export function MessageCenter({ audience = "seller" }: { audience?: "seller" | "
                         src={photo.url}
                         alt={photo.name || "Shared photo"}
                         fill
-                        unoptimized
                         className="object-cover"
                       />
                     </a>

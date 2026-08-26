@@ -52,10 +52,10 @@ export interface UploadedFile {
   url?: string
 }
 
+/** Mirrors ListingImageRequest: the API takes an objectName and a position. */
 export interface ListingImageInput {
   objectName: string
   sortOrder: number
-  isPrimary: boolean
 }
 
 export interface ListingAttributeInput {
@@ -73,7 +73,12 @@ export interface CreateListingRequest {
   stockQty: number
   isFeatured: boolean
   thumbnailObjectName?: string
-  images: ListingImageInput[]
+  /**
+   * Part of the documented create contract, but listings created with it have
+   * been coming back with `images: []`. Creation sends it and then attaches
+   * anything the response did not keep via POST /listings/{uuid}/images.
+   */
+  images?: ListingImageInput[]
   listingAttributes: ListingAttributeInput[]
 }
 
@@ -114,5 +119,17 @@ export interface UpdateListingThumbnailRequest {
 export interface AddListingImageMutationRequest {
   uuid: string
   objectName: string
-  sortOrder: number
+  /** Omitted appends to the end of the gallery. */
+  sortOrder?: number
+}
+
+export interface ReorderListingImagesRequest {
+  uuid: string
+  /** The complete gallery, first to last. Position is the array index. */
+  imageUuids: string[]
+}
+
+export interface RemoveListingImageRequest {
+  uuid: string
+  imageUuid: string
 }

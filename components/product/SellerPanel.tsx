@@ -137,7 +137,6 @@ export default function SellerPanel({
                   src={logoUri}
                   alt={`${name} logo`}
                   fill
-                  unoptimized
                   className="object-cover"
                   sizes="64px"
                 />

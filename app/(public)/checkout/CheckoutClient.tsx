@@ -35,10 +35,10 @@ import {
   Edit2,
   Trash2,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, displayImageUrl } from "@/lib/utils";
 import { getListingBySlug } from "@/app/api/listings";
 import { getCart, getCarts, updateCartItemQty, deleteCartItem, deleteSellerCart } from "@/app/api/cart";
-import { createOrder } from "@/app/api/orders";
+import { useCheckoutMutation } from "@/lib/redux/service/purchaseApi";
 import type { Listing } from "@/lib/types";
 
 type CheckoutItem = {
@@ -90,6 +90,12 @@ type ChatThread = {
   lastTime: string;
   unreadCount?: number;
 };
+
+/** Orders are identified by uuid; show a short, quotable reference instead. */
+function orderRef(uuid?: string): string {
+  if (!uuid) return "#ORD";
+  return `#ORD-${uuid.slice(0, 8).toUpperCase()}`;
+}
 
 const INITIAL_SAVED_ADDRESSES: SavedAddress[] = [
   {
@@ -264,7 +270,7 @@ export default function CheckoutClient() {
   const [showEditCartModal, setShowEditCartModal] = useState(false);
   const [showDeleteCartConfirmModal, setShowDeleteCartConfirmModal] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [orderCompleted, setOrderCompleted] = useState<{ id: number; total: number; storeName: string } | null>(null);
+  const [orderCompleted, setOrderCompleted] = useState<{ id: string; ref: string; total: number; storeName: string } | null>(null);
 
   function triggerToast(msg: string) {
     setToastMessage(msg);
@@ -274,6 +280,12 @@ export default function CheckoutClient() {
   }
 
   // Saved Addresses State
+  const [checkout] = useCheckoutMutation();
+  /* Checkout needs the cart's uuid and the seller's id, but the screen tracks
+     the chosen shop by name — so keep the identifiers alongside it. */
+  const [cartsByStore, setCartsByStore] = useState<
+    Record<string, { cartUuid: string; sellerId: string }>
+  >({});
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>(INITIAL_SAVED_ADDRESSES);
   const [selectedAddressId, setSelectedAddressId] = useState<string>("home");
 
@@ -319,6 +331,8 @@ export default function CheckoutClient() {
         const vendorCarts = await getCarts();
         let mappedItems: CheckoutItem[] = [];
 
+        const cartIndex: Record<string, { cartUuid: string; sellerId: string }> = {};
+
         if (vendorCarts && Array.isArray(vendorCarts) && vendorCarts.length > 0) {
           vendorCarts.forEach((cart, cartIdx) => {
             const sellerId = cart.sellerId || cart.sellerProfile?.sellerId || "";
@@ -328,6 +342,10 @@ export default function CheckoutClient() {
                   ? `Shop #${cart.sellerId.slice(0, 6)}`
                   : cart.sellerId
                 : `Shop ${cartIdx + 1}`);
+
+            if (cart.uuid && sellerId) {
+              cartIndex[storeName] = { cartUuid: cart.uuid, sellerId };
+            }
 
             if (cart.items && Array.isArray(cart.items)) {
               cart.items.forEach((item, itemIdx) => {
@@ -471,6 +489,7 @@ export default function CheckoutClient() {
         }
 
         setItems(mappedItems);
+        setCartsByStore(cartIndex);
 
         // Select initial store
         if (slugParam) {
@@ -613,19 +632,34 @@ export default function CheckoutClient() {
   const shippingFee = subtotal >= 50 ? 0 : 1.5;
   const grandTotal = Math.max(0, subtotal - discountAmount + shippingFee);
 
+  // Address completeness validation (all address inputs required except photo upload)
+  const isAddressValid = Boolean(
+    fullName.trim() &&
+    phone.trim() &&
+    locationTitle.trim() &&
+    googleMapLink.trim() &&
+    (locationType === "city"
+      ? khan.trim() && sangkat.trim() && village.trim() && streetNo.trim()
+      : province.trim() && district.trim() && commune.trim() && village.trim())
+  );
+
   // Step 1: Open Confirmation Popup Modal
   function handleInitiateCheckout(e: React.FormEvent) {
     e.preventDefault();
-    if (!phone.trim() || !fullName.trim()) {
-      setError("Please fill in your full name and phone number.");
+    if (!fullName.trim() || !phone.trim() || !locationTitle.trim()) {
+      setError("Please fill in your Full Name, Phone Number, and Location Title.");
       return;
     }
-    if (locationType === "city" && (!khan.trim() || !sangkat.trim() || !streetNo.trim())) {
-      setError("Please fill in your Khan, Sangkat, and Street No.");
+    if (locationType === "city" && (!khan.trim() || !sangkat.trim() || !village.trim() || !streetNo.trim())) {
+      setError("Please fill in all Phnom Penh address fields (Khan, Sangkat, Village, and Street No).");
       return;
     }
-    if (locationType === "province" && (!province.trim() || !district.trim() || !commune.trim())) {
-      setError("Please fill in your Province, District, and Commune.");
+    if (locationType === "province" && (!province.trim() || !district.trim() || !commune.trim() || !village.trim())) {
+      setError("Please fill in all Province address fields (Province, District, Commune, and Village).");
+      return;
+    }
+    if (!googleMapLink.trim()) {
+      setError("Please enter your GoogleMap link.");
       return;
     }
     if (!selectedStore) {
@@ -666,18 +700,29 @@ export default function CheckoutClient() {
     }
 
     try {
-      const order = await createOrder({
-        shipping_address: `${fullName} (${phone}) - ${fullAddressString}`,
-        payment_method: paymentMethod,
-        items: activeItems.map((i) => ({
-          listing_id: typeof i.id === "number" ? i.id : parseInt(String(i.id), 10) || 101,
-          quantity: i.quantity,
-          unit_price: i.price,
-        })),
-      });
+      /* Checkout is per seller: the seller owns the URL, their cart the body.
+         A cart spanning several shops therefore becomes several orders, which
+         is what the "proceed to checkout for your next shop" step below is. */
+      const target = cartsByStore[selectedStore];
+      if (!target?.cartUuid || !target?.sellerId) {
+        throw new Error(
+          "This shop's cart could not be identified. Please reload the checkout and try again.",
+        );
+      }
+
+      /* The address is sent as loose fields rather than an addressId: the list
+         this screen offers is local, so its ids are not address-book uuids the
+         API would recognise. Only cartUuid is required either way. */
+      const order = await checkout({
+        sellerId: target.sellerId,
+        cartUuid: target.cartUuid,
+        shippingAddress: fullAddressString,
+        recipientName: fullName.trim(),
+        recipientPhone: phone.trim(),
+      }).unwrap();
 
       const store = selectedStore;
-      setOrderCompleted({ id: order.id, total: grandTotal, storeName: store });
+      setOrderCompleted({ id: order.uuid, ref: orderRef(order.uuid), total: grandTotal, storeName: store });
       setActiveChatStore(store);
 
       // Update chat threads list with newly created order thread
@@ -686,7 +731,7 @@ export default function CheckoutClient() {
         if (exists) {
           return prev.map((t) =>
             t.storeName === store
-              ? { ...t, lastMessage: `Invoice #ORD-${order.id} created`, lastTime: "10:14 AM" }
+              ? { ...t, lastMessage: `Invoice ${orderRef(order.uuid)} created`, lastTime: "10:14 AM" }
               : t
           );
         }
@@ -694,7 +739,7 @@ export default function CheckoutClient() {
           {
             id: `t_${Date.now()}`,
             storeName: store,
-            lastMessage: `Invoice #ORD-${order.id} created`,
+            lastMessage: `Invoice ${orderRef(order.uuid)} created`,
             lastTime: "10:14 AM",
           },
           ...prev,
@@ -712,7 +757,7 @@ export default function CheckoutClient() {
         {
           id: "m2",
           sender: "seller",
-          text: `Hello ${fullName}! Invoice #ORD-${order.id} has been received and confirmed by ${store}.`,
+          text: `Hello ${fullName}! Invoice ${orderRef(order.uuid)} has been received and confirmed by ${store}.`,
           isQrCard: paymentMethod === "pay_now_shop",
           time: "10:15 AM",
         },
@@ -815,7 +860,7 @@ export default function CheckoutClient() {
           </div>
           <h1 className="mt-6 text-[28px] font-black text-[#1A1330]">Invoice Sent to {orderCompleted.storeName}!</h1>
           <p className="mt-2 text-[15px] text-[#8B85A0]">
-            Your order invoice <span className="font-bold text-[#6C4CD8]">#ORD-{orderCompleted.id}</span> has been issued. You can now chat directly with <span className="font-bold text-[#1A1330]">{orderCompleted.storeName}</span> to finalize payment and delivery.
+            Your order invoice <span className="font-bold text-[#6C4CD8]">{orderCompleted.ref}</span> has been issued. You can now chat directly with <span className="font-bold text-[#1A1330]">{orderCompleted.storeName}</span> to finalize payment and delivery.
           </p>
 
           {/* Interactive Progress Tracker */}
@@ -841,7 +886,7 @@ export default function CheckoutClient() {
           {/* Invoice Summary */}
           <div className="my-6 rounded-2xl border border-[#EDEBF3] p-5 text-left text-[14px] space-y-2.5">
             <div className="flex justify-between border-b border-[#F0EDFB] pb-2 font-bold text-[#1A1330]">
-              <span className="flex items-center gap-1.5"><FileText size={16} className="text-[#6C4CD8]" /> Invoice #ORD-{orderCompleted.id}</span>
+              <span className="flex items-center gap-1.5"><FileText size={16} className="text-[#6C4CD8]" /> Invoice {orderCompleted.ref}</span>
               <span className="text-[#6C4CD8]">${orderCompleted.total.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-[#8B85A0]">
@@ -968,7 +1013,7 @@ export default function CheckoutClient() {
                       </div>
                       <p className="text-[11.5px] text-[#8B85A0] truncate mt-0.5">
                         {thread.storeName === orderCompleted.storeName && isActive
-                          ? `Invoice #ORD-${orderCompleted.id} created`
+                          ? `Invoice ${orderCompleted.ref} created`
                           : thread.lastMessage}
                       </p>
                     </div>
@@ -1024,7 +1069,7 @@ export default function CheckoutClient() {
                           <span className="text-[14px] font-extrabold uppercase tracking-wide">Purchase Invoice Ticket</span>
                         </div>
                         <span className="rounded-md bg-[#6C4CD8] px-2.5 py-1 text-[12px] font-bold text-white">
-                          #ORD-{orderCompleted.id}
+                          {orderCompleted.ref}
                         </span>
                       </div>
 
@@ -1481,20 +1526,21 @@ export default function CheckoutClient() {
                   </>
                 )}
 
-                {/* ── GOOGLE MAP LINK (OPTIONAL) ── */}
+                {/* ── GOOGLE MAP LINK (REQUIRED) ── */}
                 <div className="sm:col-span-2">
                   <label htmlFor="googleMapLink" className="mb-1.5 flex items-center justify-between text-[13px] font-bold text-[#1A1330]">
                     <span className="flex items-center gap-1.5">
                       <Link2 size={15} className="text-[#6C4CD8]" />
-                      GoogleMap (Link)
+                      GoogleMap (Link) *
                     </span>
-                    <span className="text-[12px] font-normal text-[#8B85A0]">Optional</span>
+                    <span className="text-[12px] font-bold text-[#6C4CD8]">Required</span>
                   </label>
                   <input
                     id="googleMapLink"
                     type="url"
                     value={googleMapLink}
                     onChange={(e) => setGoogleMapLink(e.target.value)}
+                    required
                     placeholder="https://maps.google.com/?q=11.5564,104.9282"
                     className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
                   />
@@ -1545,7 +1591,7 @@ export default function CheckoutClient() {
                             onClick={() => setViewPhotoUrl(photo)}
                             title="Click to view full image"
                           >
-                            <img src={photo} alt={`House photo ${idx + 1}`} className="h-full w-full object-cover" />
+                            <img src={displayImageUrl(photo)} alt={`House photo ${idx + 1}`} className="h-full w-full object-cover" />
                             <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
                               <Eye size={16} className="text-white drop-shadow-md" />
                             </div>
@@ -1701,7 +1747,7 @@ export default function CheckoutClient() {
                           alt={item.title}
                           fill
                           className="object-cover"
-                          unoptimized={item.image.startsWith("http")}
+
                         />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center bg-[#1A1330] text-[#6C4CD8]">
@@ -1758,8 +1804,8 @@ export default function CheckoutClient() {
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={submitting || activeItems.length === 0}
-                className="w-full flex items-center justify-center gap-2 rounded-2xl bg-[#6C4CD8] py-4 text-[17px] font-bold text-white shadow-[0_8px_25px_rgba(108,76,216,0.35)] transition-all hover:scale-[1.02] hover:bg-[#5B3DC0] disabled:opacity-50"
+                disabled={submitting || activeItems.length === 0 || !isAddressValid}
+                className="w-full flex items-center justify-center gap-2 rounded-2xl bg-[#6C4CD8] py-4 text-[17px] font-bold text-white shadow-[0_8px_25px_rgba(108,76,216,0.35)] transition-all hover:scale-[1.02] hover:bg-[#5B3DC0] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:shadow-none"
               >
                 {submitting ? (
                   "Processing Order..."
@@ -1770,6 +1816,13 @@ export default function CheckoutClient() {
                   </>
                 )}
               </button>
+
+              {!isAddressValid && (
+                <p className="text-center text-[12px] font-semibold text-amber-700 bg-amber-50 rounded-xl p-2.5 border border-amber-200/80 flex items-center justify-center gap-1.5">
+                  <AlertTriangle size={14} className="shrink-0 text-amber-600" />
+                  <span>Please fill in all required address fields to proceed with checkout</span>
+                </p>
+              )}
 
               {/* Trust Badges */}
               <div className="flex items-center justify-center gap-2 pt-2 text-[12px] font-semibold text-[#8B85A0]">
@@ -1897,7 +1950,7 @@ export default function CheckoutClient() {
                             alt={item.title}
                             fill
                             className="object-cover"
-                            unoptimized={item.image.startsWith("http")}
+
                           />
                         ) : (
                           <div className="flex h-full w-full items-center justify-center text-[#6C4CD8]">
@@ -2045,7 +2098,7 @@ export default function CheckoutClient() {
               <X size={20} />
             </button>
             <img
-              src={viewPhotoUrl}
+              src={displayImageUrl(viewPhotoUrl)}
               alt="House Photo Full View"
               className="max-h-[85vh] w-auto max-w-full rounded-2xl object-contain"
             />

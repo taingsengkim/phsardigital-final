@@ -146,7 +146,7 @@ export function PopularCategoriesStrip() {
               </motion.div>
 
               {/* Bold, Clear Category Title */}
-              <span className="text-xs sm:text-[13px] font-bold text-[#1F1735] dark:text-zinc-200 group-hover:text-[#6C4CD8] dark:group-hover:text-[#A78BFA] line-clamp-1 transition-colors max-w-[110px] leading-tight">
+              <span className="text-xs sm:text-sm font-bold text-[#1F1735] dark:text-zinc-200 group-hover:text-[#6C4CD8] dark:group-hover:text-[#A78BFA] line-clamp-1 transition-colors max-w-[120px] leading-tight">
                 {category.name}
               </span>
             </Link>

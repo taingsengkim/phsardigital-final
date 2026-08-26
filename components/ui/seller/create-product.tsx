@@ -7,13 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm, useWatch } from "react-hook-form"
 import type { FieldErrors } from "react-hook-form"
 import { z } from "zod"
-import {
-  ArrowLeft,
-  ChevronDown,
-  ImagePlus,
-  Info,
-  Upload,
-} from "lucide-react"
+import { ArrowLeft, ChevronDown, Info } from "lucide-react"
 
 import {
   useCreateSellerListingMutation,
@@ -27,6 +21,8 @@ import {
   useUploadProductFileMutation,
 } from "@/lib/redux/service/sellerProductApi"
 import { readSellerDrafts, writeSellerDrafts } from "@/lib/seller-drafts"
+import { ListingGalleryManager } from "@/components/ui/seller/listing-gallery-manager"
+import { NewListingImages, type PickedImage } from "@/components/ui/seller/new-listing-images"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useAppDispatch } from "@/lib/hooks"
 import { sellerApi } from "@/lib/api/sellerApi"
@@ -101,6 +97,31 @@ function categoryPath(tree: SellerCategoryTree[], uuid?: string | null): SellerC
   return []
 }
 
+/**
+ * ListingResponse.category is a CategorySummaryResponse — `{ name, slug }`
+ * only, with no uuid — so an edit has to match the category back to the tree by
+ * slug (name as a fallback for older rows). Reading `category.uuid` always
+ * yielded undefined, which left the select empty on edit and, because the
+ * attribute schema is fetched by the selected uuid, blanked every custom field
+ * with it.
+ */
+function findCategoryBySummary(
+  tree: SellerCategoryTree[],
+  summary?: { slug?: string | null; name?: string | null } | null,
+): SellerCategoryTree | undefined {
+  const slug = summary?.slug?.trim().toLowerCase()
+  const name = summary?.name?.trim().toLowerCase()
+  if (!slug && !name) return undefined
+
+  for (const category of tree) {
+    if (slug && category.slug?.trim().toLowerCase() === slug) return category
+    if (!slug && name && category.name.trim().toLowerCase() === name) return category
+    const match = findCategoryBySummary(category.children ?? [], summary)
+    if (match) return match
+  }
+  return undefined
+}
+
 function flattenCategoryTree(tree: SellerCategoryTree[], parents: string[] = []): SellerCategoryTree[] {
   return tree.flatMap((category) => {
     const path = [...parents, category.name]
@@ -133,61 +154,6 @@ function Section({ title, color, children }: { title: string; color: string; chi
       </div>
       {children}
     </section>
-  )
-}
-
-function DropZone({
-  accept,
-  multiple,
-  label,
-  files,
-  onFiles,
-}: {
-  accept: string
-  multiple?: boolean
-  label: string
-  files: File[]
-  onFiles: (files: File[]) => void
-}) {
-  const inputRef = React.useRef<HTMLInputElement>(null)
-  const [dragging, setDragging] = React.useState(false)
-
-  return (
-    <div>
-      <button
-        type="button"
-        onClick={() => inputRef.current?.click()}
-        onDragOver={(event) => { event.preventDefault(); setDragging(true) }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={(event) => {
-          event.preventDefault()
-          setDragging(false)
-          onFiles(Array.from(event.dataTransfer.files))
-        }}
-        className={`flex min-h-44 w-full flex-col items-center justify-center gap-3 rounded-xl border border-dashed transition-colors ${dragging ? "border-violet-400 bg-violet-50" : "border-slate-200 bg-slate-50 hover:border-violet-300"}`}
-      >
-        <span className="grid size-11 place-items-center rounded-xl bg-white text-slate-500 shadow-sm">
-          {accept.startsWith("image") ? <ImagePlus className="size-5" /> : <Upload className="size-5" />}
-        </span>
-        <span className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm">
-          <Upload className="mr-2 inline size-4" />{label}
-        </span>
-        <span className="text-xs text-slate-400">or drag and drop here</span>
-      </button>
-      <input
-        ref={inputRef}
-        type="file"
-        accept={accept}
-        multiple={multiple}
-        className="hidden"
-        onChange={(event) => onFiles(Array.from(event.target.files ?? []))}
-      />
-      {files.length > 0 && (
-        <ul className="mt-3 space-y-2 text-sm text-slate-600">
-          {files.map((file) => <li key={`${file.name}-${file.size}`} className="rounded-lg bg-slate-50 px-3 py-2">{file.name}</li>)}
-        </ul>
-      )}
-    </div>
   )
 }
 
@@ -266,8 +232,12 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
       images: [],
     },
   })
-  const images = useWatch({ control, name: "images" })
   const categoryUuid = useWatch({ control, name: "categoryUuid" })
+  /* The picked photos in the order and with the cover the seller chose. The
+     form field above still holds the raw Files so the existing validation
+     (type, size, count) keeps applying unchanged. */
+  const [picked, setPicked] = React.useState<PickedImage[]>([])
+  const [coverId, setCoverId] = React.useState("")
   const [attributeValues, setAttributeValues] = React.useState<Record<string, string>>({})
   const categoryOptions = React.useMemo(() => flattenCategoryTree(categoryTree), [categoryTree])
   const selectedCategory = categoryOptions.find((category) => category.uuid === categoryUuid)
@@ -282,14 +252,19 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
 
   React.useEffect(() => {
     if (!listing || !isEditing) return
-    const path = categoryPath(categoryTree, listing.category?.uuid)
+    /* The tree arrives on its own schedule; until it does there is nothing to
+       match the category against, and resetting now would lock in a blank one. */
+    if (categoryTree.length === 0) return
+    const matched =
+      categoryPath(categoryTree, listing.category?.uuid).at(-1) ??
+      findCategoryBySummary(categoryTree, listing.category)
     reset({
       title: listing.title ?? "",
       description: listing.description ?? "",
       price: Number(listing.fullPrice ?? listing.price ?? 0),
       discountPrice: listing.discountPrice == null ? undefined : Number(listing.discountPrice),
       stockQty: Number(listing.stockQty ?? 0),
-      categoryUuid: listing.category?.uuid ?? path.at(-1)?.uuid ?? "",
+      categoryUuid: listing.category?.uuid ?? matched?.uuid ?? "",
       status: listing.status === "DRAFT" || listing.status === "ARCHIVED" ? listing.status : "ACTIVE",
       images: [],
     })
@@ -343,6 +318,14 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
       const uploadedImages = await Promise.all(
         data.images.map((file) => uploadProductFile(file).unwrap()),
       )
+      /* `data.images` is kept in the picked order, so the cover's position in
+         that list is its position among the uploads. */
+      const coverIndex = Math.max(
+        picked.findIndex((image) => image.id === coverId),
+        0,
+      )
+      const coverObjectName =
+        uploadedImages[coverIndex]?.objectName ?? uploadedImages[0]?.objectName
       const listingAttributes = categoryAttributes
         .map((attribute, index) => ({ key: attribute.code, value: attributeValues[attribute.code]?.trim() ?? "", sortOrder: attribute.sortOrder ?? index }))
         .filter((attribute) => attribute.value)
@@ -375,7 +358,17 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
           }).unwrap()))
         }
       } else {
-        await createSellerListing({
+        /* The cover is its own field on the listing; the gallery is attached
+           per image afterwards. Sending an `images` array on create does not
+           persist — every listing on the API comes back with images: [] — so
+           the documented POST /listings/{uuid}/images endpoint does that work,
+           which is also what editing uses. */
+        const galleryImages = uploadedImages.map((image, index) => ({
+          objectName: image.objectName,
+          sortOrder: index,
+        }))
+
+        const created = await createSellerListing({
           categoryUuid: data.categoryUuid,
           title: data.title,
           description: data.description,
@@ -383,14 +376,40 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
           discountPrice: data.discountPrice,
           stockQty: data.stockQty,
           isFeatured: false,
-          thumbnailObjectName: uploadedImages[0]?.objectName,
-          images: uploadedImages.map((image, index) => ({
-            objectName: image.objectName,
-            sortOrder: index,
-            isPrimary: index === 0,
-          })),
+          thumbnailObjectName: coverObjectName,
+          images: galleryImages,
           listingAttributes,
         }).unwrap()
+
+        const createdUuid = created?.uuid
+        if (!createdUuid) {
+          throw new Error(
+            "The product was created but the API did not return its id, so the photos could not be attached to it.",
+          )
+        }
+
+        /* Belt and braces. `images` is part of the documented create contract,
+           but listings have been coming back from it with images: [] — so
+           attach whatever the create did not keep, via the per-image endpoint
+           the editing view uses. Whichever mechanism the API honours, the
+           gallery ends up complete and nothing is attached twice. */
+        const persisted = new Set(
+          (created.images ?? [])
+            .map((image) => image.objectName)
+            .filter((objectName): objectName is string => Boolean(objectName)),
+        )
+        const unattached = galleryImages.filter(
+          (image) => !persisted.has(image.objectName),
+        )
+
+        // Sequential, so the gallery order is the order they were attached in.
+        for (const image of unattached) {
+          await addListingImage({
+            uuid: createdUuid,
+            objectName: image.objectName,
+            sortOrder: image.sortOrder,
+          }).unwrap()
+        }
       }
 
       dispatch(sellerApi.util.invalidateTags(["SellerListings"]))
@@ -484,12 +503,29 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
         </Section>
 
         <Section title="Images" color="bg-sky-200">
-          <FieldLabel>{isEditing ? "Add new product images (optional)" : "Cover images"}</FieldLabel>
-          {isEditing && listing?.thumbnailUri && (
-            <p className="mb-3 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">The current product images will be kept. Selecting new images will add them and set the first new image as the cover.</p>
+          {/* Editing manages the live gallery directly — every action there hits
+              the API on the spot, so it does not wait for the form's Save. */}
+          {isEditing ? (
+            <ListingGalleryManager listing={listing} listingUuid={editUuid} />
+          ) : (
+            <>
+              <FieldLabel>Product photos</FieldLabel>
+              <NewListingImages
+                images={picked}
+                coverId={coverId}
+                max={8}
+                onChange={(next, nextCoverId) => {
+                  setPicked(next)
+                  setCoverId(nextCoverId)
+                  setValue("images", next.map((image) => image.file), {
+                    shouldDirty: true,
+                    shouldValidate: true,
+                  })
+                }}
+              />
+              <FieldError message={errors.images?.message} />
+            </>
           )}
-          <DropZone accept="image/*" multiple label="Click to add images" files={images} onFiles={(files) => setValue("images", [...images, ...files], { shouldDirty: true, shouldValidate: true })} />
-          <FieldError message={errors.images?.message} />
         </Section>
 
         <Section title="Price" color="bg-emerald-200">

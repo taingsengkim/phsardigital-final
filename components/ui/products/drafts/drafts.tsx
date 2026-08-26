@@ -125,7 +125,7 @@ function ProductArtwork({
           alt={title}
           fill
           sizes="56px"
-          unoptimized={image.startsWith("http")}
+
           className="object-cover"
         />
       </div>

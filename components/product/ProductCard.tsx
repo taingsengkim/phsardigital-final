@@ -75,7 +75,8 @@ export function ProductCard({ listing, className, sellerName, onRemove }: Props)
   // 4. Seller business name
   const businessName = listing.sellerProfile?.businessName || sellerName || null;
 
-  const productUrl = `/products/${listing.uuid || listing.slug || listing.id || ""}`;
+  const targetUuid = listing.uuid || listing.id || listing.slug || "";
+  const productUrl = `/products/${targetUuid}`;
 
   return (
     <article
@@ -113,8 +114,8 @@ export function ProductCard({ listing, className, sellerName, onRemove }: Props)
               alt={listing.title || "Product image"}
               fill
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              quality={90}
               className="object-cover transition-transform duration-500 group-hover:scale-[1.06]"
-              unoptimized={Boolean(imgSrc.startsWith("http"))}
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-[#C4B5FD]">
