@@ -1,13 +1,13 @@
 "use client";
 
 import { useLanguage } from "@/lib/context/LanguageContext";
-import { Globe, Check } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Check } from "lucide-react";
 
 export function LanguageToggle() {
   const { language, setLanguage } = useLanguage();
@@ -17,33 +17,34 @@ export function LanguageToggle() {
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          aria-label="Switch Language"
-          title="Switch Language / ផ្លាស់ប្តូរភាសា"
-          className="flex h-9 items-center gap-1.5 rounded-full border border-gray-200 dark:border-zinc-800 bg-[#F4F4F6] dark:bg-[#18181B] px-2.5 py-1 text-xs font-bold text-gray-800 dark:text-zinc-200 hover:border-[#6C4CD8] transition cursor-pointer shadow-xs"
+          aria-label="Switch Language / ផ្លាស់ប្តូរភាសា"
+          title={language === "km" ? "Switch to English (🇬🇧)" : "ប្តូរទៅ ភាសាខ្មែរ (🇰🇭)"}
+          className="relative flex size-9 shrink-0 items-center justify-center rounded-full border border-primary/10 bg-primary/10 text-base shadow-xs transition hover:scale-108 hover:border-primary/25 hover:bg-primary/15 dark:border-white/10 dark:bg-white/[0.07] cursor-pointer"
         >
-          <Globe size={14} className="text-[#6C4CD8] dark:text-purple-400" />
-          <span>{language === "km" ? "🇰🇭 ខ្មែរ" : "🇬🇧 EN"}</span>
+          <span className="text-lg leading-none select-none">
+            {language === "km" ? "🇰🇭" : "🇬🇧"}
+          </span>
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-36 rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-[#18181B] p-1.5 shadow-xl">
+      <DropdownMenuContent align="end" className="w-32 rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-[#18181B] p-1 shadow-xl">
         <DropdownMenuItem
           onClick={() => setLanguage("en")}
-          className="flex items-center justify-between rounded-lg px-3 py-2 text-xs font-semibold cursor-pointer text-gray-800 dark:text-zinc-200 hover:bg-[#6C4CD8]/10 hover:text-[#6C4CD8]"
+          className="flex items-center justify-between rounded-lg px-3 py-2 text-xs font-bold cursor-pointer text-gray-800 dark:text-zinc-200 hover:bg-[#6C4CD8]/10 hover:text-[#6C4CD8]"
         >
           <div className="flex items-center gap-2">
-            <span>🇬🇧</span>
-            <span>English</span>
+            <span className="text-base">🇬🇧</span>
+            <span>UK</span>
           </div>
           {language === "en" && <Check size={14} className="text-[#6C4CD8]" />}
         </DropdownMenuItem>
 
         <DropdownMenuItem
           onClick={() => setLanguage("km")}
-          className="flex items-center justify-between rounded-lg px-3 py-2 text-xs font-semibold cursor-pointer text-gray-800 dark:text-zinc-200 hover:bg-[#6C4CD8]/10 hover:text-[#6C4CD8]"
+          className="flex items-center justify-between rounded-lg px-3 py-2 text-xs font-bold cursor-pointer text-gray-800 dark:text-zinc-200 hover:bg-[#6C4CD8]/10 hover:text-[#6C4CD8]"
         >
           <div className="flex items-center gap-2">
-            <span>🇰🇭</span>
-            <span>ភាសាខ្មែរ</span>
+            <span className="text-base">🇰🇭</span>
+            <span>Cambodia</span>
           </div>
           {language === "km" && <Check size={14} className="text-[#6C4CD8]" />}
         </DropdownMenuItem>
