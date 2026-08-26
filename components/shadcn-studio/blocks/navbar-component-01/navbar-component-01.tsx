@@ -84,7 +84,8 @@ export default function Navbar() {
   const isSeller = Boolean((profile as any)?.isSeller || sellerApp?.status === "APPROVED");
   const isPendingSeller = sellerApp?.status === "PENDING";
 
-  const userAvatar = profile?.avatarUrl || sellerApp?.logoUri || user?.image || "";
+  // A seller logo represents the store, not the signed-in user's account.
+  const userAvatar = profile?.avatarUrl || user?.image || "";
   const storeName = sellerApp?.businessName;
 
   const categoriesList =
