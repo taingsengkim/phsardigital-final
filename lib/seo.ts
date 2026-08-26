@@ -1,42 +1,64 @@
 import type { Metadata } from "next";
 import type { ApiListing } from "@/lib/types";
 import { getPrimaryImage } from "@/app/(public)/home/listing-helpers";
+import { displayImageUrl } from "@/lib/utils";
 
 /**
  * Returns the base site URL for metadata & absolute links.
- * Checks NEXT_PUBLIC_APP_URL, NEXT_PUBLIC_SITE_URL, BETTER_AUTH_URL, or falls back to production domain.
+ * Automatically resolves Vercel production domain, custom domain, or local environment.
  */
 export function getSiteUrl(): string {
-  const url =
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL.replace(/\/$/, "")}`;
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL.replace(/\/$/, "")}`;
+  }
+
+  const envUrl =
     process.env.NEXT_PUBLIC_APP_URL ||
     process.env.NEXT_PUBLIC_SITE_URL ||
-    process.env.BETTER_AUTH_URL ||
-    "https://phsardigital.com";
-  return url.replace(/\/$/, "");
+    process.env.BETTER_AUTH_URL;
+
+  if (envUrl && !envUrl.includes("localhost")) {
+    return envUrl.replace(/\/$/, "");
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    return "https://phsardigital-final.vercel.app";
+  }
+
+  return (envUrl || "http://localhost:3000").replace(/\/$/, "");
 }
 
 /**
- * Ensures an image URL is a fully qualified absolute URL (e.g. starting with http:// or https://).
+ * Ensures an image URL is a fully qualified HTTPS absolute URL.
  * Social media link preview crawlers (Telegram, Facebook, Twitter/X, WhatsApp, Discord, iMessage)
- * REQUIRE fully qualified absolute URLs to render preview thumbnails.
+ * REQUIRE fully qualified HTTPS absolute URLs to render preview thumbnails.
  */
 export function toAbsoluteUrl(pathOrUrl?: string | null): string {
   if (!pathOrUrl) {
     return `${getSiteUrl()}/picture/product_dress_blue_floral.jpg`;
   }
 
-  // Already an absolute HTTP/HTTPS URL
-  if (pathOrUrl.startsWith("http://") || pathOrUrl.startsWith("https://")) {
+  // Convert unencrypted http:// (e.g. backend MinIO IP http://51.79.146.203:9000) to HTTPS proxy URL
+  if (pathOrUrl.startsWith("http://")) {
+    const proxied = displayImageUrl(pathOrUrl);
+    return proxied.startsWith("/") ? `${getSiteUrl()}${proxied}` : proxied;
+  }
+
+  // Already secure HTTPS URL
+  if (pathOrUrl.startsWith("https://")) {
     return pathOrUrl;
   }
 
-  // Handle relative paths (e.g., /picture/dress.jpg or picture/dress.jpg)
+  // Relative path
   const cleanPath = pathOrUrl.startsWith("/") ? pathOrUrl : `/${pathOrUrl}`;
   return `${getSiteUrl()}${cleanPath}`;
 }
 
 /**
- * Resolves the primary thumbnail image for a listing as a fully qualified absolute URL for SEO metadata.
+ * Resolves the primary thumbnail image for a listing as a fully qualified absolute HTTPS URL for SEO.
  */
 export function getAbsoluteProductImageUrl(listing?: ApiListing | null): string {
   if (!listing) {
@@ -62,9 +84,35 @@ export function buildProductMetadata(listing: ApiListing | null, slug: string): 
   const siteUrl = getSiteUrl();
 
   if (!listing) {
+    const fallbackTitle = "Product Details · Phsar Digital";
+    const fallbackDesc = "Buy products on Phsar Digital, Cambodia's online marketplace.";
+    const fallbackImage = `${siteUrl}/picture/product_dress_blue_floral.jpg`;
+
     return {
-      title: "Product not found · Phsar Digital",
-      description: "The requested product could not be found on Phsar Digital.",
+      title: fallbackTitle,
+      description: fallbackDesc,
+      openGraph: {
+        title: fallbackTitle,
+        description: fallbackDesc,
+        url: `${siteUrl}/products/${slug}`,
+        siteName: "Phsar Digital",
+        locale: "en_US",
+        type: "website",
+        images: [
+          {
+            url: fallbackImage,
+            width: 1200,
+            height: 630,
+            alt: fallbackTitle,
+          },
+        ],
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: fallbackTitle,
+        description: fallbackDesc,
+        images: [fallbackImage],
+      },
     };
   }
 
