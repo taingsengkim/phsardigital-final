@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import PhsarDigitalLogo from "@/assets/svg/phsardigitalLogo";
 import {
   Search,
@@ -55,8 +56,124 @@ const CATEGORIES = [
   "Cars & Vehicles",
 ];
 
+function NavbarSearchInput({ isMobile }: { isMobile?: boolean }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [search, setSearch] = useState(searchParams?.get("search") || "");
+
+  useEffect(() => {
+    setSearch(searchParams?.get("search") || "");
+  }, [searchParams]);
+
+  const handleSearchSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const query = search.trim();
+    if (query) {
+      router.push(`/products?search=${encodeURIComponent(query)}`);
+    } else {
+      router.push("/products");
+    }
+  };
+
+  if (isMobile) {
+    return (
+      <form onSubmit={handleSearchSubmit} className="relative mt-2 block sm:hidden">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search Products..."
+          aria-label="Search products"
+          className="w-full rounded-full border border-[#E2DFEC] bg-[#F8F7FB] py-[9px] pl-[14px] pr-[44px] text-[13px] text-foreground outline-none placeholder:text-muted-foreground dark:border-border dark:bg-muted focus:border-[#6C4CD8] transition"
+        />
+        {search ? (
+          <button
+            type="button"
+            onClick={() => {
+              setSearch("");
+              router.push("/products");
+            }}
+            aria-label="Clear search"
+            className="absolute right-[34px] top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-white cursor-pointer"
+          >
+            <X size={13} />
+          </button>
+        ) : null}
+        <button
+          type="submit"
+          aria-label="Submit search"
+          className="absolute right-[12px] top-1/2 -translate-y-1/2 p-1 text-[#6C4CD8] hover:scale-110 transition cursor-pointer"
+        >
+          <Search size={15} color={BRAND} />
+        </button>
+      </form>
+    );
+  }
+
+  return (
+    <form
+      onSubmit={handleSearchSubmit}
+      className="relative hidden flex-1 sm:block sm:max-w-[480px]"
+    >
+      <input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Search Products..."
+        aria-label="Search products"
+        className="w-full rounded-full border border-[#E2DFEC] bg-[#F8F7FB] py-[9px] pl-[14px] pr-[44px] text-[13px] text-foreground outline-none placeholder:text-muted-foreground dark:border-border dark:bg-muted focus:border-[#6C4CD8] focus:ring-2 focus:ring-[#6C4CD8]/20 transition"
+      />
+      {search ? (
+        <button
+          type="button"
+          onClick={() => {
+            setSearch("");
+            router.push("/products");
+          }}
+          aria-label="Clear search"
+          className="absolute right-[34px] top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-white cursor-pointer"
+        >
+          <X size={13} />
+        </button>
+      ) : null}
+      <button
+        type="submit"
+        aria-label="Submit search"
+        className="absolute right-[12px] top-1/2 -translate-y-1/2 p-1 text-[#6C4CD8] hover:scale-110 transition cursor-pointer"
+      >
+        <Search size={15} color={BRAND} />
+      </button>
+    </form>
+  );
+}
+
+function NavbarSearch({ isMobile }: { isMobile?: boolean }) {
+  return (
+    <Suspense
+      fallback={
+        isMobile ? (
+          <div className="relative mt-2 block sm:hidden">
+            <input
+              placeholder="Search Products..."
+              disabled
+              className="w-full rounded-full border border-[#E2DFEC] bg-[#F8F7FB] py-[9px] pl-[14px] pr-[40px] text-[13px]"
+            />
+          </div>
+        ) : (
+          <div className="relative hidden flex-1 sm:block sm:max-w-[480px]">
+            <input
+              placeholder="Search Products..."
+              disabled
+              className="w-full rounded-full border border-[#E2DFEC] bg-[#F8F7FB] py-[9px] pl-[14px] pr-[40px] text-[13px]"
+            />
+          </div>
+        )
+      }
+    >
+      <NavbarSearchInput isMobile={isMobile} />
+    </Suspense>
+  );
+}
+
 export default function Navbar() {
-  const [search, setSearch] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { cartCount, savedCount } = useCartFavorites();
 
@@ -145,20 +262,7 @@ export default function Navbar() {
             </Link>
 
             {/* search - desktop/tablet only */}
-            <div className="relative hidden flex-1 sm:block sm:max-w-[480px]">
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search Products..."
-                aria-label="Search products"
-                className="w-full rounded-full border border-[#E2DFEC] bg-[#F8F7FB] py-[9px] pl-[14px] pr-[40px] text-[13px] text-foreground outline-none placeholder:text-muted-foreground dark:border-border dark:bg-muted"
-              />
-              <Search
-                size={15}
-                color={BRAND}
-                className="absolute right-[14px] top-1/2 -translate-y-1/2"
-              />
-            </div>
+            <NavbarSearch />
 
             <div className="hidden flex-1 sm:block" />
 
@@ -350,20 +454,7 @@ export default function Navbar() {
           </div>
 
           {/* row 2: search - mobile only */}
-          <div className="relative mt-2 block sm:hidden">
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search Products..."
-              aria-label="Search products"
-              className="w-full rounded-full border border-[#E2DFEC] bg-[#F8F7FB] py-[9px] pl-[14px] pr-[40px] text-[13px] text-foreground outline-none placeholder:text-muted-foreground dark:border-border dark:bg-muted"
-            />
-            <Search
-              size={15}
-              color={BRAND}
-              className="absolute right-[14px] top-1/2 -translate-y-1/2"
-            />
-          </div>
+          <NavbarSearch isMobile />
         </div>
       </div>
 
