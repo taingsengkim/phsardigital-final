@@ -1,10 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { LayoutGrid, List, ChevronsUpDown, Heart, Star, Loader2, PackageX } from "lucide-react";
+import {
+  LayoutGrid,
+  List,
+  ChevronDown,
+  Check,
+  Heart,
+  Star,
+  Loader2,
+  PackageX,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsUpDown,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGetListingsQuery } from "@/lib/api/homeApi";
 import { ProductCard } from "@/app/(public)/home/ProductCard";
@@ -14,13 +26,88 @@ function usd(n: number) {
   return (n || 0).toLocaleString("en-US", { style: "currency", currency: "USD" });
 }
 
+function getPageNumbers(current: number, total: number): (number | "...")[] {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  if (current <= 4) {
+    return [1, 2, 3, 4, 5, "...", total];
+  }
+  if (current >= total - 3) {
+    return [1, "...", total - 4, total - 3, total - 2, total - 1, total];
+  }
+  return [1, "...", current - 1, current, current + 1, "...", total];
+}
+
+function PageSizeDropdown({
+  value,
+  onChange,
+  options = [15, 30, 50, 75, 100, 150],
+}: {
+  value: number;
+  onChange: (val: number) => void;
+  options?: number[];
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div className="relative inline-block" ref={containerRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="flex h-9.5 items-center gap-2 rounded-xl border border-gray-200 dark:border-zinc-800 bg-[#F4F4F6] dark:bg-[#18181B] px-4 py-2 text-sm font-semibold text-[#1A1330] dark:text-white transition hover:bg-gray-200 dark:hover:bg-[#27272A] focus:outline-none shadow-xs"
+      >
+        <span>{value}</span>
+        <ChevronDown size={16} className={cn("text-gray-500 dark:text-zinc-400 transition-transform duration-200", isOpen && "rotate-180")} />
+      </button>
+
+      {isOpen && (
+        <div className="absolute bottom-full left-0 mb-2 z-50 min-w-[125px] overflow-hidden rounded-2xl border border-gray-200 dark:border-zinc-700 bg-white dark:bg-[#18181B] py-2 shadow-xl shadow-black/20 animate-in fade-in-0 zoom-in-95">
+          {options.map((opt) => (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => {
+                onChange(opt);
+                setIsOpen(false);
+              }}
+              className={cn(
+                "flex w-full items-center justify-between px-4 py-2.5 text-sm font-medium transition text-left",
+                opt === value
+                  ? "bg-[#6C4CD8]/10 text-[#6C4CD8] dark:bg-[#6C4CD8]/20 dark:text-purple-300 font-semibold"
+                  : "text-gray-700 dark:text-zinc-200 hover:bg-gray-100 dark:hover:bg-[#27272A]"
+              )}
+            >
+              <span>{opt}</span>
+              {opt === value && <Check size={16} className="text-[#6C4CD8] dark:text-purple-400" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ProductsClient() {
   const searchParams = useSearchParams();
   const categorySlug = searchParams.get("category") || searchParams.get("categorySlug") || "";
   const initialSort = searchParams.get("sort") || "popular";
+  const initialPageSize = Number(searchParams.get("pageSize") || searchParams.get("size")) || 75;
 
   const [view, setView] = useState<"grid" | "list">("grid");
   const [sort, setSort] = useState(initialSort);
+  const [pageSize, setPageSize] = useState(initialPageSize);
   const [page, setPage] = useState(1);
   const [favoriteMap, setFavoriteMap] = useState<Record<string, boolean>>({});
 
@@ -38,13 +125,16 @@ export default function ProductsClient() {
     categorySlug: categorySlug || undefined,
     sort: mappedSort,
     pageNumber: page - 1,
-    pageSize: 20,
+    pageSize: pageSize,
   });
 
   const apiListings = (apiData?.content || apiData?.data || []) as any[];
   const pageObj = typeof apiData?.page === "object" ? apiData.page : null;
   const totalElements = pageObj?.totalElements ?? apiData?.total ?? apiListings.length ?? 0;
-  const totalPages = pageObj?.totalPages ?? apiData?.totalPages ?? Math.ceil(totalElements / 20) ?? 1;
+  const totalPages = Math.max(
+    1,
+    pageObj?.totalPages ?? apiData?.totalPages ?? Math.ceil(totalElements / pageSize) ?? 1
+  );
 
   async function toggleFavorite(uuid: string, currentFav: boolean) {
     const nextStatus = !currentFav;
@@ -65,14 +155,18 @@ export default function ProductsClient() {
   // Display items: use real API listings
   const displayItems = apiListings;
 
+  const start = totalElements === 0 ? 0 : (page - 1) * pageSize + 1;
+  const end = Math.min(page * pageSize, Math.max(totalElements, displayItems.length));
 
-  const start = (page - 1) * 20 + 1;
-  const end = Math.min(page * 20, Math.max(totalElements, displayItems.length));
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize);
+    setPage(1);
+  };
 
   return (
     <>
       {/* ── toolbar ── */}
-      <div className="mb-5 flex items-center gap-3">
+      <div className="mb-5 flex flex-wrap items-center gap-3">
         {/* grid / list toggle */}
         <div className="flex gap-1 rounded-lg border border-[#E2DFEC] bg-white p-1">
           {(["grid", "list"] as const).map((v) => (
@@ -83,7 +177,7 @@ export default function ProductsClient() {
               className={cn(
                 "flex h-7 w-7 items-center justify-center rounded-md transition-colors",
                 view === v
-                  ? "bg-[#6C4CD8] text-white"
+                  ? "bg-[#6C4CD8] text-white shadow-sm"
                   : "text-[#8B85A0] hover:bg-[#F1EFFA]"
               )}
             >
@@ -95,12 +189,23 @@ export default function ProductsClient() {
         {/* divider */}
         <div className="h-px flex-1 bg-[#E5E2EC]" />
 
+        {/* page size selector (top toolbar) */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-gray-700 dark:text-zinc-300">Rows per page</span>
+          <PageSizeDropdown
+            value={pageSize}
+            onChange={handlePageSizeChange}
+            options={[15, 30, 50, 75, 100, 150]}
+          />
+        </div>
+
         {/* sort dropdown */}
         <div className="relative">
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value)}
-            className="appearance-none rounded-lg border border-[#E2DFEC] bg-white py-2 pl-3 pr-8 text-[12px] font-semibold text-[#3F3A52] outline-none focus:border-[#6C4CD8]"
+            aria-label="Sort order"
+            className="appearance-none rounded-lg border border-[#E2DFEC] dark:border-[#2C2442] bg-white dark:bg-[#1A1429] py-2 pl-3 pr-8 text-xs font-semibold text-[#3F3A52] dark:text-[#E2DFEC] outline-none focus:border-[#6C4CD8] focus:ring-2 focus:ring-[#6C4CD8]/20 transition cursor-pointer hover:border-[#6C4CD8]/50"
           >
             <option value="popular">Sort by Popularity</option>
             <option value="price_asc">Price: Low to High</option>
@@ -183,7 +288,6 @@ export default function ProductsClient() {
                       alt={title}
                       fill
                       className="object-cover object-center transition-transform duration-300 group-hover:scale-105"
-
                     />
                     {discountPercent && (
                       <span className="absolute left-1.5 top-1.5 rounded bg-[#6C4CD8] px-1.5 py-0.5 text-[9px] font-bold text-white">
@@ -234,46 +338,66 @@ export default function ProductsClient() {
         </div>
       )}
 
-      {/* ── pagination ── */}
+      {/* ── pagination bar ── */}
       {!isLoading && displayItems.length > 0 && (
-        <div className="mt-8 mb-10 flex items-center justify-between text-[12px] text-[#8B85A0] font-sans">
-          <span>
-            Showing {start}–{end} of {totalElements} item(s)
-          </span>
+        <div className="mt-10 mb-12 flex flex-col sm:flex-row items-center justify-between gap-5 py-3 text-sm font-sans border-t border-gray-100 dark:border-zinc-800/80 pt-7">
+          {/* Left section: Rows per page [ 75 v ] Showing 1–75 of 52 */}
+          <div className="flex flex-wrap items-center gap-3.5 sm:gap-5 text-gray-600 dark:text-zinc-400">
+            <span className="font-semibold text-gray-900 dark:text-white text-sm">Rows per page</span>
 
-          <div className="flex items-center gap-1.5">
+            <PageSizeDropdown
+              value={pageSize}
+              onChange={handlePageSizeChange}
+              options={[15, 30, 50, 75, 100, 150]}
+            />
+
+            <span className="text-sm font-medium">
+              Showing {start}–{end} of {totalElements}
+            </span>
+          </div>
+
+          {/* Right section: < 1 2 3 > circular buttons */}
+          <div className="flex items-center gap-2 flex-wrap justify-center">
+            {/* Prev button */}
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="rounded-md bg-[#EDEBF3] px-3 py-1.5 text-[11px] font-medium text-[#8B85A0] transition hover:bg-[#E0DCF0] disabled:opacity-40"
+              className="w-10 h-10 rounded-full flex items-center justify-center bg-gray-100 dark:bg-[#27272A] text-gray-700 dark:text-zinc-200 transition hover:bg-gray-200 dark:hover:bg-[#3F3F46] disabled:opacity-30 disabled:cursor-not-allowed"
+              aria-label="Previous page"
             >
-              Prev
+              <ChevronLeft size={18} />
             </button>
 
-            {Array.from({ length: totalPages }).map((_, i) => {
-              const n = i + 1;
-              return (
+            {/* Page numbers */}
+            {getPageNumbers(page, totalPages).map((p, idx) =>
+              p === "..." ? (
+                <span key={`ellipsis-${idx}`} className="w-10 h-10 flex items-center justify-center text-gray-400 dark:text-zinc-500 font-semibold text-sm">
+                  ...
+                </span>
+              ) : (
                 <button
-                  key={n}
-                  onClick={() => setPage(n)}
+                  key={p}
+                  onClick={() => setPage(p as number)}
                   className={cn(
-                    "rounded-md px-3 py-1.5 text-[11px] font-semibold transition",
-                    page === n
-                      ? "bg-[#8FC93A] text-white"
-                      : "bg-[#EDEBF3] text-[#8B85A0] hover:bg-[#E0DCF0]"
+                    "w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition",
+                    page === p
+                      ? "bg-[#6C4CD8] text-white shadow-sm shadow-[#6C4CD8]/30 font-semibold"
+                      : "bg-gray-100 dark:bg-[#27272A] text-gray-700 dark:text-zinc-200 hover:bg-gray-200 dark:hover:bg-[#3F3F46]"
                   )}
                 >
-                  {n}
+                  {p}
                 </button>
-              );
-            })}
+              )
+            )}
 
+            {/* Next button */}
             <button
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
-              className="rounded-md bg-[#8FC93A] px-3 py-1.5 text-[11px] font-semibold text-white transition hover:bg-[#7AB82E] disabled:opacity-40"
+              className="w-10 h-10 rounded-full flex items-center justify-center bg-gray-100 dark:bg-[#27272A] text-gray-700 dark:text-zinc-200 transition hover:bg-gray-200 dark:hover:bg-[#3F3F46] disabled:opacity-30 disabled:cursor-not-allowed"
+              aria-label="Next page"
             >
-              Next
+              <ChevronRight size={18} />
             </button>
           </div>
         </div>
@@ -281,3 +405,5 @@ export default function ProductsClient() {
     </>
   );
 }
+
+

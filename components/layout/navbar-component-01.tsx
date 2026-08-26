@@ -29,7 +29,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useSession, logoutFromKeycloak } from "@/lib/auth-client";
 import { useGetMeQuery } from "@/lib/api/authApi";
-import { useGetSellerApplicationQuery, useGetSellerProfileQuery } from "@/lib/api/sellerApi";
+import {
+  useGetSellerApplicationQuery,
+  useGetSellerProfileQuery,
+} from "@/lib/api/sellerApi";
 import { useGetCategoriesQuery } from "@/lib/api/homeApi";
 import LoginButton from "@/components/auth/LoginButton";
 import RegisterButton from "@/components/auth/RegisterButton";
@@ -71,15 +74,16 @@ export default function Navbar() {
 
   const isLoggedIn = Boolean(session?.user);
   const isSeller = Boolean(
-    (profile as any)?.isSeller || sellerProfile?.id || sellerApp?.status === "APPROVED"
+    (profile as any)?.isSeller ||
+    sellerProfile?.id ||
+    sellerApp?.status === "APPROVED",
   );
   const isPendingSeller = sellerApp?.status === "PENDING";
 
   // Keep the account identity separate from the seller/store identity. Store
   // logos are often wide and do not belong in the circular user avatar.
   const userAvatar = profile?.avatarUrl || session?.user?.image || "";
-  const storeName =
-    sellerProfile?.businessName || sellerApp?.businessName;
+  const storeName = sellerProfile?.businessName || sellerApp?.businessName;
 
   const categoriesList =
     apiCategories && apiCategories.length > 0
@@ -131,10 +135,11 @@ export default function Navbar() {
               className="flex flex-shrink-0 items-center gap-2 no-underline"
               aria-label="Phsar Digital home"
             >
-              <PhsarDigitalLogo className="h-8 w-8 shrink-0 sm:h-9 sm:w-9" aria-hidden="true" />
-              <span
-                className="hidden text-[15px] font-bold text-[#241F35] sm:inline sm:text-[17px] dark:text-foreground"
-              >
+              <PhsarDigitalLogo
+                className="h-8 w-8 shrink-0 sm:h-9 sm:w-9"
+                aria-hidden="true"
+              />
+              <span className="hidden text-[15px] font-bold text-[#241F35] sm:inline sm:text-[17px] dark:text-foreground">
                 Phsar Digital
               </span>
             </Link>
@@ -166,7 +171,10 @@ export default function Navbar() {
                   href="/account/seller-application"
                   aria-label="Store Pending"
                   title="Seller application under review"
-                  className={cn(NAV_PILL, "border border-amber-300 bg-amber-100 text-amber-800 transition-colors hover:bg-amber-200")}
+                  className={cn(
+                    NAV_PILL,
+                    "border border-amber-300 bg-amber-100 text-amber-800 transition-colors hover:bg-amber-200",
+                  )}
                 >
                   <Clock size={13} className="text-amber-600" />
                   <span className="hidden md:inline">Store Pending</span>
@@ -184,7 +192,8 @@ export default function Navbar() {
                     <Heart className="size-[17px]" strokeWidth={2} />
                     {savedCount > 0 && (
                       <span
-                        className="absolute -right-1 -top-1 grid size-[17px] place-items-center rounded-full bg-primary text-[10px] font-bold leading-none text-white ring-2 ring-white dark:ring-card"
+                        className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white shadow-xs animate-in zoom-in"
+                        style={{ background: BRAND }}
                       >
                         {savedCount > 99 ? "99+" : savedCount}
                       </span>
@@ -199,7 +208,8 @@ export default function Navbar() {
                     <ShoppingCart className="size-[17px]" strokeWidth={2} />
                     {cartCount > 0 && (
                       <span
-                        className="absolute -right-1 -top-1 grid size-[17px] place-items-center rounded-full bg-primary text-[10px] font-bold leading-none text-white ring-2 ring-white dark:ring-card"
+                        className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white shadow-xs animate-in zoom-in"
+                        style={{ background: BRAND }}
                       >
                         {cartCount > 99 ? "99+" : cartCount}
                       </span>
@@ -230,48 +240,90 @@ export default function Navbar() {
                       )}
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" sideOffset={10} className="w-72 rounded-2xl border border-[#E2DFEC] bg-white p-2.5 text-[#1A1330] shadow-2xl">
+                  <DropdownMenuContent
+                    align="end"
+                    sideOffset={10}
+                    className="w-72 rounded-2xl border border-[#E2DFEC] bg-white p-2.5 text-[#1A1330] shadow-2xl"
+                  >
                     <DropdownMenuLabel className="p-3 font-normal">
                       <div className="flex min-w-0 items-center gap-3">
                         <span className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-primary/10 text-primary">
-                          {userAvatar ? <img src={displayImageUrl(userAvatar)} alt="" className="size-full object-cover" /> : <User className="size-5" />}
+                          {userAvatar ? (
+                            <img
+                              src={displayImageUrl(userAvatar)}
+                              alt=""
+                              className="size-full object-cover"
+                            />
+                          ) : (
+                            <User className="size-5" />
+                          )}
                         </span>
                         <div className="min-w-0">
                           <p className="truncate text-base font-bold text-[#1A1330]">
                             {session?.user?.name || "My Account"}
                           </p>
-                          {session?.user?.email && <p className="mt-0.5 truncate text-xs text-muted-foreground">{session.user.email}</p>}
+                          {session?.user?.email && (
+                            <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                              {session.user.email}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator className="my-1" />
                     <DropdownMenuGroup className="space-y-1 py-1">
-                      <DropdownMenuItem asChild className="h-12 cursor-pointer rounded-xl px-3 text-sm font-semibold text-[#1A1330] focus:bg-[#F1EFFA] focus:text-[#6C4CD8]">
-                        <Link href="/account" className="flex w-full items-center gap-3">
+                      <DropdownMenuItem
+                        asChild
+                        className="h-12 cursor-pointer rounded-xl px-3 text-sm font-semibold text-[#1A1330] focus:bg-[#F1EFFA] focus:text-[#6C4CD8]"
+                      >
+                        <Link
+                          href="/account"
+                          className="flex w-full items-center gap-3"
+                        >
                           <User className="size-[18px] text-primary" />
                           <span className="text-current">Account Details</span>
                         </Link>
                       </DropdownMenuItem>
 
-                      <DropdownMenuItem asChild className="h-12 cursor-pointer rounded-xl px-3 text-sm font-semibold text-[#1A1330] focus:bg-[#F1EFFA] focus:text-[#6C4CD8]">
-                        <Link href="/messages" className="flex w-full items-center gap-3">
+                      <DropdownMenuItem
+                        asChild
+                        className="h-12 cursor-pointer rounded-xl px-3 text-sm font-semibold text-[#1A1330] focus:bg-[#F1EFFA] focus:text-[#6C4CD8]"
+                      >
+                        <Link
+                          href="/messages"
+                          className="flex w-full items-center gap-3"
+                        >
                           <MessageSquare className="size-[18px] text-primary" />
                           <span className="text-current">Messages</span>
                         </Link>
                       </DropdownMenuItem>
 
-                      <DropdownMenuItem asChild className="h-12 cursor-pointer rounded-xl px-3 text-sm font-semibold text-[#1A1330] focus:bg-[#F1EFFA] focus:text-[#6C4CD8]">
-                        <Link href="/orders" className="flex w-full items-center gap-3">
+                      <DropdownMenuItem
+                        asChild
+                        className="h-12 cursor-pointer rounded-xl px-3 text-sm font-semibold text-[#1A1330] focus:bg-[#F1EFFA] focus:text-[#6C4CD8]"
+                      >
+                        <Link
+                          href="/orders"
+                          className="flex w-full items-center gap-3"
+                        >
                           <ShoppingBag className="size-[18px] text-primary" />
                           <span className="text-current">Orders</span>
                         </Link>
                       </DropdownMenuItem>
 
                       {isSeller && (
-                        <DropdownMenuItem asChild className="h-12 cursor-pointer rounded-xl bg-primary/5 px-3 text-sm font-bold text-primary focus:bg-primary/15 focus:text-primary">
-                          <Link href="/seller-dashboard/home" className="flex w-full items-center gap-3">
+                        <DropdownMenuItem
+                          asChild
+                          className="h-12 cursor-pointer rounded-xl bg-primary/5 px-3 text-sm font-bold text-primary focus:bg-primary/15 focus:text-primary"
+                        >
+                          <Link
+                            href="/seller-dashboard/home"
+                            className="flex w-full items-center gap-3"
+                          >
                             <Store className="size-[18px]" />
-                            <span className="text-current">Seller Dashboard</span>
+                            <span className="text-current">
+                              Seller Dashboard
+                            </span>
                           </Link>
                         </DropdownMenuItem>
                       )}
@@ -334,7 +386,9 @@ export default function Navbar() {
               <DropdownMenuGroup>
                 {categoriesList.map((cat) => (
                   <DropdownMenuItem key={cat.slug} asChild>
-                    <Link href={`/products?category=${cat.slug}`}>{cat.name}</Link>
+                    <Link href={`/products?category=${cat.slug}`}>
+                      {cat.name}
+                    </Link>
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuGroup>
@@ -354,11 +408,14 @@ export default function Navbar() {
           <div className="flex-1" />
 
           {/* Quick link to Seller Registration / Dashboard in nav rail — only when logged in */}
-          {isLoggedIn && (
-            isSeller ? (
+          {isLoggedIn &&
+            (isSeller ? (
               <Link
                 href="/seller-dashboard/home"
-                className={cn(NAV_RAIL_PILL, "bg-white font-bold text-[#6C4CD8] shadow-xs transition-colors hover:bg-white/90")}
+                className={cn(
+                  NAV_RAIL_PILL,
+                  "bg-white font-bold text-[#6C4CD8] shadow-xs transition-colors hover:bg-white/90",
+                )}
               >
                 <Store size={13} />
                 {storeName || "Seller Dashboard"}
@@ -366,14 +423,16 @@ export default function Navbar() {
             ) : (
               <Link
                 href="/account/seller-application"
-                className={cn(NAV_RAIL_PILL, "text-white transition-colors hover:bg-white/20")}
+                className={cn(
+                  NAV_RAIL_PILL,
+                  "text-white transition-colors hover:bg-white/20",
+                )}
                 style={{ background: "rgba(255,255,255,0.18)" }}
               >
                 <Store size={13} />
                 Become a Seller
               </Link>
-            )
-          )}
+            ))}
 
           <div
             className={cn(NAV_RAIL_PILL, "text-white")}
@@ -389,7 +448,10 @@ export default function Navbar() {
       {mobileMenuOpen && (
         <div
           className="max-h-[70vh] overflow-y-auto lg:hidden"
-          style={{ background: BRAND, borderTop: "1px solid rgba(255,255,255,0.15)" }}
+          style={{
+            background: BRAND,
+            borderTop: "1px solid rgba(255,255,255,0.15)",
+          }}
         >
           <div className="flex flex-col gap-1 px-4 py-3">
             {/* Account Quick Status inside Mobile Drawer */}
@@ -407,8 +469,12 @@ export default function Navbar() {
                   </div>
                 )}
                 <div>
-                  <p className="text-sm font-bold">{session?.user?.name || "Guest Account"}</p>
-                  <p className="text-xs text-white/70">{session?.user?.email || "Sign in to manage orders"}</p>
+                  <p className="text-sm font-bold">
+                    {session?.user?.name || "Guest Account"}
+                  </p>
+                  <p className="text-xs text-white/70">
+                    {session?.user?.email || "Sign in to manage orders"}
+                  </p>
                 </div>
               </div>
               <div className="mt-3 flex items-center gap-2">
