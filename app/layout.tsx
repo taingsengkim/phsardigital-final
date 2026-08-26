@@ -18,10 +18,13 @@ const playfair = Playfair_Display({
   display: "swap",
 });
 
+import { getSiteUrl } from "@/lib/seo";
+
 export const metadata: Metadata = {
-  title: "Phasar Digital",
+  metadataBase: new URL(getSiteUrl()),
+  title: "Phsar Digital",
   description:
-    "Phasar Digital is a powerful and user-friendly platform that provides a comprehensive suite of tools for managing and analyzing data.",
+    "Phsar Digital is Cambodia's leading digital e-commerce marketplace for discovering and buying online products.",
 };
 
 export default function RootLayout({

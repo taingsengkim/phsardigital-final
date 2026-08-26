@@ -11,6 +11,9 @@ import ProductRail from "@/components/product/ProductRail";
 import { formatAddress } from "@/lib/maps";
 import { getListingPrice } from "@/lib/api/listing-price";
 
+import { buildProductMetadata, toAbsoluteUrl } from "@/lib/seo";
+import { getFileUrl } from "@/lib/utils";
+
 type Props = {
   params: Promise<{ slug: string }>;
 };
@@ -19,26 +22,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const listing = await getListing(slug);
 
-  if (!listing) {
-    return { title: "Product not found · Phsar Digital" };
-  }
-
-  const title = listing.title ?? "Product";
-  const description =
-    listing.description?.slice(0, 160) ??
-    `Buy ${title} on Phsar Digital, Cambodia's online marketplace.`;
-  const image = listing.thumbnailUri?.uri ?? listing.images?.[0]?.uri;
-
-  return {
-    title: `${title} · Phsar Digital`,
-    description,
-    openGraph: {
-      title,
-      description,
-      type: "website",
-      images: image ? [{ url: image }] : undefined,
-    },
-  };
+  return buildProductMetadata(listing, slug);
 }
 
 export default async function ProductDetailPage({ params }: Props) {
@@ -79,6 +63,14 @@ export default async function ProductDetailPage({ params }: Props) {
     { label: listing.title ?? "Product", href: null },
   ];
 
+  const productImages = [
+    listing.thumbnailUri?.uri,
+    ...(listing.images ?? []).map((i) => i.uri),
+  ]
+    .filter(Boolean)
+    .map((uri) => toAbsoluteUrl(getFileUrl(uri)))
+    .slice(0, 5);
+
   /* structured data — lets search engines show price, stock and rating */
   const productSchema = {
     "@context": "https://schema.org",
@@ -86,9 +78,7 @@ export default async function ProductDetailPage({ params }: Props) {
     name: listing.title,
     description: listing.description ?? undefined,
     sku: listing.uuid,
-    image: [listing.thumbnailUri?.uri, ...(listing.images ?? []).map((i) => i.uri)]
-      .filter(Boolean)
-      .slice(0, 5),
+    image: productImages.length > 0 ? productImages : [toAbsoluteUrl()],
     category: listing.category?.name,
     brand: seller?.businessName
       ? { "@type": "Brand", name: seller.businessName }
