@@ -133,13 +133,13 @@
   }
   html {
     font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
-    font-size: 16px;
+    font-size: 16px !important;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
   body {
     @apply bg-background text-foreground;
-    font-size: 1rem;
+    font-size: 16px !important;
     line-height: 1.65;
   }
 
@@ -147,8 +147,8 @@
     font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
   }
 
-  html[lang="km"], html[lang="km"] p, html[lang="km"] span, html[lang="km"] a, html[lang="km"] li, html[lang="km"] button, html[lang="km"] input, html[lang="km"] h1, html[lang="km"] h2, html[lang="km"] h3, html[lang="km"] h4, html[lang="km"] h5, html[lang="km"] h6 {
-    font-family: 'Hanuman', serif, sans-serif;
+  html[lang="km"], html[lang="km"] body, html[lang="km"] p, html[lang="km"] span, html[lang="km"] a, html[lang="km"] li, html[lang="km"] button, html[lang="km"] input, html[lang="km"] select, html[lang="km"] textarea, html[lang="km"] h1, html[lang="km"] h2, html[lang="km"] h3, html[lang="km"] h4, html[lang="km"] h5, html[lang="km"] h6 {
+    font-family: 'Hanuman', serif, sans-serif !important;
   }
 
   .sidebar-link:hover {
