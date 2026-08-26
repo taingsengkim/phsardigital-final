@@ -129,7 +129,7 @@ export default function ShopClient() {
           <p className="mt-1.5 text-sm text-[#77728a] dark:text-muted-foreground">Keep your public shop information accurate and up to date.</p>
         </div>
       {/* ── overview header ── */}
-      <header className="overflow-hidden rounded-[24px] border border-[#e8e5f0] bg-white shadow-[0_12px_35px_rgba(43,35,74,0.06)] dark:bg-card">
+      <header className="overflow-hidden rounded-[24px] border border-[#e8e5f0] bg-white shadow-[0_12px_35px_rgba(43,35,74,0.06)] dark:border-border dark:bg-card dark:shadow-black/20">
         <div className="h-2 bg-gradient-to-r from-[#6C4CD8] via-[#8c68f5] to-[#c4b3ff]" />
         <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:p-7">
           {profile.logoUri ? (
@@ -138,11 +138,11 @@ export default function ShopClient() {
               alt={`${profile.businessName} logo`}
               width={80}
               height={80}
-              className="size-24 shrink-0 rounded-[22px] border-4 border-white object-cover shadow-lg ring-1 ring-[#E2DFEC]"
+              className="size-24 shrink-0 rounded-[22px] border-4 border-white object-cover shadow-lg ring-1 ring-[#E2DFEC] dark:border-zinc-700 dark:ring-border"
             />
           ) : (
             <div
-              className="flex size-24 shrink-0 items-center justify-center rounded-[22px] border-4 border-white text-4xl font-black text-white shadow-lg ring-1 ring-[#E2DFEC]"
+              className="flex size-24 shrink-0 items-center justify-center rounded-[22px] border-4 border-white text-4xl font-black text-white shadow-lg ring-1 ring-[#E2DFEC] dark:border-zinc-700 dark:ring-border"
               style={{ background: "linear-gradient(135deg,#8267E8,#6C4CD8)" }}
               aria-hidden="true"
             >
@@ -255,7 +255,7 @@ export default function ShopClient() {
 
       {/* ── tabs ── */}
       <div
-        className="mt-6 grid gap-2 rounded-[20px] border border-[#e8e5f0] bg-white p-2 shadow-sm dark:bg-card sm:grid-cols-3"
+        className="mt-6 grid gap-2 rounded-[20px] border border-[#e8e5f0] bg-white p-2 shadow-sm dark:border-border dark:bg-card sm:grid-cols-3"
         role="tablist"
         aria-label="Shop settings"
       >

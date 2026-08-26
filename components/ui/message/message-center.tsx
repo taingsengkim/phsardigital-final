@@ -11,9 +11,12 @@ import {
   MessageSquare,
   Mic,
   Paperclip,
+  MoreHorizontal,
+  Reply,
   Search,
   Send,
   ShieldCheck,
+  Smile,
   Square,
   UserRound,
   X,
@@ -38,6 +41,16 @@ const PAGE_SIZE = 30
 const ATTACHMENT_PREFIX = "[attachment]"
 
 type UploadedAttachment = { name: string; url: string; mimeType: string }
+
+/** The messaging API returns UTC LocalDateTime values without a zone suffix.
+ * Browsers otherwise interpret those values as local time, leaving Cambodia
+ * timestamps seven hours behind. Preserve timestamps that already carry a
+ * timezone and treat only zone-less values as UTC. */
+function messageDate(value?: string): Date {
+  if (!value) return new Date(Number.NaN)
+  const hasTimezone = /(?:z|[+-]\d{2}:?\d{2})$/i.test(value)
+  return new Date(hasTimezone ? value : `${value}Z`)
+}
 
 function parseAttachment(body: string): UploadedAttachment | null {
   if (!body.startsWith(ATTACHMENT_PREFIX)) return null
@@ -85,7 +98,7 @@ function conversationPreview(body?: string): string {
 /** Thread-list stamp: clock time for today, "Yesterday", then a short date. */
 function threadStamp(iso?: string): string {
   if (!iso) return ""
-  const date = new Date(iso)
+  const date = messageDate(iso)
   if (Number.isNaN(date.getTime())) return ""
   const now = new Date()
   if (date.toDateString() === now.toDateString()) {
@@ -99,7 +112,7 @@ function threadStamp(iso?: string): string {
 
 function bubbleStamp(iso?: string): string {
   if (!iso) return ""
-  const date = new Date(iso)
+  const date = messageDate(iso)
   return Number.isNaN(date.getTime())
     ? ""
     : date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
@@ -108,7 +121,7 @@ function bubbleStamp(iso?: string): string {
 /** A day divider so a long thread does not read as one undated run. */
 function dayLabel(iso?: string): string {
   if (!iso) return ""
-  const date = new Date(iso)
+  const date = messageDate(iso)
   if (Number.isNaN(date.getTime())) return ""
   const now = new Date()
   if (date.toDateString() === now.toDateString()) return "Today"
@@ -125,7 +138,7 @@ function dayLabel(iso?: string): string {
 /** The API pages messages newest-first; a chat log has to read oldest-first. */
 function inChatOrder(messages: ConversationMessage[]): ConversationMessage[] {
   return [...messages].sort(
-    (a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime(),
+    (a, b) => messageDate(a.sentAt).getTime() - messageDate(b.sentAt).getTime(),
   )
 }
 
@@ -405,7 +418,12 @@ export function MessageCenter({ audience = "seller" }: { audience?: "seller" | "
             </label>
           </div>
 
-          <div className="min-h-0 flex-1 divide-y divide-border overflow-y-auto overscroll-contain">
+          <div
+            className={cn(
+              "min-h-0 flex-1 divide-y divide-border overflow-y-auto overscroll-contain",
+              audience === "seller" && "scrollbar-none",
+            )}
+          >
             {conversationsLoading ? (
               <div className="flex justify-center py-14">
                 <Loader2 className="size-5 animate-spin text-primary" />
@@ -547,7 +565,10 @@ export function MessageCenter({ audience = "seller" }: { audience?: "seller" | "
           <div
             ref={logRef}
             onScroll={handleLogScroll}
-            className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4 sm:p-6"
+            className={cn(
+              "min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4 sm:p-6",
+              audience === "seller" && "scrollbar-none",
+            )}
           >
             {!activeId ? (
               <p className="pt-24 text-center text-sm text-muted-foreground">
@@ -599,6 +620,107 @@ export function MessageCenter({ audience = "seller" }: { audience?: "seller" | "
                     index === 0 ||
                     dayLabel(messages[index - 1].sentAt) !==
                       dayLabel(message.sentAt)
+
+                  const nextMessage = messages[index + 1]
+                  const nextIsPending = nextMessage?.senderId === PENDING_SENDER_ID
+                  const nextSentByCurrentUser = nextMessage
+                    ? ownSenderIds.has(nextMessage.senderId)
+                    : false
+                  const nextAlignsLeft = nextMessage
+                    ? nextIsPending || nextSentByCurrentUser
+                      ? false
+                      : nextMessage.senderId === active?.otherUserId
+                    : null
+                  const endsMessageGroup =
+                    nextAlignsLeft === null || nextAlignsLeft !== alignLeft
+
+                  if (audience === "buyer") {
+                    return (
+                      <React.Fragment key={message.uuid}>
+                        {showDay && (
+                          <div className="flex justify-center py-2">
+                            <span className="rounded-full bg-card px-3 py-1 text-[11px] font-semibold text-muted-foreground ring-1 ring-border">
+                              {dayLabel(message.sentAt)}
+                            </span>
+                          </div>
+                        )}
+                        <div
+                          className={cn(
+                            "group/message flex w-full items-end gap-2",
+                            alignLeft ? "justify-start" : "justify-end",
+                            endsMessageGroup ? "pb-2" : "-mt-1",
+                          )}
+                        >
+                          {alignLeft && (
+                            <div className="w-9 shrink-0 self-end">
+                              {endsMessageGroup && (
+                                <CustomerAvatar
+                                  name={identityOf(active).name}
+                                  avatar={identityOf(active).avatar}
+                                  size={36}
+                                />
+                              )}
+                            </div>
+                          )}
+
+                          {!alignLeft && endsMessageGroup && (
+                            <div className="order-3 mb-0.5 shrink-0">
+                              <CustomerAvatar name="You" size={18} />
+                            </div>
+                          )}
+
+                          <div
+                            className={cn(
+                              "flex min-w-0 max-w-[78%] items-center gap-2 sm:max-w-[68%]",
+                              alignLeft ? "flex-row" : "flex-row-reverse",
+                            )}
+                          >
+                            <div
+                              className={cn(
+                                "min-w-0 rounded-[18px] text-[15px] leading-snug",
+                                isImage
+                                  ? "overflow-hidden"
+                                  : cn(
+                                      "px-3.5 py-2",
+                                      alignLeft
+                                        ? "bg-muted text-foreground"
+                                        : "bg-primary text-primary-foreground",
+                                    ),
+                                isPending && "opacity-70",
+                              )}
+                              title={isPending ? "Sending…" : bubbleStamp(message.sentAt)}
+                            >
+                              {file ? (
+                                isImage ? (
+                                  <a href={file.url} target="_blank" rel="noreferrer" className="block">
+                                    <Image src={file.url} alt={file.name || "Shared image"} width={360} height={280} className="max-h-72 w-auto max-w-full rounded-[18px] object-contain" />
+                                  </a>
+                                ) : file.mimeType.startsWith("audio/") ? (
+                                  <div className="min-w-[220px]">
+                                    <div className="mb-1 flex items-center gap-2 text-xs font-medium"><Mic className="size-4" /> Voice message</div>
+                                    <audio controls preload="metadata" src={file.url} className="h-9 w-full max-w-[280px]" />
+                                  </div>
+                                ) : (
+                                  <a href={file.url} target="_blank" rel="noreferrer" download className="flex items-center gap-2 underline underline-offset-2">
+                                    <FileText className="size-5 shrink-0" />
+                                    <span className="truncate">{file.name || "Attachment"}</span>
+                                  </a>
+                                )
+                              ) : (
+                                <p className="whitespace-pre-wrap break-words">{message.body}</p>
+                              )}
+                            </div>
+
+                            <div className="flex shrink-0 items-center gap-0.5 text-muted-foreground opacity-0 transition-opacity group-hover/message:opacity-100 group-focus-within/message:opacity-100">
+                              <button type="button" title="React" aria-label="React to message" className="rounded-full p-1.5 hover:bg-muted hover:text-foreground"><Smile className="size-4" /></button>
+                              <button type="button" title="Reply" aria-label="Reply to message" className="rounded-full p-1.5 hover:bg-muted hover:text-foreground"><Reply className="size-4" /></button>
+                              <button type="button" title="More" aria-label="More message options" className="rounded-full p-1.5 hover:bg-muted hover:text-foreground"><MoreHorizontal className="size-4" /></button>
+                            </div>
+                          </div>
+                        </div>
+                      </React.Fragment>
+                    )
+                  }
 
                   return (
                     <React.Fragment key={message.uuid}>
@@ -812,7 +934,12 @@ export function MessageCenter({ audience = "seller" }: { audience?: "seller" | "
 
         {/* ── DETAILS: who you are talking to, and what you have shared ── */}
         {profileOpen && active && (
-          <aside className="absolute inset-0 z-20 flex flex-col overflow-y-auto border-border bg-card p-5 md:static md:w-[300px] md:shrink-0 md:border-l">
+          <aside
+            className={cn(
+              "absolute inset-0 z-20 flex flex-col overflow-y-auto border-border bg-card p-5 md:static md:w-[300px] md:shrink-0 md:border-l",
+              audience === "seller" && "scrollbar-none",
+            )}
+          >
             <div className="flex justify-end">
               <button
                 type="button"

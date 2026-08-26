@@ -147,7 +147,7 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
 
 function Section({ title, color, children }: { title: string; color: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-7">
+    <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-card dark:shadow-black/20 sm:p-7">
       <div className="mb-6 flex items-center gap-3">
         <span className={`h-7 w-2 rounded-full ${color}`} />
         <h2 className="text-lg font-bold text-slate-900">{title}</h2>
@@ -159,13 +159,13 @@ function Section({ title, color, children }: { title: string; color: string; chi
 
 function CategoryAttributeField({ attribute, value, onChange }: { attribute: CategoryAttributeDefinition; value: string; onChange: (value: string) => void }) {
   const label = <FieldLabel>{attribute.label}{attribute.required ? " *" : ""}{attribute.unit ? ` (${attribute.unit})` : ""}</FieldLabel>
-  const inputClass = "h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+  const inputClass = "h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100 dark:border-white/10 dark:bg-background dark:text-foreground dark:focus:ring-violet-500/15"
 
   if (attribute.dataType === "BOOLEAN") return <div>{label}<select value={value} onChange={(event) => onChange(event.target.value)} className={inputClass}><option value="">Select an option</option><option value="true">Yes</option><option value="false">No</option></select></div>
   if (attribute.dataType === "SELECT") return <div>{label}<select value={value} onChange={(event) => onChange(event.target.value)} className={inputClass}><option value="">Select {attribute.label.toLowerCase()}</option>{(attribute.options ?? []).map((option) => <option key={option.uuid ?? option.value} value={option.value}>{option.label || option.value}</option>)}</select></div>
   if (attribute.dataType === "MULTI_SELECT") {
     const selected = new Set(value.split(",").filter(Boolean))
-    return <fieldset><legend className="mb-2 text-sm font-semibold text-slate-700">{attribute.label}{attribute.required ? " *" : ""}</legend><div className="flex min-h-12 flex-wrap gap-2 rounded-xl border border-slate-200 p-2">{(attribute.options ?? []).map((option) => <label key={option.uuid ?? option.value} className={`cursor-pointer rounded-lg px-3 py-2 text-sm transition ${selected.has(option.value) ? "bg-primary text-primary-foreground" : "bg-slate-100 text-slate-700"}`}><input type="checkbox" checked={selected.has(option.value)} onChange={(event) => { const next = new Set(selected); if (event.target.checked) next.add(option.value); else next.delete(option.value); onChange([...next].join(",")) }} className="sr-only" />{option.label || option.value}</label>)}</div></fieldset>
+    return <fieldset><legend className="mb-2 text-sm font-semibold text-slate-700">{attribute.label}{attribute.required ? " *" : ""}</legend><div className="flex min-h-12 flex-wrap gap-2 rounded-xl border border-slate-200 p-2 dark:border-white/10">{(attribute.options ?? []).map((option) => <label key={option.uuid ?? option.value} className={`cursor-pointer rounded-lg px-3 py-2 text-sm transition ${selected.has(option.value) ? "bg-primary text-primary-foreground" : "bg-slate-100 text-slate-700 dark:bg-muted dark:text-muted-foreground"}`}><input type="checkbox" checked={selected.has(option.value)} onChange={(event) => { const next = new Set(selected); if (event.target.checked) next.add(option.value); else next.delete(option.value); onChange([...next].join(",")) }} className="sr-only" />{option.label || option.value}</label>)}</div></fieldset>
   }
   return <div>{label}<input type={attribute.dataType === "NUMBER" ? "number" : "text"} value={value} onChange={(event) => onChange(event.target.value)} placeholder={`Enter ${attribute.label.toLowerCase()}`} className={inputClass} /></div>
 }
@@ -177,7 +177,7 @@ function CategoryDropdown({ label, placeholder, options, value, disabled, onChan
       <FieldLabel>{label}</FieldLabel>
       <DropdownMenu>
         <DropdownMenuTrigger asChild disabled={disabled}>
-          <button type="button" className="flex h-12 w-full items-center rounded-xl border border-slate-200 bg-white px-4 text-left text-sm outline-none transition hover:bg-slate-50 focus-visible:border-violet-400 focus-visible:ring-4 focus-visible:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400">
+          <button type="button" className="flex h-12 w-full items-center rounded-xl border border-slate-200 bg-white px-4 text-left text-sm outline-none transition hover:bg-slate-50 focus-visible:border-violet-400 focus-visible:ring-4 focus-visible:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400 dark:border-white/10 dark:bg-background dark:hover:bg-muted dark:focus-visible:ring-violet-500/15 dark:disabled:bg-muted">
             <span className={`truncate ${selected ? "text-slate-900" : "text-slate-400"}`}>{selected?.name || placeholder}</span>
             <ChevronDown className="ml-auto size-4 shrink-0 text-slate-400" />
           </button>
@@ -434,21 +434,21 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
   }
 
   return (
-    <form className="mx-auto w-full max-w-5xl pb-10" noValidate onSubmit={handleSubmit(submitProduct, showValidationError)}>
+    <form data-create-product className="mx-auto w-full max-w-5xl pb-10" noValidate onSubmit={handleSubmit(submitProduct, showValidationError)}>
       <div className="mb-7 flex flex-wrap items-center justify-between gap-4">
         <div>
           <p className="mb-1 text-sm font-medium text-violet-600">Products / {isEditing ? "Edit" : "Create"}</p>
           <h1 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">{isEditing ? "Edit product" : "New product"}</h1>
         </div>
         <div className="flex items-center gap-3">
-          <Link href="/seller-dashboard/products/dashboard" className="inline-flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50">
+          <Link href="/seller-dashboard/products/dashboard" className="inline-flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 dark:border-white/10 dark:bg-card dark:text-muted-foreground dark:hover:bg-muted">
             <ArrowLeft className="size-4" /> Back
           </Link>
           {!isEditing && (
             <button
               type="button"
               onClick={saveDraft}
-              className="h-11 rounded-xl border border-violet-300 bg-white px-5 text-sm font-semibold text-violet-700 shadow-sm transition hover:bg-violet-50"
+              className="h-11 rounded-xl border border-violet-300 bg-white px-5 text-sm font-semibold text-violet-700 shadow-sm transition hover:bg-violet-50 dark:border-violet-500/40 dark:bg-card dark:text-violet-400 dark:hover:bg-violet-500/10"
             >
               Save draft
             </button>
@@ -489,12 +489,12 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
           <div className="space-y-5">
             <div>
               <FieldLabel>Product title</FieldLabel>
-              <input {...register("title")} aria-invalid={Boolean(errors.title)} className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-base text-slate-900 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100 aria-invalid:border-red-400 aria-invalid:ring-red-100" placeholder="Enter a clear product title" />
+              <input {...register("title")} aria-invalid={Boolean(errors.title)} className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-base text-slate-900 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100 aria-invalid:border-red-400 aria-invalid:ring-red-100 dark:border-white/10 dark:bg-background dark:text-foreground dark:focus:ring-violet-500/15" placeholder="Enter a clear product title" />
               <FieldError message={errors.title?.message} />
             </div>
             <div>
               <FieldLabel>Description</FieldLabel>
-              <div className="overflow-hidden rounded-xl border border-slate-200 focus-within:border-violet-400 focus-within:ring-4 focus-within:ring-violet-100">
+              <div className="overflow-hidden rounded-xl border border-slate-200 focus-within:border-violet-400 focus-within:ring-4 focus-within:ring-violet-100 dark:border-white/10 dark:focus-within:ring-violet-500/15">
                 <textarea {...register("description")} aria-invalid={Boolean(errors.description)} rows={6} className="block w-full resize-y bg-white p-4 text-base outline-none" placeholder="Describe what buyers will receive..." />
               </div>
               <FieldError message={errors.description?.message} />
@@ -534,7 +534,7 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
               <FieldLabel>Amount</FieldLabel>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 font-semibold text-slate-500">$</span>
-                <input {...register("price", { valueAsNumber: true })} aria-invalid={Boolean(errors.price)} min="0" step="0.01" type="number" className="h-12 w-full rounded-xl border border-slate-200 pl-9 pr-4 text-base outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100 aria-invalid:border-red-400 aria-invalid:ring-red-100" placeholder="0.00" />
+                <input {...register("price", { valueAsNumber: true })} aria-invalid={Boolean(errors.price)} min="0" step="0.01" type="number" className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-4 text-base outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100 aria-invalid:border-red-400 aria-invalid:ring-red-100 dark:border-white/10 dark:bg-background dark:text-foreground dark:focus:ring-violet-500/15" placeholder="0.00" />
               </div>
               <FieldError message={errors.price?.message} />
             </div>
@@ -548,7 +548,7 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
                   min="0"
                   step="0.01"
                   type="number"
-                  className="h-12 w-full rounded-xl border border-slate-200 pl-9 pr-4 text-base outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100 aria-invalid:border-red-400 aria-invalid:ring-red-100"
+                  className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-4 text-base outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100 aria-invalid:border-red-400 aria-invalid:ring-red-100 dark:border-white/10 dark:bg-background dark:text-foreground dark:focus:ring-violet-500/15"
                   placeholder="0.00"
                 />
               </div>
@@ -563,7 +563,7 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
                 step="1"
                 type="number"
                 inputMode="numeric"
-                className="h-12 w-full rounded-xl border border-slate-200 px-4 text-base outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100 aria-invalid:border-red-400 aria-invalid:ring-red-100"
+                className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-base outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100 aria-invalid:border-red-400 aria-invalid:ring-red-100 dark:border-white/10 dark:bg-background dark:text-foreground dark:focus:ring-violet-500/15"
                 placeholder="0"
               />
               <FieldError message={errors.stockQty?.message} />
@@ -598,7 +598,7 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
             <FieldLabel>Availability</FieldLabel>
             <select
               {...register("status")}
-              className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+              className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100 dark:border-white/10 dark:bg-background dark:text-foreground dark:focus:ring-violet-500/15"
             >
               <option value="DRAFT">Draft — visible only to you</option>
               <option value="ACTIVE">Active — available and visible to buyers</option>

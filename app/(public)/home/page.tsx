@@ -14,7 +14,10 @@ import { SiteFeatures } from "./feature/SiteFeatures";
    so the page itself adds no spacing on top of them. */
 export default function HomePage() {
   return (
-    <main className="flex min-h-screen flex-col bg-white text-[#111827]">
+    <main
+      data-public-home
+      className="flex min-h-screen flex-col bg-background text-foreground transition-colors"
+    >
       {/* 1. Hero Section: Dual Carousel + Side Promo */}
       <HeroBanner />
 

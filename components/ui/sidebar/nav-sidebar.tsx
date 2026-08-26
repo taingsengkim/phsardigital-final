@@ -81,8 +81,8 @@ export function SellerSidebar() {
       >
         <SidebarHeader className="flex h-[70px] shrink-0 justify-center border-b border-[#eeeeee] bg-white px-5 dark:border-sidebar-border dark:bg-sidebar">
           <Link
-            href="/seller-dashboard/home"
-            aria-label="Seller dashboard"
+            href="/home"
+            aria-label="Go to Phsar Digital home"
             className="flex items-center gap-3"
           >
             <PhsarDigitalLogo
@@ -100,7 +100,6 @@ export function SellerSidebar() {
           </Link>
         </SidebarHeader>
         <SidebarContent className="overflow-x-hidden bg-white px-3.5 pb-5 pt-5 dark:bg-sidebar">
-          <p className="mb-3 px-3 text-[10px] font-black uppercase tracking-[0.28em] text-[#8293ad] group-data-[collapsible=icon]:hidden">Workspace</p>
           <nav aria-label="Seller dashboard" className="space-y-1">
             <Link
               href="/seller-dashboard/home"
@@ -110,7 +109,7 @@ export function SellerSidebar() {
               )}
             >
               <LayoutDashboard strokeWidth={1.8} />
-              <span className="min-w-0 group-data-[collapsible=icon]:hidden"><span className="block text-[15px] font-semibold leading-5">Overview</span><span className="block truncate text-[11px] font-medium text-[#94a4bc]">Executive summary</span></span>
+              <span className="min-w-0 group-data-[collapsible=icon]:hidden"><span className="block text-[15px] font-semibold leading-5">Dashboard</span><span className="block truncate text-[11px] font-medium text-[#94a4bc]">Executive summary</span></span>
             </Link>
             <button
               type="button"
