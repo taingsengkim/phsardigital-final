@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useLanguage } from "@/lib/context/LanguageContext";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   BadgeCheck,
@@ -77,6 +78,7 @@ export default function ProductDetailClient({
   sellerName,
   sellerId,
 }: Props) {
+  const { t } = useLanguage();
   const router = useRouter();
   const { data: session } = useSession();
   const isLoggedIn = Boolean(session?.user);
@@ -344,8 +346,8 @@ export default function ProductDetailClient({
               : stock > 0
                 ? lowStock
                   ? `Only ${stock} left in stock — order soon`
-                  : `In stock · ${stock} available`
-                : "Out of stock"}
+                  : `${t("in_stock")} · ${stock} available`
+                : t("out_of_stock")}
           </span>
         </div>
 
@@ -429,7 +431,7 @@ export default function ProductDetailClient({
           )}
         >
           {added ? <Check size={20} /> : <ShoppingCart size={20} />}
-          {adding ? "Adding…" : added ? "Added to cart" : "Add to cart"}
+          {adding ? "..." : added ? t("add_to_cart") : t("add_to_cart")}
         </button>
       </div>
 
@@ -439,7 +441,7 @@ export default function ProductDetailClient({
         disabled={!inStock}
         className="w-full rounded-xl border-2 border-[#6C4CD8] py-3.5 text-[17px] font-bold text-[#6C4CD8] transition hover:bg-[#6C4CD8] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
       >
-        Buy now
+        {t("buy_now")}
       </button>
 
       {/* ── trust badges ── */}

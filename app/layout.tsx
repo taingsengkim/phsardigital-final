@@ -22,10 +22,12 @@ import { getSiteUrl } from "@/lib/seo";
 
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
-  title: "Phsar Digital",
+  title: "Phsar Digital | ផ្សារឌីជីថល",
   description:
-    "Phsar Digital is Cambodia's leading digital e-commerce marketplace for discovering and buying online products.",
+    "Phsar Digital (ផ្សារឌីជីថល) is Cambodia's leading digital e-commerce marketplace for discovering and buying online products.",
 };
+
+import { LanguageProvider } from "@/lib/context/LanguageContext";
 
 export default function RootLayout({
   children,
@@ -49,10 +51,12 @@ export default function RootLayout({
             enableSystem={false}
             disableTransitionOnChange
           >
-            <CartFavoritesProvider>
-              {children}
-              <Toaster />
-            </CartFavoritesProvider>
+            <LanguageProvider>
+              <CartFavoritesProvider>
+                {children}
+                <Toaster />
+              </CartFavoritesProvider>
+            </LanguageProvider>
           </ThemeProvider>
         </StoreProvider>
       </body>

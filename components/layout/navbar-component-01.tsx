@@ -38,6 +38,9 @@ import { useGetCategoriesQuery } from "@/lib/api/homeApi";
 import LoginButton from "@/components/auth/LoginButton";
 import RegisterButton from "@/components/auth/RegisterButton";
 import { ThemeToggle } from "@/components/themeToggle";
+import { LanguageToggle } from "@/components/LanguageToggle";
+import { useLanguage } from "@/lib/context/LanguageContext";
+import { getCategoryTranslation } from "@/lib/i18n/translations";
 import { NAV_PILL, NAV_RAIL_PILL } from "@/components/layout/nav-pill";
 import { cn, displayImageUrl } from "@/lib/utils";
 import { useCartFavorites } from "@/lib/context/cart-favorites-context";
@@ -75,13 +78,15 @@ function NavbarSearchInput({ isMobile }: { isMobile?: boolean }) {
     }
   };
 
+  const { t } = useLanguage();
+
   if (isMobile) {
     return (
       <form onSubmit={handleSearchSubmit} className="relative mt-2 block sm:hidden">
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search Products..."
+          placeholder={t("search_products")}
           aria-label="Search products"
           className="w-full rounded-full border border-[#E2DFEC] bg-[#F8F7FB] py-[9px] pl-[14px] pr-[44px] text-[13px] text-foreground outline-none placeholder:text-muted-foreground dark:border-border dark:bg-muted focus:border-[#6C4CD8] transition"
         />
@@ -117,7 +122,7 @@ function NavbarSearchInput({ isMobile }: { isMobile?: boolean }) {
       <input
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        placeholder="Search Products..."
+        placeholder={t("search_products")}
         aria-label="Search products"
         className="w-full rounded-full border border-[#E2DFEC] bg-[#F8F7FB] py-[9px] pl-[14px] pr-[44px] text-[13px] text-foreground outline-none placeholder:text-muted-foreground dark:border-border dark:bg-muted focus:border-[#6C4CD8] focus:ring-2 focus:ring-[#6C4CD8]/20 transition"
       />
@@ -146,13 +151,14 @@ function NavbarSearchInput({ isMobile }: { isMobile?: boolean }) {
 }
 
 function NavbarSearch({ isMobile }: { isMobile?: boolean }) {
+  const { t } = useLanguage();
   return (
     <Suspense
       fallback={
         isMobile ? (
           <div className="relative mt-2 block sm:hidden">
             <input
-              placeholder="Search Products..."
+              placeholder={t("search_products")}
               disabled
               className="w-full rounded-full border border-[#E2DFEC] bg-[#F8F7FB] py-[9px] pl-[14px] pr-[40px] text-[13px]"
             />
@@ -160,7 +166,7 @@ function NavbarSearch({ isMobile }: { isMobile?: boolean }) {
         ) : (
           <div className="relative hidden flex-1 sm:block sm:max-w-[480px]">
             <input
-              placeholder="Search Products..."
+              placeholder={t("search_products")}
               disabled
               className="w-full rounded-full border border-[#E2DFEC] bg-[#F8F7FB] py-[9px] pl-[14px] pr-[40px] text-[13px]"
             />
@@ -174,6 +180,7 @@ function NavbarSearch({ isMobile }: { isMobile?: boolean }) {
 }
 
 export default function Navbar() {
+  const { t, language } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { cartCount, savedCount } = useCartFavorites();
 
@@ -205,11 +212,11 @@ export default function Navbar() {
   const categoriesList =
     apiCategories && apiCategories.length > 0
       ? apiCategories.map((c: any) => ({
-          name: c.name,
+          name: getCategoryTranslation(c.name, language),
           slug: c.slug || String(c.id),
         }))
       : CATEGORIES.map((cat) => ({
-          name: cat,
+          name: getCategoryTranslation(cat, language),
           slug: cat.toLowerCase().replace(/\s+/g, "-"),
         }));
 
@@ -224,6 +231,23 @@ export default function Navbar() {
         : name === "Offers"
           ? "/products?sort=price_asc"
           : "#";
+
+  const getNavLinkLabel = (name: string) => {
+    switch (name) {
+      case "Home":
+        return t("home");
+      case "Offers":
+        return t("offers");
+      case "Brands":
+        return t("brands");
+      case "Stores":
+        return t("stores");
+      case "All Products":
+        return t("all_products");
+      default:
+        return name;
+    }
+  };
 
   return (
     <header className="sticky top-0 z-50">
@@ -257,7 +281,7 @@ export default function Navbar() {
                 aria-hidden="true"
               />
               <span className="hidden text-[15px] font-bold text-[#241F35] sm:inline sm:text-[17px] dark:text-foreground">
-                Phsar Digital
+                {t("brand_name")}
               </span>
             </Link>
 
@@ -269,6 +293,7 @@ export default function Navbar() {
             {/* icon buttons & User profile */}
             <div className="flex flex-shrink-0 items-center gap-1.5 sm:gap-2">
               <ThemeToggle />
+              <LanguageToggle />
 
               {isPendingSeller && !isSeller && (
                 <Link
@@ -385,7 +410,7 @@ export default function Navbar() {
                           className="flex w-full items-center gap-3"
                         >
                           <User className="size-[18px] text-primary" />
-                          <span className="text-current">Account Details</span>
+                          <span className="text-current">{t("my_account")}</span>
                         </Link>
                       </DropdownMenuItem>
 
@@ -398,7 +423,7 @@ export default function Navbar() {
                           className="flex w-full items-center gap-3"
                         >
                           <MessageSquare className="size-[18px] text-primary" />
-                          <span className="text-current">Messages</span>
+                          <span className="text-current">{t("messages")}</span>
                         </Link>
                       </DropdownMenuItem>
 
@@ -411,7 +436,7 @@ export default function Navbar() {
                           className="flex w-full items-center gap-3"
                         >
                           <ShoppingBag className="size-[18px] text-primary" />
-                          <span className="text-current">Orders</span>
+                          <span className="text-current">{t("orders")}</span>
                         </Link>
                       </DropdownMenuItem>
 
@@ -426,7 +451,7 @@ export default function Navbar() {
                           >
                             <Store className="size-[18px]" />
                             <span className="text-current">
-                              Seller Dashboard
+                              {t("seller_dashboard")}
                             </span>
                           </Link>
                         </DropdownMenuItem>
@@ -439,7 +464,7 @@ export default function Navbar() {
                       className="h-12 cursor-pointer rounded-xl px-3 text-sm font-bold"
                     >
                       <LogOut className="mr-1 size-[18px]" />
-                      <span>Log Out</span>
+                      <span>{t("logout")}</span>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -469,7 +494,7 @@ export default function Navbar() {
                 aria-label="Select Category"
               >
                 <Menu size={13} />
-                Select Category
+                {t("select_category")}
                 <ChevronsUpDown size={12} />
               </button>
             </DropdownMenuTrigger>
@@ -492,7 +517,7 @@ export default function Navbar() {
               href={navLinkHref(name)}
               className="whitespace-nowrap text-[12px] font-semibold text-white/90 no-underline hover:text-white"
             >
-              {name}
+              {getNavLinkLabel(name)}
             </Link>
           ))}
 
@@ -509,7 +534,7 @@ export default function Navbar() {
                 )}
               >
                 <Store size={13} />
-                {storeName || "Seller Dashboard"}
+                {storeName || t("seller_dashboard")}
               </Link>
             ) : (
               <Link
@@ -521,7 +546,7 @@ export default function Navbar() {
                 style={{ background: "rgba(255,255,255,0.18)" }}
               >
                 <Store size={13} />
-                Become a Seller
+                {t("become_seller")}
               </Link>
             ))}
 
@@ -530,7 +555,7 @@ export default function Navbar() {
             style={{ background: "rgba(255,255,255,0.12)" }}
           >
             <MapPin size={12} />
-            Phnom Penh
+            {t("phnom_penh")}
           </div>
         </div>
       </div>

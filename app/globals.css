@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Hanuman:wght@100..900&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
@@ -144,6 +145,10 @@
 
   p, span, a, li, td, th, label, input, select, textarea, button {
     font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  }
+
+  html[lang="km"], html[lang="km"] p, html[lang="km"] span, html[lang="km"] a, html[lang="km"] li, html[lang="km"] button, html[lang="km"] input, html[lang="km"] h1, html[lang="km"] h2, html[lang="km"] h3, html[lang="km"] h4, html[lang="km"] h5, html[lang="km"] h6 {
+    font-family: 'Hanuman', serif, sans-serif;
   }
 
   .sidebar-link:hover {

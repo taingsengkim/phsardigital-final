@@ -27,6 +27,8 @@ import { cn } from "@/lib/utils";
 import { useGetListingsQuery } from "@/lib/api/homeApi";
 import { ProductCard } from "@/app/(public)/home/ProductCard";
 import { getPrimaryImage } from "@/app/(public)/home/listing-helpers";
+import { useLanguage } from "@/lib/context/LanguageContext";
+import { getCategoryTranslation } from "@/lib/i18n/translations";
 
 function usd(n: number) {
   return (n || 0).toLocaleString("en-US", { style: "currency", currency: "USD" });
@@ -54,6 +56,7 @@ function PageSizeDropdown({
   onChange: (val: number) => void;
   options?: number[];
 }) {
+  const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -74,7 +77,7 @@ function PageSizeDropdown({
         onClick={() => setIsOpen((prev) => !prev)}
         className="flex h-9.5 items-center gap-2 rounded-xl border border-gray-200 dark:border-zinc-800 bg-[#F4F4F6] dark:bg-[#18181B] px-4 py-2 text-xs sm:text-sm font-semibold text-[#1A1330] dark:text-white transition hover:bg-gray-200 dark:hover:bg-[#27272A] focus:outline-none shadow-xs cursor-pointer"
       >
-        <span>{value} per page</span>
+        <span>{value} {t("rows_per_page")}</span>
         <ChevronDown size={16} className={cn("text-gray-500 dark:text-zinc-400 transition-transform duration-200", isOpen && "rotate-180")} />
       </button>
 
@@ -106,6 +109,7 @@ function PageSizeDropdown({
 }
 
 export default function ProductsClient() {
+  const { t, language } = useLanguage();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -280,7 +284,7 @@ export default function ProductsClient() {
               type="text"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Search products by title, keyword, seller, or category..."
+              placeholder={t("search_placeholder")}
               className="w-full rounded-xl border border-gray-200 dark:border-zinc-700 bg-gray-50/80 dark:bg-[#1A1429] py-2.5 pl-10 pr-10 text-sm font-medium text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-zinc-500 outline-none transition focus:border-[#6C4CD8] focus:bg-white dark:focus:bg-[#1A1429] focus:ring-4 focus:ring-[#6C4CD8]/15"
             />
             {searchInput && (
@@ -312,7 +316,7 @@ export default function ProductsClient() {
               )}
             >
               <SlidersHorizontal size={15} />
-              <span>Price Filter</span>
+              <span>{t("price_filter")}</span>
               {(minPriceInput || maxPriceInput) && (
                 <span className="flex size-2 rounded-full bg-[#6C4CD8]" />
               )}
@@ -346,10 +350,10 @@ export default function ProductsClient() {
                 aria-label="Sort order"
                 className="h-10 appearance-none rounded-xl border border-gray-200 dark:border-zinc-800 bg-[#F4F4F6] dark:bg-[#18181B] py-2 pl-3.5 pr-9 text-xs sm:text-sm font-semibold text-[#1A1330] dark:text-white outline-none focus:border-[#6C4CD8] focus:ring-2 focus:ring-[#6C4CD8]/20 transition cursor-pointer hover:bg-gray-200 dark:hover:bg-[#27272A]"
               >
-                <option value="popular">Sort by Popularity</option>
-                <option value="price_asc">Price: Low to High</option>
-                <option value="price_desc">Price: High to Low</option>
-                <option value="newest">Newest First</option>
+                <option value="popular">{t("sort_popular")}</option>
+                <option value="price_asc">{t("sort_price_asc")}</option>
+                <option value="price_desc">{t("sort_price_desc")}</option>
+                <option value="newest">{t("sort_newest")}</option>
               </select>
               <ChevronsUpDown
                 size={14}
@@ -364,12 +368,12 @@ export default function ProductsClient() {
           <div className="mt-4 pt-4 border-t border-gray-100 dark:border-zinc-800/80 animate-in fade-in-0 zoom-in-95">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-gray-700 dark:text-zinc-300 uppercase tracking-wider">Price Range ($):</span>
+                <span className="text-xs font-bold text-gray-700 dark:text-zinc-300 uppercase tracking-wider">{t("price_range")}:</span>
                 <div className="flex items-center gap-2">
                   <input
                     type="number"
                     min="0"
-                    placeholder="Min ($)"
+                    placeholder={t("min_price")}
                     value={minPriceInput}
                     onChange={(e) => setMinPriceInput(e.target.value)}
                     className="w-24 sm:w-28 rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-[#1A1429] px-3 py-1.5 text-xs font-semibold text-gray-900 dark:text-white outline-none focus:border-[#6C4CD8]"
@@ -378,7 +382,7 @@ export default function ProductsClient() {
                   <input
                     type="number"
                     min="0"
-                    placeholder="Max ($)"
+                    placeholder={t("max_price")}
                     value={maxPriceInput}
                     onChange={(e) => setMaxPriceInput(e.target.value)}
                     className="w-24 sm:w-28 rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-[#1A1429] px-3 py-1.5 text-xs font-semibold text-gray-900 dark:text-white outline-none focus:border-[#6C4CD8]"
@@ -388,19 +392,19 @@ export default function ProductsClient() {
                     onClick={handleApplyPriceFilter}
                     className="rounded-lg bg-[#6C4CD8] px-3.5 py-1.5 text-xs font-bold text-white transition hover:bg-[#5B3EC4] cursor-pointer"
                   >
-                    Apply
+                    {t("apply")}
                   </button>
                 </div>
               </div>
 
               {/* Quick Presets */}
               <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-xs font-medium text-gray-500 dark:text-zinc-400 mr-1">Presets:</span>
+                <span className="text-xs font-medium text-gray-500 dark:text-zinc-400 mr-1">{t("presets")}:</span>
                 {[
-                  { label: "Under $25", min: null, max: 25 },
-                  { label: "$25–$50", min: 25, max: 50 },
-                  { label: "$50–$100", min: 50, max: 100 },
-                  { label: "Over $100", min: 100, max: null },
+                  { label: t("preset_under_25"), min: null, max: 25 },
+                  { label: t("preset_25_50"), min: 25, max: 50 },
+                  { label: t("preset_50_100"), min: 50, max: 100 },
+                  { label: t("preset_over_100"), min: 100, max: null },
                 ].map((preset) => (
                   <button
                     key={preset.label}
@@ -420,14 +424,14 @@ export default function ProductsClient() {
         {hasActiveFilters && (
           <div className="mt-3.5 flex flex-wrap items-center gap-2 pt-3 border-t border-gray-100 dark:border-zinc-800">
             <span className="text-xs font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider flex items-center gap-1">
-              <Filter size={12} /> Active Filters:
+              <Filter size={12} /> {t("active_filters")}:
             </span>
 
             {/* Category Filter Badge */}
             {categorySlug && (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-[#6C4CD8]/10 dark:bg-[#6C4CD8]/20 px-3 py-1 text-xs font-bold text-[#6C4CD8] dark:text-purple-300">
                 <Tag size={12} />
-                <span>Category: {categorySlug}</span>
+                <span>{getCategoryTranslation(categorySlug, language)}</span>
                 <button
                   type="button"
                   onClick={() => updateUrlParams({ category: null, categorySlug: null })}
@@ -459,7 +463,7 @@ export default function ProductsClient() {
             {/* Price Range Badge */}
             {(minPriceInput || maxPriceInput) && (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-[#6C4CD8]/10 dark:bg-[#6C4CD8]/20 px-3 py-1 text-xs font-bold text-[#6C4CD8] dark:text-purple-300">
-                <span>Price: {minPriceInput ? `$${minPriceInput}` : "$0"} – {maxPriceInput ? `$${maxPriceInput}` : "Any"}</span>
+                <span>{minPriceInput ? `$${minPriceInput}` : "$0"} – {maxPriceInput ? `$${maxPriceInput}` : "Any"}</span>
                 <button
                   type="button"
                   onClick={() => {
@@ -481,7 +485,7 @@ export default function ProductsClient() {
               className="ml-auto inline-flex items-center gap-1 text-xs font-bold text-red-500 hover:text-red-600 hover:underline cursor-pointer"
             >
               <RotateCcw size={12} />
-              <span>Reset All</span>
+              <span>{t("reset_all")}</span>
             </button>
           </div>
         )}
@@ -491,17 +495,15 @@ export default function ProductsClient() {
       {isLoading ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <Loader2 className="size-8 animate-spin text-[#6C4CD8] mb-3" />
-          <p className="text-sm font-semibold text-[#3F3A52] dark:text-zinc-300">Searching products...</p>
+          <p className="text-sm font-semibold text-[#3F3A52] dark:text-zinc-300">{t("searching_products")}</p>
         </div>
       ) : displayItems.length === 0 ? (
         /* ── EMPTY STATE ── */
         <div className="flex flex-col items-center justify-center rounded-2xl bg-white dark:bg-[#120F1D] p-12 text-center border border-[#EDEBF3] dark:border-zinc-800">
           <PackageX className="size-12 text-[#6C4CD8]/40 mb-3" />
-          <h3 className="text-base font-extrabold text-[#1A1330] dark:text-white">No Products Found</h3>
+          <h3 className="text-base font-extrabold text-[#1A1330] dark:text-white">{t("no_products_found")}</h3>
           <p className="mt-1 text-xs text-[#8B85A0] dark:text-zinc-400 max-w-sm">
-            {hasActiveFilters
-              ? "No active products matched your search or filter criteria. Try adjusting your filters or clearing search terms."
-              : "There are no active products available in this section yet. Please check back soon."}
+            {t("no_products_desc")}
           </p>
           {hasActiveFilters && (
             <button
@@ -510,7 +512,7 @@ export default function ProductsClient() {
               className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#6C4CD8] px-4 py-2 text-xs font-bold text-white transition hover:bg-[#5B3EC4] cursor-pointer"
             >
               <RotateCcw size={14} />
-              <span>Reset Filters</span>
+              <span>{t("reset_all")}</span>
             </button>
           )}
         </div>
@@ -630,7 +632,7 @@ export default function ProductsClient() {
             />
 
             <span className="text-xs sm:text-sm font-medium">
-              Showing {start}–{end} of {totalElements} products
+              {t("showing_count", { start, end, total: totalElements })}
             </span>
           </div>
 

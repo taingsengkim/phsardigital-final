@@ -45,7 +45,11 @@ function getCategoryPicture(slug: string, name: string, customImage?: string): s
   return "/picture/pic1.jpg";
 }
 
+import { useLanguage } from "@/lib/context/LanguageContext";
+import { getCategoryTranslation } from "@/lib/i18n/translations";
+
 export default function CategoryIconRow() {
+  const { t, language } = useLanguage();
   const searchParams = useSearchParams();
   const activeCategory = searchParams.get("category") || searchParams.get("categorySlug") || "";
   const sortParam = searchParams.get("sort") || "";
@@ -66,14 +70,14 @@ export default function CategoryIconRow() {
     <div className="mx-auto w-full max-w-[1280px] px-4 sm:px-6 pt-6 pb-4 font-sans">
       <div className="flex items-center justify-between mb-4 pb-2 border-b border-gray-100 dark:border-zinc-800">
         <h3 className="text-sm sm:text-base font-bold text-[#111827] dark:text-white uppercase tracking-wider">
-          Browse Categories
+          {t("cat_browse")}
         </h3>
         {activeCategory && (
           <Link
             href="/products"
             className="text-xs font-semibold text-[#6C4CD8] hover:underline"
           >
-            Clear Filter
+            {t("cat_clear_filter")}
           </Link>
         )}
       </div>
@@ -103,7 +107,7 @@ export default function CategoryIconRow() {
                 : "font-bold text-gray-700 dark:text-zinc-300 group-hover:text-[#6C4CD8]"
             }`}
           >
-            All Items
+            {t("cat_all")}
           </span>
         </Link>
 
@@ -111,7 +115,7 @@ export default function CategoryIconRow() {
         {isLoading && categories.length === 0 ? (
           <div className="flex items-center gap-2 py-4 text-xs font-semibold text-gray-400">
             <Loader2 size={16} className="animate-spin text-[#6C4CD8]" />
-            <span>Loading categories...</span>
+            <span>{t("loading")}</span>
           </div>
         ) : (
           categories.map((c: any) => {
@@ -121,6 +125,7 @@ export default function CategoryIconRow() {
               c.image_url || c.imageUrl
             );
             const isActive = activeCategory === c.slug;
+            const categoryDisplayName = getCategoryTranslation(c.name, language);
 
             return (
               <Link
@@ -141,7 +146,7 @@ export default function CategoryIconRow() {
                   <div className="relative size-full rounded-full overflow-hidden bg-slate-100 dark:bg-zinc-800">
                     <Image
                       src={pictureUrl}
-                      alt={c.name}
+                      alt={categoryDisplayName}
                       fill
                       sizes="100px"
                       className="object-cover transition-transform duration-500 group-hover:scale-112"
@@ -155,7 +160,7 @@ export default function CategoryIconRow() {
                       : "font-bold text-[#1F1735] dark:text-zinc-300 group-hover:text-[#6C4CD8]"
                   }`}
                 >
-                  {c.name}
+                  {categoryDisplayName}
                 </span>
               </Link>
             );
