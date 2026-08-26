@@ -184,12 +184,8 @@ export default function Navbar() {
                     <Heart className="size-[17px]" strokeWidth={2} />
                     {savedCount > 0 && (
                       <span
-<<<<<<< HEAD
                         className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white shadow-xs animate-in zoom-in"
                         style={{ background: BRAND }}
-=======
-                        className="absolute -right-1 -top-1 grid size-[17px] place-items-center rounded-full bg-primary text-[10px] font-bold leading-none text-white ring-2 ring-white dark:ring-card"
->>>>>>> 8bc17d3fc452694c52c86d9a990ad2342286a795
                       >
                         {savedCount > 99 ? "99+" : savedCount}
                       </span>
@@ -204,12 +200,8 @@ export default function Navbar() {
                     <ShoppingCart className="size-[17px]" strokeWidth={2} />
                     {cartCount > 0 && (
                       <span
-<<<<<<< HEAD
                         className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white shadow-xs animate-in zoom-in"
-                        style={{ background: BRAND }}
-=======
-                        className="absolute -right-1 -top-1 grid size-[17px] place-items-center rounded-full bg-primary text-[10px] font-bold leading-none text-white ring-2 ring-white dark:ring-card"
->>>>>>> 8bc17d3fc452694c52c86d9a990ad2342286a795
+                        style={{ background: BRAND }}           
                       >
                         {cartCount > 99 ? "99+" : cartCount}
                       </span>
