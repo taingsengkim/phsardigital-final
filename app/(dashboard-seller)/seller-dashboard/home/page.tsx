@@ -12,6 +12,7 @@ import {
   CircleAlert,
   CircleCheck,
   Clock,
+  CreditCard,
   ExternalLink,
   Package,
   PackagePlus,
@@ -161,6 +162,15 @@ export default function SellerDashboardHomePage() {
         </div>
 
         <div className="flex items-center gap-2.5">
+          <Button
+            asChild
+            variant="outline"
+            className="rounded-xl border-[#6C4CD8]/30 bg-[#F1EFFA]/80 text-xs sm:text-sm font-bold text-[#6C4CD8] shadow-xs hover:bg-[#E5E0F5]"
+          >
+            <Link href="/subscriptions">
+              <CreditCard className="size-4 mr-1.5" /> Subscription Plan
+            </Link>
+          </Button>
           <Button
             asChild
             className="rounded-xl bg-[#6C4CD8] text-xs sm:text-sm font-bold text-white shadow-xs hover:bg-[#5B3DC0]"

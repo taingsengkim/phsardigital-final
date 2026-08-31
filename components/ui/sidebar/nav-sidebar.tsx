@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   ChevronDown,
+  CreditCard,
   LayoutDashboard,
   MessageCircle,
   MessageSquare,
@@ -186,6 +187,17 @@ export function SellerSidebar() {
             >
               <Store strokeWidth={1.8} />
               <span className="min-w-0 group-data-[collapsible=icon]:hidden"><span className="block text-[15px] font-semibold leading-5">Shop</span><span className="block truncate text-[11px] font-medium text-[#94a4bc]">Store settings</span></span>
+            </Link>
+
+            <Link
+              href="/subscriptions"
+              className={cn(
+                itemClass,
+                active("/subscriptions") && activeClass,
+              )}
+            >
+              <CreditCard strokeWidth={1.8} />
+              <span className="min-w-0 group-data-[collapsible=icon]:hidden"><span className="block text-[15px] font-semibold leading-5">Subscription</span><span className="block truncate text-[11px] font-medium text-[#94a4bc]">Plans & billing</span></span>
             </Link>
           </nav>
         </SidebarContent>
