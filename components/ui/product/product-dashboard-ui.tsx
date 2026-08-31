@@ -59,11 +59,14 @@ export const ProductDashboardUI: React.FC<{ successMessage?: string }> = ({ succ
 
     return {
       id: item.uuid || String(item.id || index),
+      uuid: item.uuid,
       title: item.title,
       category: categoryName,
       image: primaryImg,
       status: isDeactive ? "deactive" : "active",
-      price: `$${item.price}`,
+      price: `$${Number(item.discountPrice ?? item.fullPrice ?? item.price ?? 0).toFixed(2)}`,
+      stockQty: Number(item.stockQty ?? item.stock ?? 0),
+      sku: item.sku || null,
       sales: `$${((item.price || 50) * (item.sold || (index + 1) * 3)).toLocaleString()}`,
       salesChange: "12.5%",
       salesChangeType: "up",

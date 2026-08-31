@@ -25,6 +25,7 @@ import {
   Info,
   Layers,
   Loader2,
+  Minus,
   Package,
   Plus,
   Search,
@@ -991,23 +992,91 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
                   </div>
 
                   {/* Stock */}
-                  <div>
-                    <Label required hint="Total units available to sell">
-                      Stock Units
-                    </Label>
-                    <input
-                      {...register("stockQty", { valueAsNumber: true })}
-                      type="number"
-                      step="1"
-                      min="0"
-                      placeholder="10"
-                      className={cn(
-                        INPUT_BASE,
-                        "h-12 font-black text-base tabular-nums",
-                        errors.stockQty && INPUT_ERROR,
-                      )}
-                    />
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label required hint="Total units available to sell">
+                        Stock Units
+                      </Label>
+                      <span
+                        className={cn(
+                          "rounded-full px-2 py-0.5 text-[10px] font-black",
+                          watchedStockQty > 4
+                            ? "bg-emerald-100 text-emerald-800"
+                            : watchedStockQty > 0
+                            ? "bg-amber-100 text-amber-800"
+                            : "bg-rose-100 text-rose-800",
+                        )}
+                      >
+                        {watchedStockQty > 4
+                          ? `${watchedStockQty} In Stock`
+                          : watchedStockQty > 0
+                          ? `Low Stock (${watchedStockQty})`
+                          : "Out of Stock"}
+                      </span>
+                    </div>
+
+                    {/* Number input with stepper buttons */}
+                    <div className="flex items-center rounded-2xl border border-slate-200 bg-white p-1 shadow-xs focus-within:border-[#6C4CD8] focus-within:ring-2 focus-within:ring-[#6C4CD8]/20">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const current = Number(getValues("stockQty") || 0)
+                          setValue("stockQty", Math.max(0, current - 1), {
+                            shouldDirty: true,
+                            shouldValidate: true,
+                          })
+                        }}
+                        className="grid size-10 place-items-center rounded-xl bg-slate-50 text-slate-700 hover:bg-slate-100 transition"
+                      >
+                        <Minus className="size-4" />
+                      </button>
+
+                      <input
+                        {...register("stockQty", { valueAsNumber: true })}
+                        type="number"
+                        step="1"
+                        min="0"
+                        placeholder="10"
+                        className="w-full text-center font-black text-base tabular-nums outline-none"
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const current = Number(getValues("stockQty") || 0)
+                          setValue("stockQty", current + 1, {
+                            shouldDirty: true,
+                            shouldValidate: true,
+                          })
+                        }}
+                        className="grid size-10 place-items-center rounded-xl bg-slate-50 text-slate-700 hover:bg-slate-100 transition"
+                      >
+                        <Plus className="size-4" />
+                      </button>
+                    </div>
                     <FieldError message={errors.stockQty?.message} />
+
+                    {/* Quick Add Presets */}
+                    <div className="flex items-center gap-1 pt-1">
+                      <span className="text-[10px] font-bold text-slate-400">Quick Add:</span>
+                      {[5, 10, 25, 50, 100].map((addAmount) => (
+                        <button
+                          key={addAmount}
+                          type="button"
+                          onClick={() => {
+                            const current = Number(getValues("stockQty") || 0)
+                            setValue("stockQty", current + addAmount, {
+                              shouldDirty: true,
+                              shouldValidate: true,
+                            })
+                            toast.success(`Added +${addAmount} units (Total: ${current + addAmount})`)
+                          }}
+                          className="rounded-lg bg-purple-50 px-2 py-0.5 text-[10px] font-extrabold text-[#6C4CD8] hover:bg-[#6C4CD8] hover:text-white transition"
+                        >
+                          +{addAmount}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
