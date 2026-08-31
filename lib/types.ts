@@ -270,6 +270,7 @@ export type ApiReview = {
   comment?: string | null;
   photo?: { uri?: string | null; objectName?: string | null } | null;
   isEdited?: boolean | null;
+  isVerifiedPurchase?: boolean | null;
   createdAt?: string | null;
   updatedAt?: string | null;
   replies?: ApiReviewReply[] | null;

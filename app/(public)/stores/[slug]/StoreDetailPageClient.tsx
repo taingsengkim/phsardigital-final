@@ -35,6 +35,7 @@ export default function StoreDetailPageClient({ slug }: { slug?: string }) {
   const [sellerProfile, setSellerProfile] = useState<any>(null);
   const [sellerListings, setSellerListings] = useState<any[]>([]);
   const [sellerReviews, setSellerReviews] = useState<any[]>([]);
+  const [sellerSummary, setSellerSummary] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -42,10 +43,11 @@ export default function StoreDetailPageClient({ slug }: { slug?: string }) {
     async function loadStoreData() {
       setLoading(true);
       try {
-        const [profileRes, listingsRes, reviewsRes] = await Promise.all([
+        const [profileRes, listingsRes, reviewsRes, summaryRes] = await Promise.all([
           fetch(`/api/sellers/${encodeURIComponent(safeSlug)}`).catch(() => null),
           fetch(`/api/sellers/${encodeURIComponent(safeSlug)}/listings`).catch(() => null),
           fetch(`/api/reviews/sellers/${encodeURIComponent(safeSlug)}`).catch(() => null),
+          fetch(`/api/reviews/sellers/${encodeURIComponent(safeSlug)}/summary`).catch(() => null),
         ]);
 
         if (profileRes && profileRes.ok) {
@@ -63,6 +65,11 @@ export default function StoreDetailPageClient({ slug }: { slug?: string }) {
           const rData = await reviewsRes.json();
           const items = rData?.content || rData?.data || (Array.isArray(rData) ? rData : []);
           if (isMounted) setSellerReviews(items);
+        }
+
+        if (summaryRes && summaryRes.ok) {
+          const sData = await summaryRes.json();
+          if (isMounted && sData) setSellerSummary(sData);
         }
       } catch (err) {
         console.error("Error loading store details:", err);
@@ -97,8 +104,19 @@ export default function StoreDetailPageClient({ slug }: { slug?: string }) {
     sellerProfile?.googleMapUrl ||
     "Phnom Penh, Cambodia";
 
-  const rating = sellerProfile?.averageRating ?? 5.0;
-  const reviewCount = sellerProfile?.reviewCount ?? sellerReviews.length ?? 0;
+  const rating =
+    sellerSummary?.averageRating !== undefined && sellerSummary?.averageRating !== null
+      ? sellerSummary.averageRating
+      : sellerProfile?.averageRating !== undefined
+      ? sellerProfile.averageRating
+      : null;
+
+  const reviewCount =
+    sellerSummary?.reviewCount !== undefined
+      ? sellerSummary.reviewCount
+      : sellerProfile?.reviewCount !== undefined
+      ? sellerProfile.reviewCount
+      : sellerReviews.length;
 
   const rawProducts = sellerListings;
 
@@ -108,13 +126,18 @@ export default function StoreDetailPageClient({ slug }: { slug?: string }) {
       : sellerProfile?.reviews || []
   ).map((rev: any, idx: number) => ({
     id: rev.uuid || rev.id || idx,
-    userName: rev.buyer?.fullName || rev.buyer?.username || rev.userName || "Verified Buyer",
+    userName: rev.buyer?.displayName || rev.buyer?.fullName || rev.buyer?.username || rev.userName || "Verified Buyer",
     rating: rev.rating ?? 5,
     date: rev.createdAt
       ? new Date(rev.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })
       : (rev.date || "Recent"),
     comment: rev.comment || rev.content || "Great quality product and excellent service!",
     productName: rev.listing?.title || rev.productName || "Store Item",
+    productSlug: rev.listing?.slug || null,
+    isVerifiedPurchase: Boolean(rev.isVerifiedPurchase),
+    isEdited: Boolean(rev.isEdited),
+    photoUri: rev.photo?.uri ? (rev.photo.uri.startsWith("http") || rev.photo.uri.startsWith("/") ? rev.photo.uri : getFileUrl(rev.photo.uri)) : null,
+    replies: rev.replies || [],
   }));
 
   const store: StoreDetails = {
@@ -396,38 +419,96 @@ export default function StoreDetailPageClient({ slug }: { slug?: string }) {
         /* Store Reviews Tab — Prominent Typography, Large Avatars & Stars */
         <div className="space-y-6">
           <div className="rounded-3xl border border-[#EDEBF3] bg-white p-6 sm:p-8 shadow-sm space-y-6">
-            <h3 className="text-2xl font-black text-[#1A1330]">Customer Reviews</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-2xl font-black text-[#1A1330]">Customer Reviews</h3>
+              {rating !== null && !isNaN(rating) && (
+                <div className="flex items-center gap-2 rounded-xl bg-[#F1EFFA] px-3.5 py-1.5 text-xs font-bold text-[#6C4CD8]">
+                  <Star className="size-4 fill-amber-400 text-amber-400" />
+                  <span>{Number(rating).toFixed(1)} Overall Rating ({reviewCount} reviews)</span>
+                </div>
+              )}
+            </div>
+
             {store.reviews.length > 0 ? (
               <div className="divide-y divide-[#EDEBF3] space-y-6">
                 {store.reviews.map((rev) => (
                   <div key={rev.id} className="pt-6 first:pt-0 space-y-3">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
                       <div className="flex items-center gap-3">
                         <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#6C4CD8] text-base font-bold text-white shadow-xs">
-                          {rev.userName.charAt(0)}
+                          {rev.userName.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <span className="font-extrabold text-[#1A1330] text-base sm:text-lg block">{rev.userName}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-extrabold text-[#1A1330] text-base sm:text-lg block">
+                              {rev.userName}
+                            </span>
+                            {rev.isVerifiedPurchase && (
+                              <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 border border-emerald-200">
+                                <ShieldCheck size={12} /> Verified Purchase
+                              </span>
+                            )}
+                            {rev.isEdited && (
+                              <span className="text-xs italic text-[#7C7596]">(edited)</span>
+                            )}
+                          </div>
                           <div className="flex items-center gap-1.5 mt-0.5">
                             {Array.from({ length: 5 }).map((_, i) => (
                               <Star
                                 key={i}
-                                size={17}
-                                className={i < rev.rating ? "fill-amber-400 text-amber-400" : "text-[#EDEBF3]"}
+                                size={15}
+                                className={
+                                  i < rev.rating
+                                    ? "fill-amber-400 text-amber-400"
+                                    : "fill-slate-100 text-slate-200"
+                                }
                               />
                             ))}
                           </div>
                         </div>
                       </div>
-                      <span className="text-sm font-medium text-[#7C7596]">{rev.date}</span>
+                      <span className="text-xs sm:text-sm font-medium text-[#7C7596]">{rev.date}</span>
                     </div>
 
-                    <p className="text-base sm:text-lg font-medium text-[#1A1330] leading-relaxed my-2">
-                      {rev.comment}
-                    </p>
-                    <p className="text-sm sm:text-base text-[#7C7596] font-medium">
-                      Purchased: <strong className="font-bold text-[#6C4CD8]">{rev.productName}</strong>
-                    </p>
+                    {rev.comment && (
+                      <p className="text-sm sm:text-base font-medium text-[#1A1330] leading-relaxed my-2">
+                        {rev.comment}
+                      </p>
+                    )}
+
+                    {rev.photoUri && (
+                      <div className="relative size-24 overflow-hidden rounded-2xl border border-[#EDEBF3]">
+                        <Image src={rev.photoUri} alt="Customer photo" fill className="object-cover" />
+                      </div>
+                    )}
+
+                    {rev.productName && (
+                      <p className="text-xs sm:text-sm text-[#7C7596] font-medium">
+                        Purchased:{" "}
+                        {rev.productSlug ? (
+                          <Link
+                            href={`/products/${rev.productSlug}`}
+                            className="font-bold text-[#6C4CD8] hover:underline"
+                          >
+                            {rev.productName}
+                          </Link>
+                        ) : (
+                          <strong className="font-bold text-[#6C4CD8]">{rev.productName}</strong>
+                        )}
+                      </p>
+                    )}
+
+                    {/* Seller replies */}
+                    {rev.replies && rev.replies.length > 0 && (
+                      <div className="mt-3 rounded-2xl bg-[#F8F7FB] p-4 border border-[#EDEBF3] space-y-2 ml-4 sm:ml-8">
+                        {rev.replies.map((reply: any, i: number) => (
+                          <div key={reply.uuid || i} className="text-xs sm:text-sm space-y-1">
+                            <span className="font-bold text-[#6C4CD8]">Shop Owner Response:</span>
+                            <p className="text-[#4A435A] font-medium leading-relaxed">{reply.comment}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

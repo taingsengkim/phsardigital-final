@@ -24,7 +24,12 @@ import type {
   ApiReviewReply,
   ReviewSummary,
 } from "@/lib/types";
-import { useCreateProductReviewMutation } from "@/lib/redux/service/sellerCommentApi";
+import {
+  useCreateProductReviewMutation,
+  useGetListingReviewsQuery,
+  useGetListingReviewSummaryQuery,
+} from "@/lib/redux/service/sellerCommentApi";
+import type { ReviewResponse, ReviewSummaryResponse } from "@/lib/types/review";
 
 type Tab = "details" | "reviews" | "shipping";
 
@@ -34,7 +39,7 @@ type Props = {
   attributes?: ApiListingAttribute[] | null;
   specifications?: ApiListingSpecificationGroup[] | null;
   reviews?: ApiReview[];
-  reviewSummary: ReviewSummary;
+  reviewSummary?: ReviewSummary | ReviewSummaryResponse;
   sellerName?: string | null;
   storeCity?: string | null;
 };
@@ -49,7 +54,7 @@ type ReviewPhoto = {
   comment: string | null;
 };
 
-function collectReviewPhotos(reviews: ApiReview[]): ReviewPhoto[] {
+function collectReviewPhotos(reviews: (ApiReview | ReviewResponse)[]): ReviewPhoto[] {
   return reviews.flatMap((review, index) => {
     const uri = review.photo?.uri;
     if (!uri) return [];
@@ -67,6 +72,19 @@ function collectReviewPhotos(reviews: ApiReview[]): ReviewPhoto[] {
 
 function formatDate(value?: string | null): string | null {
   if (!value) return null;
+  // Local ISO string parse without UTC offset distortion
+  const parts = value.split("T")[0]?.split("-");
+  if (parts && parts.length === 3) {
+    const [year, month, day] = parts.map(Number);
+    const date = new Date(year, month - 1, day);
+    if (!Number.isNaN(date.getTime())) {
+      return date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+    }
+  }
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
   return date.toLocaleDateString("en-US", {
@@ -87,35 +105,36 @@ export default function ProductDetailTabs({
   storeCity,
 }: Props) {
   const [active, setActive] = useState<Tab>("details");
-  const [submittedReviews, setSubmittedReviews] = useState<ApiReview[]>([]);
-  const shownReviews = [...submittedReviews, ...reviews];
-  const shownSummary = useMemo<ReviewSummary>(() => {
-    if (!submittedReviews.length) return reviewSummary;
-    const ratings = submittedReviews
-      .map((review) => Number(review.rating))
-      .filter((rating) => rating >= 1 && rating <= 5);
-    const previousTotal = reviewSummary.total;
-    const previousSum = (reviewSummary.average ?? 0) * previousTotal;
-    const total = previousTotal + ratings.length;
-    const breakdown = { ...reviewSummary.breakdown };
-    ratings.forEach((rating) => {
-      const star = Math.round(rating);
-      breakdown[star] = (breakdown[star] ?? 0) + 1;
-    });
-    return {
-      total,
-      average: total ? (previousSum + ratings.reduce((sum, rating) => sum + rating, 0)) / total : null,
-      breakdown,
-    };
-  }, [reviewSummary, submittedReviews]);
+  const [activePhotoIndex, setActivePhotoIndex] = useState<number | null>(null);
 
-  /* Every photo buyers attached, in the order the reviews are shown. `null`
-     means the enlarged view is closed. */
-  const reviewPhotos = useMemo(
-    () => collectReviewPhotos([...submittedReviews, ...reviews]),
-    [submittedReviews, reviews],
+  // Live reviews and summary queries
+  const { data: liveReviewsData } = useGetListingReviewsQuery(
+    { listingUuid },
+    { skip: !listingUuid }
+  );
+  const { data: liveSummaryData } = useGetListingReviewSummaryQuery(
+    listingUuid,
+    { skip: !listingUuid }
+  );
+
+  const finalReviews: (ApiReview | ReviewResponse)[] =
+    liveReviewsData?.content && liveReviewsData.content.length > 0
+      ? liveReviewsData.content
+      : reviews;
+
+  const photoStrip = useMemo(
+    () => collectReviewPhotos(finalReviews),
+    [finalReviews]
   );
   const [openPhoto, setOpenPhoto] = useState<number | null>(null);
+
+  const activeSummary = liveSummaryData || reviewSummary;
+  const reviewTotal =
+    activeSummary && "reviewCount" in activeSummary
+      ? activeSummary.reviewCount
+      : activeSummary && "total" in activeSummary
+      ? activeSummary.total
+      : finalReviews.length;
 
   const sortedAttributes = [...(attributes ?? [])].sort(
     (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
@@ -126,7 +145,7 @@ export default function ProductDetailTabs({
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "details", label: "Product details" },
-    { id: "reviews", label: `Reviews${shownSummary.total ? ` (${shownSummary.total})` : ""}` },
+    { id: "reviews", label: `Reviews${reviewTotal ? ` (${reviewTotal})` : ""}` },
     { id: "shipping", label: "Shipping & returns" },
   ];
 
@@ -161,23 +180,35 @@ export default function ProductDetailTabs({
           </p>
 
           {specificationGroups.length > 0 ? (
-            <div className="mt-8 space-y-5">
-              <h3 className="text-[20px] font-bold text-[#1A1330]">Specifications</h3>
-              {specificationGroups.map((group, groupIndex) => (
-                <section key={`${group.name ?? "General"}-${groupIndex}`} className="overflow-hidden rounded-2xl border border-[#E2DFEC]">
-                  <h4 className="bg-[#F1EFFA] px-6 py-3 text-[15px] font-bold text-[#6C4CD8]">{group.name?.trim() || "General"}</h4>
-                  {[...(group.attributes ?? [])].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)).map((attr, i) => (
-                    <div key={attr.uuid ?? `${attr.key}-${i}`} className={cn("grid grid-cols-[minmax(120px,1fr)_2fr] gap-4 px-6 py-4 text-[16px]", i % 2 === 0 ? "bg-white" : "bg-[#F8F6FD]")}><span className="font-semibold text-[#1A1330]">{attr.key}</span><span className="text-[#5A5470]">{attr.value}</span></div>
-                  ))}
-                </section>
+            <div className="mt-8 space-y-6">
+              {specificationGroups.map((group, gi) => (
+                <div key={group.name || gi} className="overflow-hidden rounded-2xl border border-[#E2DFEC]">
+                  <div className="bg-[#FAF9FD] px-6 py-3 border-b border-[#E2DFEC]">
+                    <h4 className="text-[17px] font-bold text-[#1A1330]">{group.name}</h4>
+                  </div>
+                  <div className="divide-y divide-[#E2DFEC]">
+                    {(group.attributes ?? []).map((attr, i) => (
+                      <div
+                        key={attr.uuid ?? `${attr.key}-${i}`}
+                        className={cn(
+                          "grid grid-cols-[minmax(120px,1fr)_2fr] gap-4 px-6 py-4 text-[16px]",
+                          i % 2 === 0 ? "bg-white" : "bg-[#F8F6FD]"
+                        )}
+                      >
+                        <span className="font-semibold text-[#1A1330]">{attr.key}</span>
+                        <span className="text-[#5A5470]">{attr.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
-          ) : sortedAttributes.length > 0 && (
-            <div className="mt-8">
-              <h3 className="mb-4 text-[20px] font-bold text-[#1A1330]">
-                Specifications
-              </h3>
-              <div className="overflow-hidden rounded-2xl border border-[#E2DFEC]">
+          ) : sortedAttributes.length > 0 ? (
+            <div className="mt-8 overflow-hidden rounded-2xl border border-[#E2DFEC]">
+              <div className="bg-[#FAF9FD] px-6 py-3 border-b border-[#E2DFEC]">
+                <h4 className="text-[17px] font-bold text-[#1A1330]">Specifications</h4>
+              </div>
+              <div className="divide-y divide-[#E2DFEC]">
                 {sortedAttributes.map((attr, i) => (
                   <div
                     key={attr.uuid ?? `${attr.key}-${i}`}
@@ -192,7 +223,7 @@ export default function ProductDetailTabs({
                 ))}
               </div>
             </div>
-          )}
+          ) : null}
         </div>
       )}
 
@@ -201,18 +232,18 @@ export default function ProductDetailTabs({
         <div id="reviews" className="mt-8 max-w-[860px] scroll-mt-24">
           <ReviewForm
             listingUuid={listingUuid}
-            onCreated={(review) => setSubmittedReviews((current) => [review, ...current])}
+            onCreated={() => {}}
           />
-          {shownReviews.length === 0 ? (
+          {finalReviews.length === 0 ? (
             <EmptyReviews />
           ) : (
             <>
-              <ReviewSummaryCard summary={shownSummary} />
-              {reviewPhotos.length > 0 && (
-                <ReviewPhotoStrip photos={reviewPhotos} onOpen={setOpenPhoto} />
+              <ReviewSummaryCard summary={activeSummary} />
+              {photoStrip.length > 0 && (
+                <ReviewPhotoStrip photos={photoStrip} onOpen={setOpenPhoto} />
               )}
               <div className="space-y-5">
-                {shownReviews.map((review, index) => {
+                {finalReviews.map((review, index) => {
                   const key = review.uuid ?? `review-${index}`;
                   return (
                     <ReviewRow
@@ -221,7 +252,7 @@ export default function ProductDetailTabs({
                       sellerName={sellerName}
                       onOpenPhoto={() =>
                         setOpenPhoto(
-                          reviewPhotos.findIndex(
+                          photoStrip.findIndex(
                             (photo) => photo.reviewKey === key,
                           ),
                         )
@@ -233,9 +264,9 @@ export default function ProductDetailTabs({
             </>
           )}
 
-          {openPhoto !== null && openPhoto >= 0 && reviewPhotos[openPhoto] && (
+          {openPhoto !== null && openPhoto >= 0 && photoStrip[openPhoto] && (
             <ReviewPhotoLightbox
-              photos={reviewPhotos}
+              photos={photoStrip}
               index={openPhoto}
               onClose={() => setOpenPhoto(null)}
               onNavigate={setOpenPhoto}
@@ -400,50 +431,54 @@ function ReviewForm({
   );
 }
 
-function ReviewSummaryCard({ summary }: { summary: ReviewSummary }) {
-  const { average, total, breakdown } = summary;
+function ReviewSummaryCard({ summary }: { summary?: any }) {
+  const average = summary?.averageRating ?? summary?.average ?? null;
+  const total = summary?.reviewCount ?? summary?.total ?? 0;
 
-  // `total` is the server-wide count; the bars only describe the reviews on
-  // this page, so scale them against that subset rather than the grand total.
-  const graphed = Object.values(breakdown).reduce((sum, c) => sum + c, 0);
+  let breakdownList: { stars: number; count: number; percentage: number }[] = [];
+  if (Array.isArray(summary?.breakdown)) {
+    breakdownList = summary.breakdown;
+  } else if (summary?.breakdown) {
+    const totalCount = total || 1;
+    breakdownList = [5, 4, 3, 2, 1].map((s) => ({
+      stars: s,
+      count: summary.breakdown[s] ?? 0,
+      percentage: ((summary.breakdown[s] ?? 0) / totalCount) * 100,
+    }));
+  } else {
+    breakdownList = [5, 4, 3, 2, 1].map((s) => ({ stars: s, count: 0, percentage: 0 }));
+  }
 
   return (
     <div className="mb-8 flex flex-col items-center gap-8 rounded-2xl bg-[#F6F5FA] px-8 py-6 sm:flex-row">
       <div className="text-center">
         <p className="text-[54px] font-black leading-none text-[#6C4CD8]">
-          {average !== null ? average.toFixed(1) : "—"}
+          {average !== null && !isNaN(average) ? Number(average).toFixed(1) : "—"}
         </p>
-        {average !== null && (
+        {average !== null && !isNaN(average) ? (
           <RatingStars rating={average} size={20} className="mt-2 justify-center" />
+        ) : (
+          <p className="mt-2 text-xs font-semibold text-[#8B85A0]">No reviews yet</p>
         )}
         <p className="mt-1.5 text-[14px] text-[#8B85A0]">
           {total} {total === 1 ? "review" : "reviews"}
         </p>
-        {graphed < total && (
-          <p className="mt-0.5 text-[13px] text-[#B3ADC4]">
-            Breakdown covers the {graphed} shown
-          </p>
-        )}
       </div>
 
       <div className="w-full flex-1 space-y-2">
-        {[5, 4, 3, 2, 1].map((star) => {
-          const count = breakdown[star] ?? 0;
-          const pct = graphed ? (count / graphed) * 100 : 0;
-          return (
-            <div key={star} className="flex items-center gap-3">
-              <span className="w-4 text-right text-[14px] text-[#8B85A0]">{star}</span>
-              <span className="text-[#F5B301]">★</span>
-              <div className="h-2 flex-1 overflow-hidden rounded-full bg-[#E2DFEC]">
-                <div
-                  className="h-full rounded-full bg-[#F5B301] transition-all duration-500"
-                  style={{ width: `${pct}%` }}
-                />
-              </div>
-              <span className="w-8 text-[13px] text-[#8B85A0]">{count}</span>
+        {breakdownList.map((item) => (
+          <div key={item.stars} className="flex items-center gap-3">
+            <span className="w-4 text-right text-[14px] text-[#8B85A0]">{item.stars}</span>
+            <span className="text-[#F5B301]">★</span>
+            <div className="h-2 flex-1 overflow-hidden rounded-full bg-[#E2DFEC]">
+              <div
+                className="h-full rounded-full bg-[#F5B301] transition-all duration-500"
+                style={{ width: `${Math.min(100, Math.max(0, item.percentage))}%` }}
+              />
             </div>
-          );
-        })}
+            <span className="w-8 text-[13px] text-[#8B85A0] tabular-nums">{item.count}</span>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -617,7 +652,7 @@ function ReviewRow({
   sellerName,
   onOpenPhoto,
 }: {
-  review: ApiReview;
+  review: ApiReview | ReviewResponse;
   sellerName?: string | null;
   onOpenPhoto?: () => void;
 }) {
@@ -654,6 +689,12 @@ function ReviewRow({
             {date && <span className="text-[13px] text-[#8B85A0]">{date}</span>}
             {review.isEdited && (
               <span className="text-[12px] italic text-[#B3ADC4]">edited</span>
+            )}
+            {review.isVerifiedPurchase && (
+              <span className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700">
+                <ShieldCheck className="size-3" />
+                Verified Purchase
+              </span>
             )}
           </div>
 

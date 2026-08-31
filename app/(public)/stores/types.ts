@@ -12,13 +12,18 @@ export type StoreProduct = {
 };
 
 export type StoreReview = {
-  id: number;
+  id: string | number;
   userName: string;
   userAvatar?: string;
   rating: number;
   date: string;
   comment: string;
   productName: string;
+  productSlug?: string | null;
+  isVerifiedPurchase?: boolean;
+  isEdited?: boolean;
+  photoUri?: string | null;
+  replies?: any[];
 };
 
 export type StoreDetails = {

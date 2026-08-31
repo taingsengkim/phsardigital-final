@@ -2,123 +2,458 @@
 
 import * as React from "react"
 import Image from "next/image"
-import { Check, Heart, LoaderCircle, Search, Smile, Trash2 } from "lucide-react"
+import Link from "next/link"
+import {
+  CornerDownRight,
+  ExternalLink,
+  Loader2,
+  MessageSquare,
+  Package,
+  RefreshCw,
+  Search,
+  Send,
+  ShieldCheck,
+  Star,
+  Trash2,
+  User,
+} from "lucide-react"
+import { toast } from "sonner"
+import { cn, getFileUrl } from "@/lib/utils"
+import {
+  useDeleteReviewMutation,
+  useGetSellerCommentsQuery,
+  useReplyToCommentMutation,
+} from "@/lib/redux/service/sellerCommentApi"
+import type { ReviewResponse } from "@/lib/types/review"
+import { Button } from "@/components/ui/button"
 
-import { cn } from "@/lib/utils"
-import { getFileUrl } from "@/lib/utils"
-import { useDeleteCommentMutation, useGetSellerCommentsQuery, useReplyToCommentMutation } from "@/lib/redux/service/sellerCommentApi"
-import type { SellerComment } from "@/lib/types/seller-comment"
-
-type CommentItem = {
-  id: string | number
-  name: string
-  message: string
-  time: string
-  avatar: string
-  product: string
-  art: string
-}
-
-const initialComments: CommentItem[] = [
-  { id: 1, name: "Samson Heathcote", message: "Awesome, keep it up,", time: "8h", avatar: "/picture/sengkim.jpg", product: "DSM - Geometry pattern", art: "from-[#b8d6c4] via-[#eac3aa] to-[#b16f50]" },
-  { id: 2, name: "Maureen Russel", message: "Well done, I’m just purchased.", time: "14h", avatar: "/picture/menghor.jpg", product: "Node - Crypto iOS UI design kit", art: "from-[#eadcff] via-[#f3e1b9] to-[#c8a7ed]" },
-  { id: 3, name: "Whitney Nicolas", message: "Awesome, keep it up,", time: "16h", avatar: "/picture/bunleang.jpg", product: "TaskEz: Productivity App iOS UI Kit", art: "from-[#ffbf69] via-[#ee805e] to-[#f2dfd4]" },
-  { id: 4, name: "Amani Rempel", message: "Awesome, keep it up,", time: "19h", avatar: "/picture/lisa.PNG", product: "Bitcloud - Crypto exchange UI kit", art: "from-[#82d4ff] via-[#f9ccd7] to-[#9c78d0]" },
-  { id: 5, name: "Corene Toy", message: "Awesome, keep it up,", time: "1 day", avatar: "/picture/sokhim.JPG", product: "Academe 3D Education Icons", art: "from-[#55526c] via-[#817db9] to-[#e8bbc5]" },
-]
-
-const commentArt = [
-  "from-[#b8d6c4] via-[#eac3aa] to-[#b16f50]",
-  "from-[#eadcff] via-[#f3e1b9] to-[#c8a7ed]",
-  "from-[#ffbf69] via-[#ee805e] to-[#f2dfd4]",
-]
-
-function Checkbox({ checked, onChange, label }: { checked: boolean; onChange: () => void; label: string }) {
-  return <button type="button" role="checkbox" aria-checked={checked} aria-label={label} onClick={onChange} className={cn("grid size-[22px] shrink-0 place-items-center rounded-[5px] border", checked ? "border-[#2f80ed] bg-[#2f80ed] text-white" : "border-[#c7ccd1] bg-white")}>{checked && <Check className="size-[15px]" strokeWidth={3} />}</button>
-}
-
-function ProductArt({ art, index }: { art: string; index: number }) {
-  return <div className={cn("relative size-[70px] shrink-0 overflow-hidden rounded-[8px] bg-gradient-to-br", art)} aria-hidden="true"><span className="absolute -bottom-2 left-2 h-8 w-14 -rotate-12 rounded-full bg-white/55" /><span className="absolute left-1/2 top-1/2 size-8 -translate-x-1/2 -translate-y-1/2 rotate-45 rounded-[30%] bg-white/45 shadow-md" /><span className={cn("absolute h-10 w-3 rounded-full bg-white/65", index % 2 ? "right-4 top-3 rotate-12" : "left-4 top-2 -rotate-12")} /></div>
+function formatDate(value?: string | null): string {
+  if (!value) return ""
+  const parts = value.split("T")[0]?.split("-")
+  if (parts && parts.length === 3) {
+    const [year, month, day] = parts.map(Number)
+    const date = new Date(year, month - 1, day)
+    if (!Number.isNaN(date.getTime())) {
+      return date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
+    }
+  }
+  return new Date(value).toLocaleDateString()
 }
 
 export function Comment() {
-  const { data, isLoading, isError } = useGetSellerCommentsQuery({ page: 0, size: 100 })
-  const [replyToComment] = useReplyToCommentMutation()
-  const [deleteComment] = useDeleteCommentMutation()
-  const apiComments = React.useMemo<CommentItem[]>(() => (data?.content ?? []).map((review: SellerComment, index) => ({
-    id: review.uuid,
-    name: review.buyer?.fullName || [review.buyer?.firstName, review.buyer?.lastName].filter(Boolean).join(" ") || review.buyer?.username || "Buyer",
-    message: review.comment || "",
-    time: review.createdAt ? new Date(review.createdAt).toLocaleDateString() : "",
-    avatar: getFileUrl(review.buyer?.avatarFile?.uri) || "/picture/lisa.PNG",
-    product: review.listing?.title || "Product",
-    art: commentArt[index % commentArt.length],
-  })), [data])
-  const [comments, setComments] = React.useState<CommentItem[]>([])
-  // Synchronize the editable local list when the API response changes.
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  React.useEffect(() => setComments(apiComments), [apiComments])
-  const [selected, setSelected] = React.useState<Set<string | number>>(new Set())
-  const [query, setQuery] = React.useState("")
-  const [replyingTo, setReplyingTo] = React.useState<string | number | null>(null)
-  const [replies, setReplies] = React.useState<Record<string, string>>({})
-  const [draftReply, setDraftReply] = React.useState("")
-  const visible = comments.filter((item) => `${item.name} ${item.message} ${item.product}`.toLowerCase().includes(query.toLowerCase()))
-  const allSelected = visible.length > 0 && visible.every((item) => selected.has(item.id))
+  const { data, isLoading, isError, refetch, isFetching } = useGetSellerCommentsQuery({
+    page: 0,
+    size: 50,
+  })
+  const [replyToComment, { isLoading: isReplying }] = useReplyToCommentMutation()
+  const [deleteReview] = useDeleteReviewMutation()
 
-  function toggle(id: string | number) {
-    setSelected((current) => { const next = new Set(current); if (next.has(id)) next.delete(id); else next.add(id); return next })
+  const [activeTab, setActiveTab] = React.useState<"all" | "unanswered" | "positive" | "critical">(
+    "all",
+  )
+  const [searchQuery, setSearchQuery] = React.useState("")
+  const [replyingReviewId, setReplyingReviewId] = React.useState<string | null>(null)
+  const [replyText, setReplyText] = React.useState("")
+
+  const reviewsList: ReviewResponse[] = data?.content || []
+
+  // Filter & Sort reviews (Unanswered surface first by default)
+  const filteredReviews = React.useMemo(() => {
+    return reviewsList
+      .filter((rev) => {
+        // Tab filtering
+        const hasReplies = Boolean(rev.replies && rev.replies.length > 0)
+        if (activeTab === "unanswered" && hasReplies) return false
+        if (activeTab === "positive" && (rev.rating || 0) < 4) return false
+        if (activeTab === "critical" && (rev.rating || 0) > 3) return false
+
+        // Search filtering
+        if (!searchQuery.trim()) return true
+        const q = searchQuery.toLowerCase().trim()
+        const buyer = (rev.buyer?.displayName || "").toLowerCase()
+        const comment = (rev.comment || "").toLowerCase()
+        const product = (rev.listing?.title || "").toLowerCase()
+        return buyer.includes(q) || comment.includes(q) || product.includes(q)
+      })
+      .sort((a, b) => {
+        // Unanswered first
+        const aHasReply = Boolean(a.replies && a.replies.length > 0)
+        const bHasReply = Boolean(b.replies && b.replies.length > 0)
+        if (!aHasReply && bHasReply) return -1
+        if (aHasReply && !bHasReply) return 1
+        // Then by newest
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      })
+  }, [reviewsList, activeTab, searchQuery])
+
+  const unansweredCount = React.useMemo(() => {
+    return reviewsList.filter((r) => !r.replies || r.replies.length === 0).length
+  }, [reviewsList])
+
+  const handleSendReply = async (reviewUuid: string) => {
+    const text = replyText.trim()
+    if (!text) {
+      toast.error("Please enter a reply message")
+      return
+    }
+
+    try {
+      await replyToComment({ reviewUuid, comment: text }).unwrap()
+      toast.success("Reply posted successfully!")
+      setReplyingReviewId(null)
+      setReplyText("")
+    } catch (err: any) {
+      toast.error(err?.data?.message || err?.message || "Failed to post reply")
+    }
   }
-  function toggleAll() {
-    setSelected((current) => { const next = new Set(current); if (allSelected) visible.forEach((item) => next.delete(item.id)); else visible.forEach((item) => next.add(item.id)); return next })
-  }
-  function startReply(id: string | number) {
-    setReplyingTo(id)
-    setDraftReply(replies[id] ?? "")
-  }
-  async function saveReply(id: string | number) {
-    const comment = draftReply.trim()
-    if (!comment) return
-    await replyToComment({ reviewUuid: String(id), comment }).unwrap()
-    setReplies((current) => ({ ...current, [id]: comment }))
-    setReplyingTo(null)
-    setDraftReply("")
-  }
-  async function removeComment(id: string | number) {
-    if (!window.confirm("Delete this comment?")) return
-    await deleteComment(String(id)).unwrap()
-    setComments((items) => items.filter((item) => item.id !== id))
-    setSelected((items) => { const next = new Set(items); next.delete(id); return next })
+
+  const handleDeleteReview = async (reviewUuid: string) => {
+    if (!window.confirm("Are you sure you want to delete this review?")) return
+    try {
+      await deleteReview(reviewUuid).unwrap()
+      toast.success("Review deleted")
+    } catch (err: any) {
+      toast.error(err?.data?.message || err?.message || "Failed to delete review")
+    }
   }
 
   return (
-    <section className="flex min-h-[calc(100vh-104px)] flex-col bg-[#f7f7f8] px-[28px] py-[28px] text-[#27282b] sm:px-[38px]">
-      <h1 className="mb-[22px] text-[32px] font-bold leading-none tracking-[-0.8px]">Comments</h1>
-      <div className="flex-1 rounded-[10px] bg-white px-[18px] pb-[20px] pt-[18px] shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-        <div className="flex flex-wrap items-center gap-[16px] pb-[25px]"><span className="h-[31px] w-[14px] rounded-[5px] bg-[#c9b7ff]" /><h2 className="text-[17px] font-semibold">Product comments</h2><label className="relative w-full max-w-[345px] sm:ml-[8px]"><Search className="absolute left-[13px] top-1/2 size-[18px] -translate-y-1/2 text-[#75808c]" /><input value={query} onChange={(event) => setQuery(event.target.value)} type="search" placeholder="Search comments" className="h-[39px] w-full rounded-[10px] border-0 bg-[#f4f4f5] pl-[40px] pr-[14px] text-[13px] outline-none focus:ring-2 focus:ring-[#8068e8]/25" /></label></div>
+    <section className="min-h-[calc(100svh-70px)] bg-slate-50/70 p-4 sm:p-7 space-y-6">
+      {/* Header */}
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
+            Customer Reviews
+          </h1>
+          <p className="mt-1 text-xs sm:text-sm text-slate-500">
+            Read buyer feedback across all your products and reply directly as the shop owner.
+          </p>
+        </div>
 
-        <div className="flex items-center border-b border-[#eceef0] pb-[14px] text-[11px] font-medium text-[#777f89]"><Checkbox checked={allSelected} onChange={toggleAll} label="Select all comments" /><span className="ml-[32px] flex-1">Comments</span><span className="hidden w-[270px] md:block">Products</span></div>
+        <div className="flex items-center gap-2.5">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="rounded-xl border-slate-200 bg-white text-slate-700 shadow-xs hover:bg-slate-50"
+          >
+            <RefreshCw className={cn("size-4 mr-1.5", isFetching && "animate-spin")} />
+            Refresh
+          </Button>
+        </div>
+      </header>
 
-        {visible.map((comment, index) => (
-          <div key={comment.id} className={cn("group flex min-h-[112px] items-start border-b border-[#eceef0] px-[2px] py-[18px] transition-colors", replyingTo === comment.id && "my-[6px] rounded-[9px] border-b-0 bg-[#fafafa] px-[10px] shadow-[0_2px_2px_rgba(0,0,0,0.08)]")}>
-            <Checkbox checked={selected.has(comment.id)} onChange={() => toggle(comment.id)} label={`Select comment by ${comment.name}`} />
-            <div className="ml-[32px] flex min-w-0 flex-1 gap-[16px]">
-              <Image src={comment.avatar} alt="" width={42} height={42} className="size-[42px] shrink-0 rounded-full object-cover" />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-[10px]"><p className="truncate text-[12px] font-semibold">{comment.name}</p><span className="ml-auto text-[10px] text-[#858c95] md:hidden">{comment.time}</span></div>
-                <p className="mt-[3px] text-[11px] text-[#34383d]">{comment.message}</p>
-                {replies[comment.id] && replyingTo !== comment.id && <div className="mt-[12px] flex items-start gap-[9px]"><Image src="/picture/lisa.PNG" alt="Your avatar" width={34} height={34} className="size-[34px] rounded-full object-cover" /><p className="pt-[4px] text-[11px]"><span className="font-semibold text-[#3182e5]">@elva</span> {replies[comment.id]}</p></div>}
-                {replyingTo === comment.id && <div className="mt-[12px] flex items-start gap-[9px]"><Image src="/picture/lisa.PNG" alt="Your avatar" width={34} height={34} className="size-[34px] rounded-full object-cover" /><div className="flex-1"><div className="flex items-center border-b border-[#dfe2e5] pb-[5px] text-[11px]"><span className="mr-[4px] font-semibold text-[#3182e5]">@elva</span><input autoFocus value={draftReply} onChange={(event) => setDraftReply(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") saveReply(comment.id) }} placeholder="Leave something to reply" className="min-w-0 flex-1 bg-transparent outline-none" /></div><div className="mt-[10px] flex gap-[8px]"><button type="button" onClick={() => saveReply(comment.id)} className="h-[35px] rounded-[7px] bg-[#7654e8] px-[17px] text-[11px] font-semibold text-white">Reply</button><button type="button" onClick={() => setReplyingTo(null)} className="h-[35px] rounded-[7px] border border-[#dfe2e5] bg-white px-[15px] text-[11px] font-semibold">Cancel</button></div></div></div>}
-                {replyingTo !== comment.id && !replies[comment.id] && <div className="mt-[10px] flex gap-[20px] text-[#7b858e] opacity-100 md:opacity-0 md:group-hover:opacity-100"><button type="button" onClick={() => startReply(comment.id)} aria-label="Reply"><Heart className="size-[17px]" /></button><button type="button" onClick={() => removeComment(comment.id)} aria-label="Delete comment"><Trash2 className="size-[16px]" /></button><button type="button" onClick={() => startReply(comment.id)} aria-label="React to comment"><Smile className="size-[17px]" /></button></div>}
-              </div>
-            </div>
-            <span className="hidden w-[52px] pt-[6px] text-[10px] text-[#858c95] md:block">{comment.time}</span>
-            <div className="hidden w-[270px] items-start gap-[15px] md:flex"><ProductArt art={comment.art} index={index} /><div className="pt-[4px]"><p className="max-w-[150px] text-[12px] font-semibold leading-[17px]">{comment.product}</p><p className="mt-[3px] text-[10px] text-[#858c95]">UI design kit</p></div></div>
-          </div>
-        ))}
-        {visible.length === 0 && <p className="py-[70px] text-center text-[13px] text-[#858c95]">No comments found.</p>}
-        <div className="flex justify-center pt-[22px]"><button type="button" className="flex h-[38px] items-center gap-[9px] rounded-[8px] border border-[#e1e3e6] px-[16px] text-[11px] font-semibold shadow-sm"><LoaderCircle className="size-[17px]" /> Load more</button></div>
+      {/* Filter Tabs & Search Bar */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-slate-200 bg-white p-3.5 shadow-xs">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setActiveTab("all")}
+            className={cn(
+              "rounded-xl px-3.5 py-1.5 text-xs font-bold transition cursor-pointer",
+              activeTab === "all"
+                ? "bg-[#6C4CD8] text-white shadow-xs"
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200/80",
+            )}
+          >
+            All Reviews ({reviewsList.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("unanswered")}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition cursor-pointer",
+              activeTab === "unanswered"
+                ? "bg-amber-600 text-white shadow-xs"
+                : "bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100",
+            )}
+          >
+            Needs Reply
+            {unansweredCount > 0 && (
+              <span className="grid size-4 place-items-center rounded-full bg-amber-200 text-[10px] font-black text-amber-900">
+                {unansweredCount}
+              </span>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("positive")}
+            className={cn(
+              "rounded-xl px-3.5 py-1.5 text-xs font-bold transition cursor-pointer",
+              activeTab === "positive"
+                ? "bg-emerald-600 text-white shadow-xs"
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200/80",
+            )}
+          >
+            4–5 Stars
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("critical")}
+            className={cn(
+              "rounded-xl px-3.5 py-1.5 text-xs font-bold transition cursor-pointer",
+              activeTab === "critical"
+                ? "bg-rose-600 text-white shadow-xs"
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200/80",
+            )}
+          >
+            1–3 Stars
+          </button>
+        </div>
+
+        <div className="relative w-full sm:w-72">
+          <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by buyer or product..."
+            className="w-full rounded-xl border border-slate-200 bg-slate-50/60 pl-9 pr-3.5 py-2 text-xs font-medium text-slate-900 outline-none focus:border-[#6C4CD8] focus:bg-white focus:ring-2 focus:ring-[#6C4CD8]/20 placeholder:text-slate-400"
+          />
+        </div>
       </div>
+
+      {/* Reviews List */}
+      {isLoading ? (
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-44 rounded-2xl bg-slate-200/80 animate-pulse" />
+          ))}
+        </div>
+      ) : filteredReviews.length > 0 ? (
+        <div className="space-y-4">
+          {filteredReviews.map((rev) => {
+            const hasReply = Boolean(rev.replies && rev.replies.length > 0)
+            const isReplyingThis = replyingReviewId === rev.uuid
+            const photoUrl = rev.photo?.uri
+              ? rev.photo.uri.startsWith("http") || rev.photo.uri.startsWith("/")
+                ? rev.photo.uri
+                : getFileUrl(rev.photo.uri)
+              : null
+
+            return (
+              <article
+                key={rev.uuid}
+                className={cn(
+                  "rounded-2xl border bg-white p-5 sm:p-6 shadow-xs space-y-4 transition-all",
+                  !hasReply ? "border-amber-200 bg-amber-50/20" : "border-slate-200",
+                )}
+              >
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  {/* Buyer & Review details */}
+                  <div className="flex items-start gap-3.5">
+                    <div className="relative size-11 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+                      {rev.buyer?.avatarUrl ? (
+                        <Image
+                          src={rev.buyer.avatarUrl}
+                          alt={rev.buyer.displayName || "Buyer"}
+                          fill
+                          className="object-cover"
+                        />
+                      ) : (
+                        <div className="grid h-full w-full place-items-center bg-[#6C4CD8] text-sm font-bold text-white">
+                          {(rev.buyer?.displayName || "B").charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-bold text-slate-950">
+                          {rev.buyer?.displayName || "Customer"}
+                        </span>
+                        <div className="flex items-center gap-0.5">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <Star
+                              key={i}
+                              size={14}
+                              className={
+                                i < (rev.rating || 0)
+                                  ? "fill-amber-400 text-amber-400"
+                                  : "fill-slate-100 text-slate-200"
+                              }
+                            />
+                          ))}
+                        </div>
+                        {rev.isVerifiedPurchase && (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-extrabold text-emerald-700 border border-emerald-200">
+                            <ShieldCheck className="size-3" /> Verified Order
+                          </span>
+                        )}
+                        {rev.isEdited && (
+                          <span className="text-[10px] italic text-slate-400">(edited)</span>
+                        )}
+                      </div>
+
+                      <p className="text-xs text-slate-400 font-medium">{formatDate(rev.createdAt)}</p>
+
+                      {rev.comment && (
+                        <p className="text-xs sm:text-sm font-medium text-slate-800 leading-relaxed pt-1">
+                          {rev.comment}
+                        </p>
+                      )}
+
+                      {/* Photo preview */}
+                      {photoUrl && (
+                        <div className="relative mt-2 size-20 overflow-hidden rounded-xl border border-slate-200">
+                          <Image src={photoUrl} alt="Review attachment" fill className="object-cover" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Product card tile */}
+                  {rev.listing && (
+                    <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-2.5 sm:max-w-xs shrink-0">
+                      <div className="relative size-12 shrink-0 overflow-hidden rounded-lg bg-white border border-slate-200">
+                        {rev.listing.thumbnailUrl ? (
+                          <Image
+                            src={
+                              rev.listing.thumbnailUrl.startsWith("http") ||
+                              rev.listing.thumbnailUrl.startsWith("/")
+                                ? rev.listing.thumbnailUrl
+                                : getFileUrl(rev.listing.thumbnailUrl)
+                            }
+                            alt={rev.listing.title}
+                            fill
+                            className="object-cover"
+                          />
+                        ) : (
+                          <div className="grid h-full w-full place-items-center text-slate-400">
+                            <Package className="size-5" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                          Product
+                        </span>
+                        {rev.listing.slug ? (
+                          <Link
+                            href={`/products/${rev.listing.slug}`}
+                            target="_blank"
+                            className="text-xs font-bold text-slate-900 hover:text-[#6C4CD8] line-clamp-1 flex items-center gap-1"
+                          >
+                            {rev.listing.title}
+                            <ExternalLink className="size-2.5 text-slate-400" />
+                          </Link>
+                        ) : (
+                          <p className="text-xs font-bold text-slate-900 line-clamp-1">
+                            {rev.listing.title}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Existing Replies */}
+                {rev.replies && rev.replies.length > 0 && (
+                  <div className="space-y-2 border-l-2 border-[#6C4CD8]/30 pl-4 ml-6 pt-1">
+                    {rev.replies.map((reply, idx) => (
+                      <div key={reply.uuid || idx} className="rounded-xl bg-purple-50/50 p-3 text-xs space-y-1">
+                        <div className="flex items-center gap-1.5 font-bold text-[#6C4CD8]">
+                          <CornerDownRight className="size-3.5" />
+                          <span>Shop Owner Reply</span>
+                          <span className="text-[10px] text-slate-400 font-normal">
+                            • {formatDate(reply.createdAt)}
+                          </span>
+                        </div>
+                        <p className="text-slate-800 pl-5 leading-relaxed">{reply.comment}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Inline Reply Composer */}
+                <div className="pt-2 flex items-center justify-between border-t border-slate-100">
+                  {isReplyingThis ? (
+                    <div className="w-full space-y-2 pt-1">
+                      <div className="flex items-center gap-2">
+                        <CornerDownRight className="size-4 text-[#6C4CD8] shrink-0" />
+                        <input
+                          type="text"
+                          value={replyText}
+                          onChange={(e) => setReplyText(e.target.value)}
+                          placeholder="Write a polite response to this customer review..."
+                          className="flex-1 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-medium text-slate-900 outline-none focus:border-[#6C4CD8] focus:ring-2 focus:ring-[#6C4CD8]/20"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && !e.shiftKey) {
+                              e.preventDefault()
+                              handleSendReply(rev.uuid)
+                            }
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={isReplying}
+                          onClick={() => handleSendReply(rev.uuid)}
+                          className="rounded-xl bg-[#6C4CD8] hover:bg-[#5B3DC0] text-xs font-bold text-white px-4 shrink-0"
+                        >
+                          {isReplying ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setReplyingReviewId(null)
+                            setReplyText("")
+                          }}
+                          className="rounded-xl text-xs text-slate-500"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between w-full">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setReplyingReviewId(rev.uuid)
+                          setReplyText("")
+                        }}
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-[#6C4CD8] hover:text-[#5B3DC0] transition cursor-pointer"
+                      >
+                        <MessageSquare className="size-3.5" />
+                        {hasReply ? "Add another reply" : "Reply to review"}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteReview(rev.uuid)}
+                        className="text-slate-400 hover:text-rose-600 transition p-1"
+                        title="Delete review"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </article>
+            )
+          })}
+        </div>
+      ) : (
+        <div className="flex min-h-64 flex-col items-center justify-center rounded-3xl border border-slate-200 bg-white p-12 text-center shadow-xs space-y-3">
+          <div className="grid size-14 place-items-center rounded-2xl bg-purple-50 text-[#6C4CD8]">
+            <MessageSquare className="size-7" />
+          </div>
+          <h3 className="text-lg font-bold text-slate-950">No Reviews Found</h3>
+          <p className="text-xs text-slate-500 max-w-sm">
+            {activeTab !== "all"
+              ? "No reviews match your current filter selection."
+              : "As customers purchase and review your products, their feedback will appear here."}
+          </p>
+        </div>
+      )}
     </section>
   )
 }

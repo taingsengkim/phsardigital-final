@@ -20,6 +20,7 @@ import {
   ExternalLink,
   Check,
   Trash2,
+  Star,
 } from "lucide-react";
 import type { UserOrder, OrderStatus } from "./types";
 import { adaptPurchase } from "./adapt-purchase";
@@ -27,6 +28,10 @@ import {
   useCancelPurchaseMutation,
   useGetMyPurchasesQuery,
 } from "@/lib/redux/service/purchaseApi";
+import { useGetMyReviewsQuery } from "@/lib/redux/service/sellerCommentApi";
+import type { ReviewResponse } from "@/lib/types/review";
+import ReviewDialog from "@/components/review/ReviewDialog";
+import { cn } from "@/lib/utils";
 
 import { useLanguage } from "@/lib/context/LanguageContext";
 
@@ -55,6 +60,23 @@ export default function OrdersPageClient() {
     }
     return [];
   });
+  const { data: myReviewsData } = useGetMyReviewsQuery();
+  const myReviewsByListing = useMemo(() => {
+    const map = new Map<string, ReviewResponse>();
+    for (const rev of myReviewsData?.content ?? []) {
+      if (rev.listing?.uuid) {
+        map.set(rev.listing.uuid, rev);
+      }
+    }
+    return map;
+  }, [myReviewsData]);
+
+  const [activeReviewItem, setActiveReviewItem] = useState<{
+    listingUuid: string;
+    listingTitle: string;
+    listingImage?: string | null;
+  } | null>(null);
+
   const [activeTab, setActiveTab] = useState<"all" | OrderStatus>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [trackingOrder, setTrackingOrder] = useState<UserOrder | null>(null);
@@ -302,6 +324,37 @@ export default function OrdersPageClient() {
                       <p className="mt-1 text-xs sm:text-sm text-[#7C7596]">
                         Quantity: <span className="font-bold text-[#1A1330]">{item.quantity}</span> &nbsp;•&nbsp; Unit Price: ${item.price.toFixed(2)}
                       </p>
+
+                      {order.status === "COMPLETED" && (
+                        <div className="mt-2.5">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setActiveReviewItem({
+                                listingUuid: item.id,
+                                listingTitle: item.title,
+                                listingImage: item.image,
+                              })
+                            }
+                            className={cn(
+                              "inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition cursor-pointer shadow-xs",
+                              myReviewsByListing.has(item.id)
+                                ? "bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100"
+                                : "bg-[#F1EFFA] text-[#6C4CD8] border border-[#6C4CD8]/20 hover:bg-[#E5E0F5]",
+                            )}
+                          >
+                            <Star
+                              size={13}
+                              className={
+                                myReviewsByListing.has(item.id)
+                                  ? "fill-amber-400 text-amber-400"
+                                  : "fill-[#6C4CD8] text-[#6C4CD8]"
+                              }
+                            />
+                            {myReviewsByListing.has(item.id) ? "Edit Your Review" : "Review Product"}
+                          </button>
+                        </div>
+                      )}
                     </div>
 
                     <div className="text-right">
@@ -550,6 +603,18 @@ export default function OrdersPageClient() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Review Dialog Modal */}
+      {activeReviewItem && (
+        <ReviewDialog
+          isOpen={Boolean(activeReviewItem)}
+          onClose={() => setActiveReviewItem(null)}
+          listingUuid={activeReviewItem.listingUuid}
+          listingTitle={activeReviewItem.listingTitle}
+          listingImage={activeReviewItem.listingImage}
+          existingReview={myReviewsByListing.get(activeReviewItem.listingUuid)}
+        />
+      )}
     </div>
   );
 }
