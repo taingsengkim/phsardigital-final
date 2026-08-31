@@ -11,6 +11,7 @@ export interface PosSaleRequest {
   lines: PosSaleLineRequest[]
   customerName?: string
   customerPhone?: string
+  paymentMethod?: "CASH" | "KHQR"
   amountTendered?: number
   note?: string
   soldAt?: string
@@ -18,6 +19,7 @@ export interface PosSaleRequest {
 
 export interface PosSaleResponse {
   sale: Purchase
-  amountTendered?: number
-  changeDue?: number
+  paymentMethod?: "CASH" | "KHQR"
+  amountTendered?: number | null
+  changeDue?: number | null
 }

@@ -74,6 +74,11 @@ const createProductSchema = z
       .trim()
       .min(3, "Title must be at least 3 characters.")
       .max(120, "Title must not exceed 120 characters."),
+    sku: z
+      .string()
+      .trim()
+      .max(64, "SKU must not exceed 64 characters.")
+      .optional(),
     description: z
       .string()
       .trim()
@@ -382,6 +387,7 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
     resolver: zodResolver(createProductSchema),
     defaultValues: {
       title: "",
+      sku: "",
       description: "",
       price: undefined,
       discountPrice: undefined,
@@ -465,6 +471,7 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
 
     reset({
       title: listing.title ?? "",
+      sku: listing.sku ?? "",
       description: listing.description ?? "",
       price: Number(listing.fullPrice ?? listing.price ?? 0),
       discountPrice: listing.discountPrice == null ? undefined : Number(listing.discountPrice),
@@ -603,6 +610,7 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
           body: {
             categoryUuid: data.categoryUuid,
             title: data.title,
+            sku: data.sku !== undefined ? (data.sku.trim() === "" ? "" : data.sku.trim()) : undefined,
             description: data.description,
             fullPrice: data.price,
             ...(data.discountPrice !== undefined ? { discountPrice: data.discountPrice } : {}),
@@ -639,6 +647,7 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
         const created = await createSellerListing({
           categoryUuid: data.categoryUuid,
           title: data.title,
+          sku: data.sku?.trim() ? data.sku.trim() : undefined,
           description: data.description,
           fullPrice: data.price,
           discountPrice: data.discountPrice,
@@ -663,15 +672,20 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
       router.refresh()
     } catch (err: any) {
       const status = err?.status
-      if (status === 402 || status === 409) {
+      const msg = err?.data?.message || err?.message || ""
+      if (status === 409) {
+        if (msg.toLowerCase().includes("sku") || msg.toLowerCase().includes("barcode") || msg.toLowerCase().includes("code") || msg.toLowerCase().includes("already uses")) {
+          setError("sku", { type: "manual", message: msg })
+          setFormError(msg)
+          return
+        }
         setRequiresSubscription(true)
-        setFormError(
-          status === 409
-            ? "Listing quota reached. Archive an item or upgrade your plan."
-            : "An active subscription is required to publish listings.",
-        )
+        setFormError(msg || "Listing quota reached. Archive an item or upgrade your plan.")
+      } else if (status === 402) {
+        setRequiresSubscription(true)
+        setFormError(msg || "An active subscription is required to publish listings.")
       } else {
-        setFormError(err?.data?.message || err?.message || `Unable to ${isEditing ? "update" : "create"} the product.`)
+        setFormError(msg || `Unable to ${isEditing ? "update" : "create"} the product.`)
       }
       window.scrollTo({ top: 0, behavior: "smooth" })
     }
@@ -836,6 +850,19 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
                       {watchedTitle?.length || 0}/120
                     </span>
                   </div>
+                </div>
+
+                {/* SKU / Barcode */}
+                <div>
+                  <Label hint="Stock Keeping Unit / Barcode for hardware scanner lookups (max 64 chars)">
+                    SKU / Barcode (Optional)
+                  </Label>
+                  <input
+                    {...register("sku")}
+                    placeholder="e.g., SONY-WH1000XM5-BLK or 8806091234567"
+                    className={cn(INPUT_BASE, "h-12 font-mono text-sm", errors.sku && INPUT_ERROR)}
+                  />
+                  <FieldError message={errors.sku?.message} />
                 </div>
 
                 {/* Description */}

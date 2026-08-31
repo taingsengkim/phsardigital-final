@@ -421,12 +421,13 @@ export const sellerApi = createApi({
       providesTags: ["SellerReviews"],
     }),
 
-    getMyListings: builder.query<any, { status?: string; pageNumber?: number; pageSize?: number } | void>({
+    getMyListings: builder.query<any, { search?: string; status?: string; pageNumber?: number; pageSize?: number } | void>({
       query: (params) => {
         const pageNumber = params?.pageNumber ?? 0;
         const pageSize = params?.pageSize ?? 20;
         let url = `/listings/me?pageNumber=${pageNumber}&pageSize=${pageSize}`;
-        if (params?.status) url += `&status=${params.status}`;
+        if (params?.status) url += `&status=${encodeURIComponent(params.status)}`;
+        if (params?.search) url += `&search=${encodeURIComponent(params.search)}`;
         return { url };
       },
       providesTags: ["SellerListings"],

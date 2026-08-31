@@ -36,13 +36,15 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const status = searchParams.get("status");
+  const search = searchParams.get("search");
   const pageNumber = searchParams.get("pageNumber") ?? "0";
   const rawPageSize = Number(searchParams.get("pageSize") ?? "20");
   const clampedPageSize = isNaN(rawPageSize) || rawPageSize < 1 ? 20 : Math.min(rawPageSize, 100);
   const pageSize = String(clampedPageSize);
 
   let url = `${BASE_URL}/api/v1/listings/me?pageNumber=${pageNumber}&pageSize=${pageSize}`;
-  if (status) url += `&status=${status}`;
+  if (status) url += `&status=${encodeURIComponent(status)}`;
+  if (search) url += `&search=${encodeURIComponent(search)}`;
 
   try {
     const res = await fetch(url, {

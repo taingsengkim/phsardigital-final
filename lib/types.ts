@@ -201,6 +201,7 @@ export type ApiListing = {
   sellerProfile?: ApiSellerSummary | null;
   category?: ApiCategorySummary | null;
   title?: string | null;
+  sku?: string | null;
   slug?: string | null;
   description?: string | null;
   price?: number | null;

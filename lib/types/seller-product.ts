@@ -67,6 +67,7 @@ export interface ListingAttributeInput {
 export interface CreateListingRequest {
   categoryUuid: string
   title: string
+  sku?: string
   description: string
   fullPrice: number
   discountPrice?: number
@@ -84,6 +85,7 @@ export interface CreateListingRequest {
 
 export interface SellerListing extends CreateListingRequest {
   uuid: string
+  sku?: string
   createdAt?: string
   updatedAt?: string
 }
@@ -97,6 +99,7 @@ export type ListingStatus = "DRAFT" | "ACTIVE" | "SOLD_OUT" | "ARCHIVED" | "SUSP
 export interface UpdateListingBody {
   categoryUuid?: string
   title?: string
+  sku?: string
   description?: string
   fullPrice?: number
   discountPrice?: number
