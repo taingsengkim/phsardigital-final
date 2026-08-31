@@ -5,6 +5,7 @@ import type {
   DashboardPageParams,
   PagedResponse,
   SellerConversation,
+  SellerDashboardOverview,
   SellerOrder,
   SellerProfile,
   SellerReview,
@@ -15,34 +16,39 @@ const pageQuery = ({ pageNumber = 0, pageSize = 20 }: DashboardPageParams = {}) 
 
 export const sellerDashboardApi = createApi({
   reducerPath: "sellerDashboardApi",
-  baseQuery: fetchBaseQuery({ baseUrl: "/api/seller-dashboard" }),
+  baseQuery: fetchBaseQuery({ baseUrl: "/api" }),
   tagTypes: ["SellerDashboard"],
   endpoints: (builder) => ({
+    getSellerDashboardOverview: builder.query<SellerDashboardOverview, void>({
+      query: () => "/sellers/me/dashboard",
+      providesTags: ["SellerDashboard"],
+    }),
     getSellerProfile: builder.query<SellerProfile, void>({
-      query: () => "?resource=profile",
+      query: () => "/seller-dashboard?resource=profile",
       providesTags: ["SellerDashboard"],
     }),
     getSellerOrders: builder.query<PagedResponse<SellerOrder>, DashboardPageParams | void>({
-      query: (params) => `?resource=orders&${pageQuery(params ?? {}).toString()}`,
+      query: (params) => `/seller-dashboard?resource=orders&${pageQuery(params ?? {}).toString()}`,
       providesTags: ["SellerDashboard"],
     }),
     getSellerReviews: builder.query<PagedResponse<SellerReview>, DashboardPageParams | void>({
-      query: (params) => `?resource=reviews&${pageQuery(params ?? {}).toString()}`,
+      query: (params) => `/seller-dashboard?resource=reviews&${pageQuery(params ?? {}).toString()}`,
       providesTags: ["SellerDashboard"],
     }),
     getSellerConversations: builder.query<SellerConversation[], void>({
-      query: () => "?resource=conversations",
+      query: () => "/seller-dashboard?resource=conversations",
       providesTags: ["SellerDashboard"],
     }),
     getSellerListings: builder.query<PagedResponse<DashboardListing>, DashboardPageParams & { sellerId: string }>({
       query: ({ sellerId, ...params }) =>
-        `?resource=listings&sellerId=${encodeURIComponent(sellerId)}&${pageQuery(params).toString()}`,
+        `/seller-dashboard?resource=listings&sellerId=${encodeURIComponent(sellerId)}&${pageQuery(params).toString()}`,
       providesTags: ["SellerDashboard"],
     }),
   }),
 })
 
 export const {
+  useGetSellerDashboardOverviewQuery,
   useGetSellerProfileQuery,
   useGetSellerOrdersQuery,
   useGetSellerReviewsQuery,

@@ -102,3 +102,54 @@ export interface DashboardPageParams {
   pageNumber?: number
   pageSize?: number
 }
+
+export interface DashboardRevenue {
+  lifetimeEarned: number
+  inFlight: number
+  todayRevenue: number
+  thisWeekRevenue: number
+  thisMonthRevenue: number
+  percentageGrowth: number | null
+}
+
+export interface DashboardOrders {
+  total: number
+  pending: number
+  confirmed: number
+  completed: number
+  cancelled: number
+  todayCount: number
+}
+
+export interface DashboardInventory {
+  totalProducts: number
+  activeProducts: number
+  draftProducts: number
+  soldOutProducts: number
+  lowStockProducts: number
+  totalInventoryUnits: number
+}
+
+export interface DashboardSalesDay {
+  date: string
+  dayLabel: string
+  ordersCount: number
+  revenue: number
+}
+
+export interface DashboardTopProduct {
+  listingUuid: string
+  title: string
+  slug: string
+  thumbnailUrl?: string | null
+  unitsSold: number
+  totalRevenue: number
+}
+
+export interface SellerDashboardOverview {
+  revenue: DashboardRevenue
+  orders: DashboardOrders
+  inventory: DashboardInventory
+  salesChart7Days: DashboardSalesDay[]
+  topProducts: DashboardTopProduct[]
+}
