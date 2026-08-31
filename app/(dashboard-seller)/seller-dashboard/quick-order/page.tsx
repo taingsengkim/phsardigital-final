@@ -680,6 +680,18 @@ export default function QuickOrderPage() {
                     key={product.id}
                     className="flex items-center gap-2 rounded-lg border border-slate-100 bg-slate-50/50 p-2 text-xs"
                   >
+                    {/* The cashier scans the grid by picture; the cart should
+                        read the same way when they check it against the counter. */}
+                    <div className="relative size-10 shrink-0 overflow-hidden rounded-md border border-slate-200 bg-white">
+                      <Image
+                        src={product.image}
+                        alt={product.name}
+                        fill
+                        sizes="40px"
+                        className="object-cover"
+                      />
+                    </div>
+
                     <div className="min-w-0 flex-1 space-y-0.5">
                       <h4 className="font-medium text-slate-900 truncate">{product.name}</h4>
                       <div className="flex items-center gap-1 text-[11px] text-slate-400">
