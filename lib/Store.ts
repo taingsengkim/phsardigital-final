@@ -8,6 +8,7 @@ import { sellerProductApi } from "@/lib/redux/service/sellerProductApi";
 import { sellerCommentApi } from "@/lib/redux/service/sellerCommentApi";
 import { sellerMessageApi } from "@/lib/redux/service/sellerMessageApi";
 import { purchaseApi } from "@/lib/redux/service/purchaseApi";
+import { paymentRequiredMiddleware } from "@/lib/api/payment-required-middleware";
 
 export const makeStore = () => {
   return configureStore({
@@ -32,7 +33,8 @@ export const makeStore = () => {
         sellerProductApi.middleware,
         sellerCommentApi.middleware,
         sellerMessageApi.middleware,
-        purchaseApi.middleware
+        purchaseApi.middleware,
+        paymentRequiredMiddleware
       ),
   });
 };

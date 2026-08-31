@@ -635,10 +635,14 @@ export default function DashboardSeller() {
             </div>
             <div>
               <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-300">
-                {subscription.planDisplayName || subscription.plan}
+                {subscription.planDisplayName || subscription.planCode}
               </span>
               <h3 className="mt-0.5 text-base font-bold text-white">
-                Posting allowed • {listingsUsed} of {subscription.listingLimit}{" "}
+                {subscription.canPostListing ? "Posting allowed" : "Listing limit reached"} •{" "}
+                {listingsUsed} of{" "}
+                {subscription.listingLimit === null
+                  ? "unlimited"
+                  : subscription.listingLimit}{" "}
                 listings used
               </h3>
             </div>

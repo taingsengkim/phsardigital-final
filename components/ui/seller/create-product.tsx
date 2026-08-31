@@ -420,9 +420,16 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
       router.refresh()
     } catch (error) {
       const apiError = error as ApiFailure
-      const subscriptionRequired = apiError.status === 402
+      // 402 means no active subscription; 409 on a listing means the plan's
+      // listing cap is full, which needs the opposite advice — archive one, or
+      // move up a plan. Both send the seller to the pricing page.
+      const subscriptionRequired = apiError.status === 402 || apiError.status === 409
       setRequiresSubscription(subscriptionRequired)
-      setFormError(apiFailureMessage(error, `Could not ${isEditing ? "update" : "create"} the product. Please try again.`))
+      setFormError(
+        apiError.status === 409
+          ? "Your plan's listing limit is full. Archive a listing you no longer sell, or upgrade to a larger plan."
+          : apiFailureMessage(error, `Could not ${isEditing ? "update" : "create"} the product. Please try again.`),
+      )
       window.scrollTo({ top: 0, behavior: "smooth" })
     }
   }

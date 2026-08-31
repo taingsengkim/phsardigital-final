@@ -62,31 +62,83 @@ export interface AttachDocumentPayload {
   objectName: string;
 }
 
-export type SubscriptionPlanType = "BASIC" | "STANDARD" | "PREMIUM";
-
+/**
+ * Admins create and retire plans at runtime, so a plan code is an opaque
+ * string ("BASIC", "PRO_2027", …) and never a union baked into the frontend.
+ * `code` is the immutable identity; `displayName` is the label to show.
+ */
 export interface SubscriptionPlan {
-  plan: SubscriptionPlanType;
+  code: string;
   displayName: string;
   priceUsd: number;
   durationDays: number;
-  listingLimit: number;
+  /** null means unlimited. */
+  listingLimit: number | null;
+  /** false = retired: still honoured for current subscribers, not sellable. */
+  active: boolean;
+  sortOrder: number;
 }
+
+export type SubscriptionStatus = "ACTIVE" | "EXPIRED" | "CANCELLED";
 
 export interface SellerSubscription {
   sellerId: string;
-  plan: SubscriptionPlanType;
+  planCode: string;
   planDisplayName: string;
-  status: "ACTIVE" | "EXPIRED";
+  status: SubscriptionStatus;
   startedAt: string;
   expiresAt: string;
   listingsUsed: number;
-  listingLimit: number;
+  /** null means unlimited. */
+  listingLimit: number | null;
   canPostListing: boolean;
   canChat: boolean;
 }
 
+export type PaymentStatus = "PENDING" | "PAID" | "EXPIRED";
+
+export interface Payment {
+  uuid: string;
+  purpose: string;
+  reference: string;
+  amount: number;
+  currency: string;
+  status: PaymentStatus;
+  /** false once the payment settled or the QR lapsed — the server's truth. */
+  payable: boolean;
+  /** An EMVCo payload string to render as a QR client-side, not an image URL. */
+  qr: string;
+  md5: string;
+  /** ISO local date-time with NO timezone offset, e.g. "2026-09-01T14:35:00". */
+  expiresAt: string;
+  paidAt: string | null;
+}
+
+/**
+ * POST /subscriptions/me no longer grants anything: it opens a checkout and
+ * the plan starts only once Bakong confirms the transfer. A free plan is the
+ * one exception — branch on `paymentRequired`, never on the price.
+ */
+export interface SubscriptionCheckout {
+  planCode: string;
+  planDisplayName: string;
+  priceUsd: number;
+  durationDays: number;
+  paymentRequired: boolean;
+  payment: Payment | null;
+  subscription: SellerSubscription | null;
+}
+
 export interface SubscribePayload {
-  plan: SubscriptionPlanType;
+  planCode: string;
+}
+
+export interface PagedPayments {
+  content: Payment[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
+  size: number;
 }
 
 export interface SellerProfile {
@@ -272,6 +324,10 @@ export const sellerApi = createApi({
       query: () => ({
         url: "/subscriptions/plans",
       }),
+      // The catalogue is admin-ordered, and the endpoint already filters out
+      // retired plans; sorting here keeps every caller off sortOrder.
+      transformResponse: (response: SubscriptionPlan[] | null) =>
+        [...(response ?? [])].sort((a, b) => a.sortOrder - b.sortOrder),
     }),
 
     getSellerSubscription: builder.query<SellerSubscription | null, void>({
@@ -279,6 +335,8 @@ export const sellerApi = createApi({
         url: "/subscriptions/me",
       }),
       providesTags: ["SellerSubscription"],
+      // A 404 upstream means "never subscribed", which the proxy turns into a
+      // null body — that is the pricing page, not an error.
       transformResponse: (response: any) => {
         if (!response || response.notFound) {
           return null;
@@ -287,13 +345,46 @@ export const sellerApi = createApi({
       },
     }),
 
-    subscribeToPlan: builder.mutation<SellerSubscription, SubscribePayload>({
+    subscribeToPlan: builder.mutation<SubscriptionCheckout, SubscribePayload>({
       query: (payload) => ({
         url: "/subscriptions/me",
         method: "POST",
         body: payload,
       }),
-      invalidatesTags: ["SellerSubscription"],
+      // A paid checkout grants nothing yet, so there is nothing to invalidate
+      // until the poll confirms it. Only the free-plan branch is active now.
+      invalidatesTags: (result) =>
+        result?.subscription ? ["SellerSubscription"] : [],
+    }),
+
+    /**
+     * Asks Bakong whether the transfer landed and activates the plan when it
+     * has. Safe to call repeatedly — it settles at most once.
+     */
+    verifyPayment: builder.mutation<Payment, string>({
+      query: (uuid) => ({
+        url: `/payments/${encodeURIComponent(uuid)}/verify`,
+        method: "POST",
+      }),
+      invalidatesTags: (result) =>
+        result?.status === "PAID" ? ["SellerSubscription"] : [],
+    }),
+
+    /** One payment, read back without asking Bakong. */
+    getPayment: builder.query<Payment, string>({
+      query: (uuid) => ({
+        url: `/payments/${encodeURIComponent(uuid)}`,
+      }),
+    }),
+
+    /** The signed-in seller's own payment history — never anyone else's. */
+    getMyPayments: builder.query<
+      PagedPayments,
+      { pageNumber?: number; pageSize?: number } | void
+    >({
+      query: (params) => ({
+        url: `/payments?pageNumber=${params?.pageNumber ?? 0}&pageSize=${params?.pageSize ?? 20}`,
+      }),
     }),
 
     // Seller Dashboard data
@@ -360,6 +451,9 @@ export const {
   useGetSubscriptionPlansQuery,
   useGetSellerSubscriptionQuery,
   useSubscribeToPlanMutation,
+  useVerifyPaymentMutation,
+  useGetPaymentQuery,
+  useGetMyPaymentsQuery,
   useGetSellerProfileQuery,
   useUpdateSellerProfileMutation,
   useGetSellerOrdersQuery,
