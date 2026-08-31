@@ -5,8 +5,6 @@ import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
-  AlertCircle,
-  Building2,
   Calendar,
   Check,
   CheckCircle2,
@@ -15,8 +13,6 @@ import {
   Clock,
   ExternalLink,
   Eye,
-  FileText,
-  Info,
   Loader2,
   MapPin,
   MessageSquare,
@@ -25,7 +21,6 @@ import {
   PackageCheck,
   PackageOpen,
   Phone,
-  Printer,
   RefreshCw,
   Search,
   Store,
@@ -49,13 +44,6 @@ import type {
   PurchaseStatus,
   SellerOrdersSummary,
 } from "@/lib/types/purchase"
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 
 const PAGE_SIZE = 20
@@ -106,8 +94,6 @@ export default function SellerOrdersPage() {
   const [searchQuery, setSearchQuery] = React.useState("")
   const [debouncedSearch, setDebouncedSearch] = React.useState("")
   const [pageNumber, setPageNumber] = React.useState(0)
-  const [selectedOrder, setSelectedOrder] = React.useState<Purchase | null>(null)
-  const [lightboxPhoto, setLightboxPhoto] = React.useState<{ url: string; caption?: string } | null>(null)
 
   // 300ms Search Debounce
   React.useEffect(() => {
@@ -162,23 +148,15 @@ export default function SellerOrdersPage() {
     refetchOrders()
   }
 
-  // Keep selectedOrder in sync if updated in cache
-  React.useEffect(() => {
-    if (selectedOrder) {
-      const updated = orders.find((o) => o.uuid === selectedOrder.uuid)
-      if (updated) setSelectedOrder(updated)
-    }
-  }, [orders, selectedOrder])
-
   // Action Handlers with Error Handling
   const handleConfirm = async (order: Purchase, e?: React.MouseEvent) => {
     e?.stopPropagation()
     setActingOrderId(order.uuid)
     try {
-      const updated = await confirmOrder(order.uuid).unwrap()
+      await confirmOrder(order.uuid).unwrap()
       toast.success(`Order ${shortOrderRef(order.uuid)} confirmed & in fulfilment`)
       refetchSummary()
-      if (selectedOrder?.uuid === order.uuid) setSelectedOrder(updated)
+      refetchOrders()
     } catch (err: any) {
       const msg = err?.data?.message || err?.message || "Could not confirm order"
       toast.error(msg)
@@ -191,10 +169,10 @@ export default function SellerOrdersPage() {
     e?.stopPropagation()
     setActingOrderId(order.uuid)
     try {
-      const updated = await completeOrder(order.uuid).unwrap()
+      await completeOrder(order.uuid).unwrap()
       toast.success(`Order ${shortOrderRef(order.uuid)} marked as delivered`)
       refetchSummary()
-      if (selectedOrder?.uuid === order.uuid) setSelectedOrder(updated)
+      refetchOrders()
     } catch (err: any) {
       const msg = err?.data?.message || err?.message || "Could not complete order"
       toast.error(msg)
@@ -207,10 +185,10 @@ export default function SellerOrdersPage() {
     e?.stopPropagation()
     setActingOrderId(order.uuid)
     try {
-      const updated = await cancelOrder(order.uuid).unwrap()
+      await cancelOrder(order.uuid).unwrap()
       toast.info(`Order ${shortOrderRef(order.uuid)} cancelled`)
       refetchSummary()
-      if (selectedOrder?.uuid === order.uuid) setSelectedOrder(updated)
+      refetchOrders()
     } catch (err: any) {
       const msg = err?.data?.message || err?.message || "Could not cancel order"
       toast.error(msg)
@@ -232,12 +210,6 @@ export default function SellerOrdersPage() {
       } else {
         toast.error(err?.data?.message || "Could not start chat with customer")
       }
-    }
-  }
-
-  const handlePrintPackingSlip = () => {
-    if (typeof window !== "undefined") {
-      window.print()
     }
   }
 
@@ -471,7 +443,7 @@ export default function SellerOrdersPage() {
                 return (
                   <div
                     key={order.uuid}
-                    onClick={() => setSelectedOrder(order)}
+                    onClick={() => router.push(`/seller-dashboard/orders/${order.uuid}`)}
                     className="group relative flex flex-col gap-4 p-4 sm:p-5 transition-colors hover:bg-slate-50/80 cursor-pointer lg:flex-row lg:items-center lg:justify-between"
                   >
                     {/* Left Details: Order Ref, Date, Customer, Products Preview */}
@@ -662,7 +634,7 @@ export default function SellerOrdersPage() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => setSelectedOrder(order)}
+                          onClick={() => router.push(`/seller-dashboard/orders/${order.uuid}`)}
                           className="rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-200/60"
                         >
                           <Eye className="size-3.5 text-slate-500" />
@@ -709,498 +681,6 @@ export default function SellerOrdersPage() {
           </div>
         )}
       </section>
-
-      {/* ── 5. DETAILS DRAWER (Slide-over) ── */}
-      <Sheet open={Boolean(selectedOrder)} onOpenChange={(open) => !open && setSelectedOrder(null)}>
-        <SheetContent
-          side="right"
-          className="w-full sm:max-w-xl md:max-w-2xl overflow-y-auto p-0 bg-white"
-        >
-          {selectedOrder && (
-            <div className="flex min-h-full flex-col">
-              {/* Drawer Header */}
-              <SheetHeader className="border-b border-slate-100 p-5 sm:p-6 bg-slate-50/60">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <SheetTitle className="text-xl font-black text-slate-900">
-                      {shortOrderRef(selectedOrder.uuid)}
-                    </SheetTitle>
-                    <span
-                      className={cn(
-                        "rounded-md px-2 py-0.5 text-[10px] font-extrabold uppercase",
-                        selectedOrder.channel === "POS"
-                          ? "bg-slate-200 text-slate-700"
-                          : "bg-[#F1EFFA] text-[#6C4CD8]",
-                      )}
-                    >
-                      {selectedOrder.channel || "ONLINE"}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={handlePrintPackingSlip}
-                      className="rounded-xl border-slate-200 bg-white text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 cursor-pointer"
-                      title="Print packing slip"
-                    >
-                      <Printer className="size-3.5 mr-1" />
-                      Print Slip
-                    </Button>
-                  </div>
-                </div>
-                <SheetDescription className="mt-1 text-xs text-slate-500">
-                  Full purchase order details, customer shipping destination, and line items.
-                </SheetDescription>
-              </SheetHeader>
-
-              {/* Drawer Body */}
-              <div className="flex-1 p-5 sm:p-6 space-y-6">
-                {/* ── Timeline: STRICT 3 STEPS (Placed -> In Fulfilment -> Delivered) + Cancelled ── */}
-                <div className="rounded-2xl border border-slate-200 bg-slate-50/40 p-4 sm:p-5">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-4">
-                    Fulfillment Timeline
-                  </h4>
-
-                  {selectedOrder.status === "CANCELLED" ? (
-                    <div className="flex items-center gap-3 rounded-xl border border-rose-200 bg-rose-50/80 p-3.5 text-rose-800">
-                      <XCircle className="size-5 shrink-0 text-rose-600" />
-                      <div className="text-xs">
-                        <strong className="font-bold">Order Cancelled</strong>
-                        <p className="text-rose-700/80 mt-0.5">
-                          {formatLocalDateTime(selectedOrder.cancelledAt || selectedOrder.createdAt)}
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="relative flex items-center justify-between">
-                      {/* Step 1: Placed */}
-                      <div className="flex flex-col items-center text-center z-10">
-                        <span className="grid size-8 place-items-center rounded-full bg-[#6C4CD8] text-white shadow-xs text-xs font-bold">
-                          <Check className="size-4" />
-                        </span>
-                        <span className="mt-2 text-xs font-bold text-slate-900">Placed</span>
-                        <span className="text-[11px] text-slate-500">
-                          {formatLocalDateTime(selectedOrder.createdAt)}
-                        </span>
-                      </div>
-
-                      {/* Connecting Line 1-2 */}
-                      <div
-                        className={cn(
-                          "absolute top-4 left-[20%] right-[50%] h-0.5 -translate-y-1/2",
-                          selectedOrder.confirmedAt || selectedOrder.status === "CONFIRMED" || selectedOrder.status === "COMPLETED"
-                            ? "bg-[#6C4CD8]"
-                            : "bg-slate-200",
-                        )}
-                      />
-
-                      {/* Step 2: In Fulfilment */}
-                      <div className="flex flex-col items-center text-center z-10">
-                        <span
-                          className={cn(
-                            "grid size-8 place-items-center rounded-full text-xs font-bold shadow-xs",
-                            selectedOrder.confirmedAt || selectedOrder.status === "CONFIRMED" || selectedOrder.status === "COMPLETED"
-                              ? "bg-[#6C4CD8] text-white"
-                              : "bg-slate-200 text-slate-500",
-                          )}
-                        >
-                          <Truck className="size-4" />
-                        </span>
-                        <span className="mt-2 text-xs font-bold text-slate-900">In Fulfilment</span>
-                        <span className="text-[11px] text-slate-500">
-                          {selectedOrder.confirmedAt ? formatLocalDateTime(selectedOrder.confirmedAt) : "Pending"}
-                        </span>
-                      </div>
-
-                      {/* Connecting Line 2-3 */}
-                      <div
-                        className={cn(
-                          "absolute top-4 left-[50%] right-[20%] h-0.5 -translate-y-1/2",
-                          selectedOrder.completedAt || selectedOrder.status === "COMPLETED"
-                            ? "bg-emerald-600"
-                            : "bg-slate-200",
-                        )}
-                      />
-
-                      {/* Step 3: Delivered */}
-                      <div className="flex flex-col items-center text-center z-10">
-                        <span
-                          className={cn(
-                            "grid size-8 place-items-center rounded-full text-xs font-bold shadow-xs",
-                            selectedOrder.completedAt || selectedOrder.status === "COMPLETED"
-                              ? "bg-emerald-600 text-white"
-                              : "bg-slate-200 text-slate-500",
-                          )}
-                        >
-                          <PackageCheck className="size-4" />
-                        </span>
-                        <span className="mt-2 text-xs font-bold text-slate-900">Delivered</span>
-                        <span className="text-[11px] text-slate-500">
-                          {selectedOrder.completedAt ? formatLocalDateTime(selectedOrder.completedAt) : "Awaiting"}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* ── Customer & Shipping Section ── */}
-                <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 space-y-3 shadow-xs">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                    Customer & Delivery Details
-                  </h4>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                    <div className="space-y-1">
-                      <span className="text-slate-400">Recipient Name</span>
-                      <p className="font-bold text-slate-900 text-sm">
-                        {selectedOrder.buyerName || (selectedOrder.channel === "POS" ? "Counter Customer" : "Customer")}
-                      </p>
-                    </div>
-
-                    <div className="space-y-1">
-                      <span className="text-slate-400">Contact Number</span>
-                      <p className="font-bold text-slate-900 text-sm">
-                        {selectedOrder.buyerPhone ? (
-                          <a
-                            href={`tel:${selectedOrder.buyerPhone.replace(/[^\d+]/g, "")}`}
-                            className="inline-flex items-center gap-1 text-[#6C4CD8] hover:underline"
-                          >
-                            <Phone className="size-3.5" />
-                            {selectedOrder.buyerPhone}
-                          </a>
-                        ) : (
-                          "—"
-                        )}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1 pt-1 border-t border-slate-100 text-xs">
-                    <span className="text-slate-400">Shipping Address</span>
-                    <p className="font-medium text-slate-800 leading-relaxed">
-                      {selectedOrder.shippingAddress || "In-store checkout (POS)"}
-                    </p>
-                  </div>
-
-                  {selectedOrder.note && (
-                    <div className="rounded-xl bg-amber-50/70 border border-amber-200/60 p-3 text-xs text-amber-900">
-                      <strong className="font-bold">Customer Delivery Note:</strong>
-                      <p className="mt-0.5 italic">&ldquo;{selectedOrder.note}&rdquo;</p>
-                    </div>
-                  )}
-
-                  {/* Landmark Delivery Photos Strip */}
-                  {selectedOrder.deliveryPhotos && selectedOrder.deliveryPhotos.length > 0 && (
-                    <div className="pt-2 border-t border-slate-100">
-                      <span className="text-xs font-bold text-slate-700">Landmark Reference Photos</span>
-                      <p className="text-[11px] text-slate-500 mb-2">Buyer saved photos to assist courier arrival.</p>
-                      <div className="flex items-center gap-2 overflow-x-auto pb-1">
-                        {selectedOrder.deliveryPhotos
-                          .filter((photo): photo is { url: string; caption?: string } => Boolean(photo && photo.url))
-                          .map((photo, idx) => {
-                            const src = photo.url.startsWith("http") || photo.url.startsWith("/") ? photo.url : getFileUrl(photo.url)
-                            return (
-                              <button
-                                key={idx}
-                                type="button"
-                                onClick={() => setLightboxPhoto(photo)}
-                                className="group relative size-16 shrink-0 overflow-hidden rounded-xl border border-slate-200 hover:border-[#6C4CD8]"
-                              >
-                                <Image src={src} alt={photo.caption || "Landmark photo"} fill className="object-cover" />
-                              </button>
-                            )
-                          })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* GPS Mini-Map (Only when BOTH coordinates are non-null) */}
-                  {selectedOrder.deliveryLatitude !== null && selectedOrder.deliveryLongitude !== null && (
-                    <div className="pt-2 border-t border-slate-100">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-900">
-                          <Navigation className="size-3.5 text-emerald-600" />
-                          Precise GPS Delivery Coordinates
-                        </span>
-                        <a
-                          href={`https://maps.google.com/?q=${selectedOrder.deliveryLatitude},${selectedOrder.deliveryLongitude}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-[11px] font-bold text-[#6C4CD8] hover:underline"
-                        >
-                          Open in Google Maps <ExternalLink className="size-3" />
-                        </a>
-                      </div>
-                      <div className="relative h-40 w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
-                        <iframe
-                          title="Delivery location"
-                          src={`https://maps.google.com/maps?q=${selectedOrder.deliveryLatitude},${selectedOrder.deliveryLongitude}&z=16&output=embed`}
-                          className="h-full w-full border-0"
-                          loading="lazy"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* ── Itemized Order Invoice ── */}
-                <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 space-y-4 shadow-xs">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                    Purchased Items ({selectedOrder.items?.length ?? 0})
-                  </h4>
-
-                  <div className="divide-y divide-slate-100">
-                    {(selectedOrder.items ?? []).map((item, idx) => {
-                      const hasDiscount = Boolean(item.fullPrice && item.fullPrice > item.unitPrice)
-                      const itemImg = item.thumbnailUrl
-                        ? item.thumbnailUrl.startsWith("http") || item.thumbnailUrl.startsWith("/")
-                          ? item.thumbnailUrl
-                          : getFileUrl(item.thumbnailUrl)
-                        : null
-
-                      return (
-                        <div key={idx} className="flex items-center gap-3.5 py-3 first:pt-0 last:pb-0">
-                          <div className="relative size-14 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
-                            {itemImg ? (
-                              <Image src={itemImg} alt={item.title || "Product item"} fill sizes="56px" className="object-cover" />
-                            ) : (
-                              <div className="grid h-full w-full place-items-center text-slate-400">
-                                <Package className="size-5" />
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="min-w-0 flex-1">
-                            {item.slug ? (
-                              <Link
-                                href={`/products/${item.slug}`}
-                                target="_blank"
-                                className="text-xs sm:text-sm font-bold text-slate-900 hover:text-[#6C4CD8] transition line-clamp-1"
-                              >
-                                {item.title || "Product item"}
-                              </Link>
-                            ) : (
-                              <p className="text-xs sm:text-sm font-bold text-slate-900 line-clamp-1">{item.title || "Product item"}</p>
-                            )}
-                            <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
-                              <span>Qty: <strong className="text-slate-900 font-bold">{item.quantity}</strong></span>
-                              <span>•</span>
-                              <span>${Number(item.unitPrice).toFixed(2)}</span>
-                              {hasDiscount && (
-                                <span className="line-through text-slate-400">
-                                  ${Number(item.fullPrice).toFixed(2)}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="text-right font-black text-sm text-slate-900">
-                            ${Number(item.lineTotal || item.unitPrice * item.quantity).toFixed(2)}
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-
-                  {/* Financial Summary */}
-                  <div className="border-t border-slate-100 pt-3 space-y-1.5 text-xs text-slate-600">
-                    <div className="flex justify-between">
-                      <span>Total Items Value</span>
-                      <span className="font-semibold text-slate-900">
-                        ${Number(selectedOrder.totalPrice).toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm font-black text-slate-950 pt-2 border-t border-slate-100">
-                      <span>Grand Total</span>
-                      <span className="text-base text-[#6C4CD8] font-black">
-                        ${Number(selectedOrder.totalPrice).toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Drawer Sticky Action Footer */}
-              <div className="sticky bottom-0 border-t border-slate-200 bg-white p-4 sm:p-5 flex items-center justify-between gap-3 shadow-lg">
-                <div className="text-xs text-slate-500">
-                  Status: <strong className="text-slate-900 font-bold">{selectedOrder.status}</strong>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  {selectedOrder.status === "PENDING" && (
-                    <>
-                      <Button
-                        disabled={actingOrderId === selectedOrder.uuid || isConfirming}
-                        onClick={(e) => handleConfirm(selectedOrder, e)}
-                        className="rounded-xl bg-[#6C4CD8] px-4 font-bold text-white shadow-xs hover:bg-[#5B3DC0] cursor-pointer"
-                      >
-                        {actingOrderId === selectedOrder.uuid && isConfirming ? (
-                          <Loader2 className="size-4 animate-spin mr-1" />
-                        ) : (
-                          <Check className="size-4 mr-1" />
-                        )}
-                        Confirm Order
-                      </Button>
-                      <Button
-                        variant="outline"
-                        disabled={actingOrderId === selectedOrder.uuid || isCancelling}
-                        onClick={(e) => handleCancel(selectedOrder, e)}
-                        className="rounded-xl border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 font-bold cursor-pointer"
-                      >
-                        Decline
-                      </Button>
-                    </>
-                  )}
-
-                  {selectedOrder.status === "CONFIRMED" && (
-                    <>
-                      <Button
-                        disabled={actingOrderId === selectedOrder.uuid || isCompleting}
-                        onClick={(e) => handleComplete(selectedOrder, e)}
-                        className="rounded-xl bg-emerald-600 px-4 font-bold text-white shadow-xs hover:bg-emerald-700 cursor-pointer"
-                      >
-                        {actingOrderId === selectedOrder.uuid && isCompleting ? (
-                          <Loader2 className="size-4 animate-spin mr-1" />
-                        ) : (
-                          <PackageCheck className="size-4 mr-1" />
-                        )}
-                        Mark Delivered
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        disabled={actingOrderId === selectedOrder.uuid || isCancelling}
-                        onClick={(e) => handleCancel(selectedOrder, e)}
-                        className="rounded-xl text-xs font-semibold text-slate-500 hover:bg-rose-50 hover:text-rose-600 cursor-pointer"
-                      >
-                        Cancel Order
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-        </SheetContent>
-      </Sheet>
-
-      {/* ── Photo Lightbox Modal ── */}
-      {lightboxPhoto && (
-        <div
-          onClick={() => setLightboxPhoto(null)}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
-        >
-          <div className="relative max-w-2xl max-h-[90vh] overflow-hidden rounded-2xl bg-white p-2">
-            <button
-              type="button"
-              onClick={() => setLightboxPhoto(null)}
-              className="absolute right-4 top-4 z-10 grid size-8 place-items-center rounded-full bg-black/60 text-white hover:bg-black"
-            >
-              <X className="size-4" />
-            </button>
-            <div className="relative h-96 w-full sm:w-[500px]">
-              <Image
-                src={
-                  lightboxPhoto.url.startsWith("http") || lightboxPhoto.url.startsWith("/")
-                    ? lightboxPhoto.url
-                    : getFileUrl(lightboxPhoto.url)
-                }
-                alt={lightboxPhoto.caption || "Landmark photo"}
-                fill
-                className="object-contain"
-              />
-            </div>
-            {lightboxPhoto.caption && (
-              <p className="p-3 text-center text-xs font-semibold text-slate-700">{lightboxPhoto.caption}</p>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── PRINT-ONLY PACKING SLIP STYLESHEET ── */}
-      <style jsx global>{`
-        @media print {
-          body * {
-            visibility: hidden;
-          }
-          #print-packing-slip,
-          #print-packing-slip * {
-            visibility: visible;
-          }
-          #print-packing-slip {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            display: block !important;
-            padding: 24px;
-            background: #fff;
-            color: #000;
-          }
-        }
-        @media screen {
-          #print-packing-slip {
-            display: none;
-          }
-        }
-      `}</style>
-
-      {/* Hidden printable packing slip DOM */}
-      {selectedOrder && (
-        <div id="print-packing-slip">
-          <div className="border-b-2 border-black pb-4 mb-6">
-            <h1 className="text-2xl font-black">PHSARDIGITAL PACKING SLIP</h1>
-            <p className="text-sm">Order Reference: {shortOrderRef(selectedOrder.uuid)}</p>
-            <p className="text-xs text-gray-600">Date: {formatLocalDateTime(selectedOrder.createdAt)}</p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-6 mb-6 text-sm">
-            <div>
-              <strong className="block font-bold">Seller Store:</strong>
-              <p>{selectedOrder.businessName || "PhsarDigital Store"}</p>
-              <p className="text-xs text-gray-500">ID: {selectedOrder.sellerId}</p>
-            </div>
-            <div>
-              <strong className="block font-bold">Ship To / Recipient:</strong>
-              <p>{selectedOrder.buyerName || (selectedOrder.channel === "POS" ? "Counter Customer" : "Customer")}</p>
-              <p>{selectedOrder.buyerPhone}</p>
-              <p className="mt-1">{selectedOrder.shippingAddress}</p>
-            </div>
-          </div>
-
-          <table className="w-full text-left border-collapse mb-6 text-sm">
-            <thead>
-              <tr className="border-b-2 border-black">
-                <th className="py-2">Item Description</th>
-                <th className="py-2 text-center">Qty</th>
-                <th className="py-2 text-right">Unit Price</th>
-                <th className="py-2 text-right">Line Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(selectedOrder.items ?? []).map((item, idx) => (
-                <tr key={idx} className="border-b border-gray-300">
-                  <td className="py-2">{item.title}</td>
-                  <td className="py-2 text-center">{item.quantity}</td>
-                  <td className="py-2 text-right">${Number(item.unitPrice).toFixed(2)}</td>
-                  <td className="py-2 text-right">
-                    ${Number(item.lineTotal || item.unitPrice * item.quantity).toFixed(2)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          <div className="text-right text-base font-black">
-            Total Order Amount: ${Number(selectedOrder.totalPrice).toFixed(2)}
-          </div>
-          {selectedOrder.note && (
-            <div className="mt-4 p-2 border border-gray-400 text-xs">
-              <strong>Delivery Note:</strong> {selectedOrder.note}
-            </div>
-          )}
-        </div>
-      )}
     </main>
   )
 }
