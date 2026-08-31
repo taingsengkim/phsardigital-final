@@ -1,4 +1,7 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import type { KhqrPayment } from "@/lib/types/payment";
+
+export type { PaymentStatus } from "@/lib/types/payment";
 
 export type DocumentType = "ID_CARD" | "BUSINESS_LICENSE" | "OTHER";
 export type ApplicationStatus = "PENDING" | "APPROVED" | "REJECTED" | "NOT_FOUND";
@@ -95,24 +98,8 @@ export interface SellerSubscription {
   canChat: boolean;
 }
 
-export type PaymentStatus = "PENDING" | "PAID" | "EXPIRED";
-
-export interface Payment {
-  uuid: string;
-  purpose: string;
-  reference: string;
-  amount: number;
-  currency: string;
-  status: PaymentStatus;
-  /** false once the payment settled or the QR lapsed — the server's truth. */
-  payable: boolean;
-  /** An EMVCo payload string to render as a QR client-side, not an image URL. */
-  qr: string;
-  md5: string;
-  /** ISO local date-time with NO timezone offset, e.g. "2026-09-01T14:35:00". */
-  expiresAt: string;
-  paidAt: string | null;
-}
+/** Re-exported so subscription callers need not know it is shared with POS. */
+export type Payment = KhqrPayment;
 
 /**
  * POST /subscriptions/me no longer grants anything: it opens a checkout and
@@ -162,6 +149,14 @@ export interface SellerProfile {
   reviewCount?: number;
   suspendedAt?: string | null;
   suspensionReason?: string | null;
+  /**
+   * The Bakong account KHQR counter sales are paid into, e.g.
+   * "shop_owner@aclb". Null until the seller sets one, and a KHQR sale is
+   * refused with 409 while it is missing.
+   */
+  bakongAccountId?: string | null;
+  /** Shown to the customer in their banking app; max 25 chars (KHQR's limit). */
+  bakongAccountName?: string | null;
 }
 
 /**
@@ -183,6 +178,10 @@ export interface UpdateSellerProfilePayload {
   phoneNumber?: string;
   biography?: string;
   socialLink?: string[];
+  /** Must match name@bank, max 32. Send "" to clear it. */
+  bakongAccountId?: string;
+  /** Max 25; falls back to businessName when empty. */
+  bakongAccountName?: string;
 }
 
 export interface SellerOrderItem {

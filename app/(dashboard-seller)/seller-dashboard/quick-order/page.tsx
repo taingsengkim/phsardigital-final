@@ -30,6 +30,10 @@ import { sellerDashboardApi } from "@/lib/redux/service/sellerDashboardApi"
 import { useAppDispatch } from "@/lib/hooks"
 import type { PosSaleRequest, PosSaleResponse } from "@/lib/types/pos"
 import { Button } from "@/components/ui/button"
+import { PosKhqrDialog } from "@/components/seller/PosKhqrDialog"
+
+/** The till remembers the last method for the session, not across sessions. */
+const PAYMENT_METHOD_KEY = "pos-payment-method"
 
 type PosProduct = {
   id: string
@@ -96,10 +100,40 @@ export default function QuickOrderPage() {
   const [customerPhone, setCustomerPhone] = React.useState("")
   const [orderNote, setOrderNote] = React.useState("")
 
-  const [paymentMethod, setPaymentMethod] = React.useState<"CASH" | "KHQR">("CASH")
+  const [paymentMethodPref, setPaymentMethodPref] = React.useState<"CASH" | "KHQR">("CASH")
   const [amountTenderedInput, setAmountTenderedInput] = React.useState<string>("")
 
   const [completedSale, setCompletedSale] = React.useState<PosSaleResponse | null>(null)
+  /** A KHQR sale that is rung up and waiting for the customer to scan. */
+  const [pendingKhqrSale, setPendingKhqrSale] = React.useState<PosSaleResponse | null>(null)
+
+  const hasBakongAccount = Boolean(sellerProfile?.bakongAccountId)
+
+  /* Restored in an effect rather than a lazy initialiser: this page is
+     prerendered, and seeding state from sessionStorage during the first render
+     would make the server and client disagree about which tab is active. */
+  React.useEffect(() => {
+    try {
+      const remembered = sessionStorage.getItem(PAYMENT_METHOD_KEY)
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (remembered === "CASH" || remembered === "KHQR") setPaymentMethodPref(remembered)
+    } catch {
+      /* private browsing — the default is fine */
+    }
+  }, [])
+
+  const setPaymentMethod = React.useCallback((method: "CASH" | "KHQR") => {
+    setPaymentMethodPref(method)
+    try {
+      sessionStorage.setItem(PAYMENT_METHOD_KEY, method)
+    } catch {
+      /* private browsing — the choice just will not survive a reload */
+    }
+  }, [])
+
+  /* Derived, not stored: if the shop's Bakong account is removed the till
+     falls back to cash on its own instead of stranding a cashier mid-sale. */
+  const paymentMethod = hasBakongAccount ? paymentMethodPref : "CASH"
 
   const products = React.useMemo<PosProduct[]>(() => {
     const rawList = Array.isArray(listingsData)
@@ -285,21 +319,20 @@ export default function QuickOrderPage() {
     setAmountTenderedInput(amount.toFixed(2))
   }
 
-  const handleCompleteSale = async () => {
-    if (cartItems.length === 0) {
-      toast.error("Cart is empty.")
-      return
-    }
+  const saleErrorMessage = (err: unknown): string => {
+    const failure = err as { data?: { message?: string }; message?: string }
+    return failure?.data?.message || failure?.message || "Failed to process sale."
+  }
 
-    if (paymentMethod === "CASH") {
-      if (!amountTenderedInput || amountTenderedNum < total) {
-        toast.error(`Amount tendered must be at least ${formatMoney(total)}`)
-        return
-      }
-    }
+  const invalidateAfterSale = React.useCallback(() => {
+    dispatch(sellerApi.util.invalidateTags(["SellerListings", "SellerOrders"]))
+    dispatch(sellerDashboardApi.util.invalidateTags(["SellerDashboard"]))
+    dispatch(purchaseApi.util.invalidateTags(["Purchase", "PurchaseSummary"]))
+  }, [dispatch])
 
+  const submitSale = async (saleUuid: string) => {
     const salePayload: PosSaleRequest = {
-      saleUuid: saleUuidRef.current,
+      saleUuid,
       lines: cartItems.map((item) => ({
         listingUuid: item.product.id,
         quantity: item.quantity,
@@ -310,26 +343,92 @@ export default function QuickOrderPage() {
       customerPhone:
         isNamedCustomer && customerPhone.trim() ? customerPhone.trim() : undefined,
       paymentMethod,
+      // A KHQR sale must not carry amountTendered — the API answers 400.
       ...(paymentMethod === "CASH" ? { amountTendered: amountTenderedNum } : {}),
       note: orderNote.trim() ? orderNote.trim() : undefined,
       soldAt: new Date().toISOString(),
     }
 
-    try {
-      const res = await createPosSale(salePayload).unwrap()
-      toast.success("Sale completed.")
-      setCompletedSale(res)
+    const res = await createPosSale(salePayload).unwrap()
 
-      dispatch(sellerApi.util.invalidateTags(["SellerListings", "SellerOrders"]))
-      dispatch(sellerDashboardApi.util.invalidateTags(["SellerDashboard"]))
-      dispatch(purchaseApi.util.invalidateTags(["Purchase", "PurchaseSummary"]))
+    // Stock is taken the moment the sale is recorded, KHQR included, so the
+    // catalogue and the orders list are already stale either way.
+    invalidateAfterSale()
 
-      handleClearCart()
-    } catch (err: any) {
-      const msg =
-        err?.data?.message || err?.message || "Failed to process sale."
-      toast.error(msg)
+    if (res.payment) {
+      // Nothing is settled yet. Keep the cart intact so "Try again" can ring
+      // the same basket up if the customer walks away from the QR.
+      setPendingKhqrSale(res)
+      return
     }
+
+    toast.success("Sale completed.")
+    setCompletedSale(res)
+    handleClearCart()
+  }
+
+  const handleCompleteSale = async () => {
+    if (cartItems.length === 0) {
+      toast.error("Cart is empty.")
+      return
+    }
+
+    if (paymentMethod === "KHQR" && !hasBakongAccount) {
+      toast.error("Add your shop's Bakong account before taking KHQR payments.")
+      return
+    }
+
+    if (paymentMethod === "CASH") {
+      if (!amountTenderedInput || amountTenderedNum < total) {
+        toast.error(`Amount tendered must be at least ${formatMoney(total)}`)
+        return
+      }
+    }
+
+    try {
+      await submitSale(saleUuidRef.current)
+    } catch (err) {
+      toast.error(saleErrorMessage(err))
+    }
+  }
+
+  const handleKhqrPaid = () => {
+    const settled = pendingKhqrSale
+    if (!settled) return
+
+    // The sale object in hand still says PENDING — the server completed it and
+    // there is no seller-scoped single-order endpoint to refetch it from, so
+    // patch the status locally for the receipt.
+    setCompletedSale({
+      ...settled,
+      sale: { ...settled.sale, status: "COMPLETED" },
+    })
+    setPendingKhqrSale(null)
+    toast.success("Payment received.")
+
+    saleUuidRef.current = crypto.randomUUID()
+    handleClearCart()
+    invalidateAfterSale()
+  }
+
+  const handleKhqrRetry = async () => {
+    // The lapsed sale is cancelled server-side and will never accept payment,
+    // so this is a brand-new sale with a brand-new uuid. The stock came back
+    // when it was cancelled, so the catalogue needs re-reading too.
+    setPendingKhqrSale(null)
+    saleUuidRef.current = crypto.randomUUID()
+    dispatch(sellerApi.util.invalidateTags(["SellerListings"]))
+
+    try {
+      await submitSale(saleUuidRef.current)
+    } catch (err) {
+      toast.error(saleErrorMessage(err))
+    }
+  }
+
+  const handleKhqrCancel = () => {
+    setPendingKhqrSale(null)
+    toast.info("Sale left pending. The stock returns when the QR expires.")
   }
 
   const handleStartNextSale = () => {
@@ -694,14 +793,22 @@ export default function QuickOrderPage() {
                 <button
                   type="button"
                   onClick={() => setPaymentMethod("KHQR")}
+                  disabled={!hasBakongAccount}
+                  title={
+                    hasBakongAccount
+                      ? undefined
+                      : "Add your shop's Bakong account in shop settings first"
+                  }
                   className={cn(
-                    "rounded-lg py-2 font-medium transition cursor-pointer border",
-                    paymentMethod === "KHQR"
-                      ? "border-slate-900 bg-slate-900 text-white"
-                      : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100",
+                    "rounded-lg py-2 font-medium transition border",
+                    !hasBakongAccount
+                      ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
+                      : paymentMethod === "KHQR"
+                        ? "cursor-pointer border-slate-900 bg-slate-900 text-white"
+                        : "cursor-pointer border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100",
                   )}
                 >
-                  KHQR Counter
+                  KHQR
                 </button>
               </div>
 
@@ -759,9 +866,32 @@ export default function QuickOrderPage() {
                 </div>
               )}
 
-              {paymentMethod === "KHQR" && (
-                <div className="rounded-lg bg-slate-50 p-2.5 border border-slate-200 text-xs text-slate-600">
-                  Confirm customer has paid via the counter KHQR stand before completing sale.
+              {/* Discovering KHQR is unavailable with a customer waiting is the
+                  worst possible moment, so say it before the sale starts. */}
+              {!hasBakongAccount && (
+                <div className="flex flex-col gap-1.5 rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-900">
+                  <span className="flex items-center gap-1.5 font-medium">
+                    <AlertCircle className="size-3.5" /> KHQR is not set up
+                  </span>
+                  <span className="text-amber-800">
+                    Add your shop&apos;s Bakong account to take KHQR at the counter.
+                  </span>
+                  <Link
+                    href="/seller-dashboard/shop"
+                    className="font-medium underline underline-offset-2 hover:text-amber-950"
+                  >
+                    Open shop settings
+                  </Link>
+                </div>
+              )}
+
+              {paymentMethod === "KHQR" && hasBakongAccount && (
+                <div className="flex items-start gap-1.5 rounded-lg bg-slate-50 p-2.5 border border-slate-200 text-xs text-slate-600">
+                  <QrCode className="mt-0.5 size-3.5 shrink-0 text-slate-400" />
+                  <span>
+                    A QR appears for the customer to scan. The sale completes only
+                    once Bakong confirms the transfer.
+                  </span>
                 </div>
               )}
             </div>
@@ -786,7 +916,7 @@ export default function QuickOrderPage() {
                     <Loader2 className="size-3.5 animate-spin" /> Processing...
                   </span>
                 ) : paymentMethod === "KHQR" ? (
-                  `Confirm Paid (${formatMoney(total)})`
+                  `Charge via KHQR (${formatMoney(total)})`
                 ) : (
                   `Complete Sale (${formatMoney(total)})`
                 )}
@@ -795,6 +925,23 @@ export default function QuickOrderPage() {
           </aside>
         </div>
       </div>
+
+      {/* ── KHQR counter dialog ── */}
+      {pendingKhqrSale?.payment && (
+        <PosKhqrDialog
+          // A fresh QR is a fresh countdown and a fresh poll.
+          key={pendingKhqrSale.payment.uuid}
+          payment={pendingKhqrSale.payment}
+          shopName={
+            sellerProfile?.bakongAccountName ||
+            sellerProfile?.businessName ||
+            "Your Store"
+          }
+          onPaid={handleKhqrPaid}
+          onRetry={handleKhqrRetry}
+          onCancel={handleKhqrCancel}
+        />
+      )}
 
       {/* ── Receipt Modal ── */}
       {completedSale && (

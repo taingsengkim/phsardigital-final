@@ -14,6 +14,7 @@ import {
   MessageCircle,
   Package,
   Phone,
+  QrCode,
   ShieldAlert,
   Star,
   Store,
@@ -27,13 +28,15 @@ import { cn } from "@/lib/utils";
 import ShopDetailsSection from "./sections/ShopDetailsSection";
 import ShopContactSection from "./sections/ShopContactSection";
 import ShopLocationSection from "./sections/ShopLocationSection";
+import ShopPayoutSection from "./sections/ShopPayoutSection";
 
-type Tab = "details" | "contact" | "location";
+type Tab = "details" | "contact" | "location" | "payments";
 
 const TABS = [
   { id: "details", label: "Shop details", description: "Brand and description", icon: Store },
   { id: "contact", label: "Contact", description: "Phone and social links", icon: Phone },
   { id: "location", label: "Location", description: "Address and map pin", icon: MapPin },
+  { id: "payments", label: "Payments", description: "Bakong KHQR account", icon: QrCode },
 ] satisfies { id: Tab; label: string; description: string; icon: typeof Store }[];
 
 const BUSINESS_TYPE_LABELS: Record<string, string> = {
@@ -291,6 +294,7 @@ export default function ShopClient() {
         {tab === "details" && <ShopDetailsSection />}
         {tab === "contact" && <ShopContactSection />}
         {tab === "location" && <ShopLocationSection />}
+        {tab === "payments" && <ShopPayoutSection />}
       </div>
       </div>
     </main>

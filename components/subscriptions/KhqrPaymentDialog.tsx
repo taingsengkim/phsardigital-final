@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import {
   AlertCircle,
@@ -11,49 +11,8 @@ import {
   Timer,
   X,
 } from "lucide-react";
-import {
-  Payment,
-  SubscriptionCheckout,
-  useVerifyPaymentMutation,
-} from "@/lib/api/sellerApi";
-
-const POLL_INTERVAL_MS = 3000;
-
-/**
- * `expiresAt` arrives with no timezone offset ("2026-09-01T14:35:00"), so
- * `new Date(...)` would read it in whatever zone the seller's device is set
- * to and a phone on the wrong clock would show a countdown hours out. The API
- * is Cambodian, so read it as Indochina time (UTC+7).
- *
- * This only drives the countdown text. Whether the QR still works is decided
- * by the server's `payable` / `status`, never by this number.
- */
-function secondsUntilExpiry(expiresAt: string | undefined): number | null {
-  const parts = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/.exec(
-    expiresAt ?? "",
-  );
-  if (!parts) return null;
-  const ms = Date.UTC(
-    Number(parts[1]),
-    Number(parts[2]) - 1,
-    Number(parts[3]),
-    Number(parts[4]) - 7,
-    Number(parts[5]),
-    Number(parts[6] ?? 0),
-  );
-  const seconds = Math.round((ms - Date.now()) / 1000);
-  // A value outside a sane window means the clock assumption was wrong; show
-  // no countdown rather than a misleading one.
-  return seconds > 0 && seconds < 24 * 60 * 60 ? seconds : null;
-}
-
-function formatCountdown(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${String(s).padStart(2, "0")}`;
-}
-
-type Phase = "waiting" | "paid" | "expired" | "stopped";
+import { Payment, SubscriptionCheckout } from "@/lib/api/sellerApi";
+import { formatCountdown, useKhqrPayment } from "@/lib/hooks/use-khqr-payment";
 
 /**
  * Renders the Bakong KHQR for one subscription checkout and polls until the
@@ -74,80 +33,7 @@ export function KhqrPaymentDialog({
   onClose: () => void;
 }) {
   const payment = checkout.payment;
-  const uuid = payment?.uuid;
-
-  const [verifyPayment] = useVerifyPaymentMutation();
-  const [phase, setPhase] = useState<Phase>("waiting");
-  const [unreachable, setUnreachable] = useState(false);
-  const [remaining, setRemaining] = useState<number | null>(() =>
-    secondsUntilExpiry(payment?.expiresAt),
-  );
-
-  // Kept in a ref so a parent passing an inline callback cannot restart the
-  // poll — restarting it would issue a second verify every render.
-  const onPaidRef = useRef(onPaid);
-  useEffect(() => {
-    onPaidRef.current = onPaid;
-  }, [onPaid]);
-
-  useEffect(() => {
-    if (!uuid || phase !== "waiting") return;
-
-    let stopped = false;
-    let timer: ReturnType<typeof setTimeout>;
-
-    async function tick() {
-      if (stopped) return;
-      try {
-        const result = await verifyPayment(uuid!).unwrap();
-        setUnreachable(false);
-        if (result.status === "PAID") {
-          stopped = true;
-          setPhase("paid");
-          onPaidRef.current(result);
-          return;
-        }
-        // Still PENDING but no longer payable: the QR lapsed.
-        if (!result.payable) {
-          stopped = true;
-          setPhase("expired");
-          return;
-        }
-      } catch (err) {
-        const status = (err as { status?: number | string })?.status;
-        // Only a gone session (401) or a payment that is not this seller's
-        // (404) is a reason to stop asking. 502/503/504 and dropped requests
-        // mean Bakong was unreachable — the money may already have moved, so
-        // keep the QR up and keep polling.
-        if (status === 401 || status === 404) {
-          stopped = true;
-          setPhase("stopped");
-          return;
-        }
-        setUnreachable(true);
-      }
-      timer = setTimeout(tick, POLL_INTERVAL_MS);
-    }
-
-    timer = setTimeout(tick, POLL_INTERVAL_MS);
-    return () => {
-      stopped = true;
-      clearTimeout(timer);
-    };
-  }, [uuid, phase, verifyPayment]);
-
-  // The countdown runs off a local timer started when the response arrived,
-  // not off repeated parsing of the offset-less server timestamp.
-  useEffect(() => {
-    if (phase !== "waiting" || remaining === null) return;
-    const id = setInterval(() => {
-      setRemaining((left) => (left === null ? null : Math.max(0, left - 1)));
-    }, 1000);
-    return () => clearInterval(id);
-    // `remaining` is deliberately not a dependency: the interval decrements it
-    // functionally and must not be torn down every tick.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase]);
+  const { phase, remaining, unreachable } = useKhqrPayment(payment, onPaid);
 
   const close = useCallback(() => onClose(), [onClose]);
 
