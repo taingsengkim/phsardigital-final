@@ -5,30 +5,22 @@ import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
-  AlertCircle,
-  AlertTriangle,
+  ArrowDownRight,
   ArrowRight,
   ArrowUpRight,
-  ArrowDownRight,
-  Boxes,
-  Calendar,
-  CheckCircle2,
   ChevronRight,
-  CircleDollarSign,
+  CircleAlert,
+  CircleCheck,
   Clock,
   ExternalLink,
-  Layers,
-  Loader2,
   Package,
-  PackageCheck,
   PackagePlus,
   Plus,
   RefreshCw,
   ShoppingBag,
   Sparkles,
   Store,
-  TrendingDown,
-  TrendingUp,
+  TriangleAlert,
   Truck,
 } from "lucide-react"
 import { cn, getFileUrl } from "@/lib/utils"
@@ -116,7 +108,7 @@ export default function SellerDashboardHomePage() {
     return (
       <main className="flex min-h-[calc(100svh-70px)] flex-col items-center justify-center bg-slate-50/70 p-6 text-center">
         <div className="grid size-16 place-items-center rounded-2xl bg-rose-100 text-rose-600 mb-4">
-          <AlertCircle className="size-8" />
+          <CircleAlert className="size-8" />
         </div>
         <h2 className="text-xl font-bold text-slate-900">Failed to Load Dashboard Overview</h2>
         <p className="mt-1 text-sm text-slate-500 max-w-md">
@@ -244,7 +236,7 @@ export default function SellerDashboardHomePage() {
                 orders.pending > 0 ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-500",
               )}
             >
-              {orders.pending > 0 ? <Clock className="size-5" /> : <CheckCircle2 className="size-5" />}
+              {orders.pending > 0 ? <Clock className="size-5" /> : <CircleCheck className="size-5" />}
             </span>
           </div>
 
@@ -541,14 +533,14 @@ export default function SellerDashboardHomePage() {
                 className="flex items-center justify-between rounded-xl border border-amber-300 bg-amber-50/80 p-3 text-xs text-amber-900 hover:bg-amber-100/70 transition"
               >
                 <div className="flex items-center gap-2 font-bold">
-                  <AlertTriangle className="size-4 text-amber-600 shrink-0" />
+                  <TriangleAlert className="size-4 text-amber-600 shrink-0" />
                   <span>{inventory.lowStockProducts} products running low on stock</span>
                 </div>
                 <span className="font-extrabold text-amber-800 underline">Restock Now →</span>
               </Link>
             ) : (
               <div className="flex items-center gap-2 rounded-xl bg-slate-50 p-3 text-xs text-slate-600 font-medium">
-                <CheckCircle2 className="size-4 text-emerald-600 shrink-0" />
+                <CircleCheck className="size-4 text-emerald-600 shrink-0" />
                 <span>Stock levels healthy across all products</span>
               </div>
             )}
