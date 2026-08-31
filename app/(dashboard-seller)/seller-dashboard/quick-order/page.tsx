@@ -5,17 +5,9 @@ import Image from "next/image"
 import Link from "next/link"
 import {
   AlertCircle,
-  ArrowRight,
-  Banknote,
   Barcode,
-  Check,
   CheckCircle2,
-  ChevronRight,
-  CreditCard,
-  DollarSign,
-  ExternalLink,
   History,
-  Info,
   Loader2,
   Minus,
   Package,
@@ -26,12 +18,9 @@ import {
   Search,
   ShoppingCart,
   Store,
-  Tag,
   Trash2,
   User,
-  Users,
   X,
-  Zap,
 } from "lucide-react"
 import { toast } from "sonner"
 import { cn, getFileUrl } from "@/lib/utils"
@@ -66,18 +55,13 @@ function formatMoney(amount: number | null | undefined): string {
 export default function QuickOrderPage() {
   const dispatch = useAppDispatch()
 
-  // Idempotency Key: Generate ONCE per sale. Reused on network retry, reset on "Start Next Sale".
   const saleUuidRef = React.useRef<string>(crypto.randomUUID())
-
-  // Hardware Scanner & Search Input Ref
   const searchInputRef = React.useRef<HTMLInputElement>(null)
 
-  // Search & Filters
   const [searchInput, setSearchInput] = React.useState("")
   const [debouncedSearch, setDebouncedSearch] = React.useState("")
   const [selectedCategory, setSelectedCategory] = React.useState("All")
 
-  // Debounce typed search input ~250ms
   React.useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchInput.trim())
@@ -85,12 +69,10 @@ export default function QuickOrderPage() {
     return () => clearTimeout(timer)
   }, [searchInput])
 
-  // Focus search input on mount
   React.useEffect(() => {
     searchInputRef.current?.focus()
   }, [])
 
-  // Fetch store listings (searches across all statuses including DRAFT)
   const {
     data: listingsData,
     isLoading,
@@ -106,24 +88,19 @@ export default function QuickOrderPage() {
   const { data: sellerProfile } = useGetSellerProfileQuery()
   const [createPosSale, { isLoading: isSubmitting }] = useCreatePosSaleMutation()
 
-  // Cart Quantities & custom unit prices: listingUuid -> quantity
   const [cartQuantities, setCartQuantities] = React.useState<Record<string, number>>({})
   const [unitPriceOverrides, setUnitPriceOverrides] = React.useState<Record<string, number>>({})
 
-  // Customer Details
   const [isNamedCustomer, setIsNamedCustomer] = React.useState(false)
   const [customerName, setCustomerName] = React.useState("Walk-in Customer")
   const [customerPhone, setCustomerPhone] = React.useState("")
   const [orderNote, setOrderNote] = React.useState("")
 
-  // Payment State: "CASH" | "KHQR"
   const [paymentMethod, setPaymentMethod] = React.useState<"CASH" | "KHQR">("CASH")
   const [amountTenderedInput, setAmountTenderedInput] = React.useState<string>("")
 
-  // Completed Sale Receipt Modal
   const [completedSale, setCompletedSale] = React.useState<PosSaleResponse | null>(null)
 
-  // Map backend listings to POS products
   const products = React.useMemo<PosProduct[]>(() => {
     const rawList = Array.isArray(listingsData)
       ? listingsData
@@ -161,12 +138,10 @@ export default function QuickOrderPage() {
     })
   }, [listingsData])
 
-  // Extract unique categories
   const categories = React.useMemo(() => {
     return ["All", ...Array.from(new Set(products.map((p) => p.category)))]
   }, [products])
 
-  // Filter products by selected category
   const filteredProducts = React.useMemo(() => {
     return products.filter((p) => {
       if (selectedCategory === "All") return true
@@ -174,7 +149,6 @@ export default function QuickOrderPage() {
     })
   }, [products, selectedCategory])
 
-  // Add product to cart helper
   const handleAddToCart = React.useCallback(
     (product: PosProduct, quantityDelta = 1) => {
       if (product.stockQty <= 0) {
@@ -188,7 +162,7 @@ export default function QuickOrderPage() {
         const nextQty = Math.min(maxStock, Math.max(0, currentQty + quantityDelta))
 
         if (currentQty + quantityDelta > maxStock) {
-          toast.warning(`Maximum available stock reached (${maxStock} in stock)`)
+          toast.warning(`Maximum stock reached (${maxStock} available)`)
         }
 
         if (nextQty === 0) {
@@ -199,7 +173,6 @@ export default function QuickOrderPage() {
         return { ...prev, [product.id]: nextQty }
       })
 
-      // Refocus search input for continuous scanning
       setTimeout(() => {
         searchInputRef.current?.focus()
       }, 50)
@@ -207,27 +180,24 @@ export default function QuickOrderPage() {
     [],
   )
 
-  // Hardware Scanner / Enter key handling
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       e.preventDefault()
       const query = searchInput.trim()
       if (!query) return
 
-      // Look for exact SKU match (case-insensitive) or exact title match
       const exactSkuMatch = products.find(
         (p) => p.sku && p.sku.toLowerCase() === query.toLowerCase(),
       )
 
       if (exactSkuMatch) {
         handleAddToCart(exactSkuMatch, 1)
-        toast.success(`Scanned: ${exactSkuMatch.name}`)
+        toast.success(`Added: ${exactSkuMatch.name}`)
         setSearchInput("")
         setDebouncedSearch("")
         return
       }
 
-      // If only 1 product in the result set, auto-add
       const matchingProducts = products.filter(
         (p) =>
           (p.sku && p.sku.toLowerCase().includes(query.toLowerCase())) ||
@@ -243,7 +213,6 @@ export default function QuickOrderPage() {
     }
   }
 
-  // Cart Items
   const cartItems = React.useMemo(() => {
     return products
       .filter((p) => (cartQuantities[p.id] ?? 0) > 0)
@@ -267,13 +236,11 @@ export default function QuickOrderPage() {
     return cartItems.reduce((sum, item) => sum + item.quantity, 0)
   }, [cartItems])
 
-  // Cash tendered calculation
   const amountTenderedNum = parseFloat(amountTenderedInput) || 0
   const isCashTenderValid = paymentMethod === "CASH" ? amountTenderedNum >= total : true
   const liveChangeDue =
     paymentMethod === "CASH" && amountTenderedNum >= total ? amountTenderedNum - total : null
 
-  // Quantity controllers
   const handleSetQuantity = (id: string, delta: number) => {
     const product = products.find((p) => p.id === id)
     if (!product) return
@@ -314,15 +281,13 @@ export default function QuickOrderPage() {
     searchInputRef.current?.focus()
   }
 
-  // Quick cash bill presets
   const handleQuickCashPreset = (amount: number) => {
     setAmountTenderedInput(amount.toFixed(2))
   }
 
-  // Submit POS Sale
   const handleCompleteSale = async () => {
     if (cartItems.length === 0) {
-      toast.error("Cart is empty. Add products first.")
+      toast.error("Cart is empty.")
       return
     }
 
@@ -333,9 +298,6 @@ export default function QuickOrderPage() {
       }
     }
 
-    // Build payload according to backend rules:
-    // CASH: send amountTendered
-    // KHQR: DO NOT send amountTendered (omit field)
     const salePayload: PosSaleRequest = {
       saleUuid: saleUuidRef.current,
       lines: cartItems.map((item) => ({
@@ -355,10 +317,9 @@ export default function QuickOrderPage() {
 
     try {
       const res = await createPosSale(salePayload).unwrap()
-      toast.success("Sale completed successfully!")
+      toast.success("Sale completed.")
       setCompletedSale(res)
 
-      // Invalidate seller orders, orders summary, and dashboard overview
       dispatch(sellerApi.util.invalidateTags(["SellerListings", "SellerOrders"]))
       dispatch(sellerDashboardApi.util.invalidateTags(["SellerDashboard"]))
       dispatch(purchaseApi.util.invalidateTags(["Purchase", "PurchaseSummary"]))
@@ -366,12 +327,11 @@ export default function QuickOrderPage() {
       handleClearCart()
     } catch (err: any) {
       const msg =
-        err?.data?.message || err?.message || "Failed to process POS sale. Please retry."
+        err?.data?.message || err?.message || "Failed to process sale."
       toast.error(msg)
     }
   }
 
-  // Start Next Sale
   const handleStartNextSale = () => {
     saleUuidRef.current = crypto.randomUUID()
     setCompletedSale(null)
@@ -382,25 +342,20 @@ export default function QuickOrderPage() {
   }
 
   return (
-    <main className="min-h-[calc(100svh-70px)] bg-[#F8F9FC] p-3 sm:p-6">
-      <div className="mx-auto max-w-[1750px] space-y-4">
-        {/* ── Top POS Header ── */}
-        <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-3xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-xs">
-          <div className="flex items-center gap-3.5">
-            <div className="grid size-11 place-items-center rounded-2xl bg-[#6C4CD8] text-white shadow-xs">
-              <Store className="size-5" />
+    <main className="min-h-[calc(100svh-70px)] bg-slate-50/50 p-4 sm:p-6">
+      <div className="mx-auto max-w-7xl space-y-4">
+        {/* Top Header */}
+        <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="grid size-9 place-items-center rounded-lg bg-slate-100 text-slate-700">
+              <Store className="size-4.5" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-lg sm:text-xl font-black text-slate-950 tracking-tight">
-                  POS Counter Register
-                </h1>
-                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-black text-emerald-700 border border-emerald-200">
-                  Ready to Scan
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 font-medium">
-                {sellerProfile?.businessName || "Your Store"} • Fast Barcode & Walk-in Checkout
+              <h1 className="text-base font-semibold text-slate-900">
+                POS Register
+              </h1>
+              <p className="text-xs text-slate-500">
+                {sellerProfile?.businessName || "Your Store"} · Barcode and walk-in sales
               </p>
             </div>
           </div>
@@ -410,10 +365,10 @@ export default function QuickOrderPage() {
               asChild
               variant="outline"
               size="sm"
-              className="rounded-xl border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50"
+              className="rounded-lg text-xs h-8"
             >
               <Link href="/seller-dashboard/orders">
-                <History className="size-3.5 mr-1.5 text-slate-500" /> View Orders
+                <History className="size-3.5 mr-1 text-slate-400" /> Orders
               </Link>
             </Button>
             <Button
@@ -422,32 +377,32 @@ export default function QuickOrderPage() {
               size="sm"
               onClick={() => refetch()}
               disabled={isFetching}
-              className="rounded-xl border-slate-200 bg-white text-xs font-bold text-slate-700"
-              title="Refresh product catalogue"
+              className="rounded-lg text-xs h-8"
+              title="Refresh catalogue"
             >
               <RotateCcw className={cn("size-3.5", isFetching && "animate-spin")} />
             </Button>
           </div>
         </header>
 
-        {/* ── 2-Column POS Layout ── */}
-        <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_440px] xl:grid-cols-[minmax(0,1fr)_480px]">
-          {/* ── LEFT: PRODUCT CATALOGUE & SCANNER ── */}
+        {/* 2-Column POS Layout */}
+        <div className="grid items-start gap-4 lg:grid-cols-[1fr_380px]">
+          {/* Left: Catalogue & Scanner */}
           <section className="space-y-4 min-w-0">
-            {/* Search & Barcode Input */}
-            <div className="rounded-3xl border border-slate-200/90 bg-white p-4 shadow-xs space-y-3">
+            {/* Search Input */}
+            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs space-y-3">
               <div className="relative">
-                <Barcode className="absolute left-3.5 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
+                <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
                 <input
                   ref={searchInputRef}
                   type="text"
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
                   onKeyDown={handleSearchKeyDown}
-                  placeholder="Scan barcode or type product name / SKU (Press Enter to quick-add)..."
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50/70 pl-11 pr-10 py-3 text-xs sm:text-sm font-medium text-slate-950 outline-none focus:border-[#6C4CD8] focus:bg-white focus:ring-2 focus:ring-[#6C4CD8]/20"
+                  placeholder="Scan barcode or type name / SKU (Press Enter to add)..."
+                  className="w-full rounded-lg border border-slate-200 bg-white pl-10 pr-9 py-2 text-xs sm:text-sm text-slate-900 outline-none focus:border-slate-400"
                 />
-                {searchInput ? (
+                {searchInput && (
                   <button
                     type="button"
                     onClick={() => {
@@ -459,24 +414,20 @@ export default function QuickOrderPage() {
                   >
                     <X className="size-4" />
                   </button>
-                ) : (
-                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 rounded-md bg-slate-200/80 px-1.5 py-0.5 text-[10px] font-black text-slate-600">
-                    SCANNER READY
-                  </span>
                 )}
               </div>
 
-              {/* Category Pills */}
-              <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+              {/* Category Filter Pills */}
+              <div className="flex gap-1 overflow-x-auto pb-0.5 scrollbar-none text-xs">
                 {categories.map((cat) => (
                   <button
                     key={cat}
                     type="button"
                     onClick={() => setSelectedCategory(cat)}
                     className={cn(
-                      "h-8 shrink-0 rounded-xl px-3.5 text-xs font-bold transition cursor-pointer",
+                      "rounded-md px-2.5 py-1 font-medium transition cursor-pointer shrink-0",
                       selectedCategory === cat
-                        ? "bg-[#6C4CD8] text-white shadow-xs"
+                        ? "bg-slate-900 text-white"
                         : "bg-slate-100 text-slate-600 hover:bg-slate-200",
                     )}
                   >
@@ -488,29 +439,26 @@ export default function QuickOrderPage() {
 
             {/* Products Grid */}
             {isLoading ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3.5">
+              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
                 {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                  <div key={i} className="h-60 rounded-3xl bg-slate-200/80 animate-pulse" />
+                  <div key={i} className="h-52 rounded-xl bg-slate-100 animate-pulse" />
                 ))}
               </div>
             ) : isError ? (
-              <div className="flex min-h-64 flex-col items-center justify-center rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-xs space-y-3">
-                <AlertCircle className="size-8 text-rose-500" />
-                <p className="text-sm font-bold text-slate-900">Failed to load product catalogue</p>
-                <Button onClick={() => refetch()} size="sm" className="rounded-xl bg-[#6C4CD8]">
+              <div className="rounded-xl border border-slate-200 bg-white p-8 text-center space-y-2">
+                <AlertCircle className="size-6 text-rose-500 mx-auto" />
+                <p className="text-xs font-medium text-slate-900">Failed to load product catalogue</p>
+                <Button onClick={() => refetch()} size="sm" variant="outline" className="text-xs">
                   Retry
                 </Button>
               </div>
             ) : filteredProducts.length === 0 ? (
-              <div className="flex min-h-64 flex-col items-center justify-center rounded-3xl border border-dashed border-slate-200 bg-white p-8 text-center shadow-xs space-y-2">
-                <Package className="size-8 text-slate-300" />
-                <p className="text-sm font-bold text-slate-800">No matching products found</p>
-                <p className="text-xs text-slate-400">
-                  Try adjusting your search query or category filter
-                </p>
+              <div className="rounded-xl border border-dashed border-slate-200 bg-white p-8 text-center space-y-1">
+                <Package className="size-6 text-slate-300 mx-auto" />
+                <p className="text-xs font-medium text-slate-700">No matching products found</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3.5">
+              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
                 {filteredProducts.map((product) => {
                   const qtyInCart = cartQuantities[product.id] ?? 0
                   const isOutOfStock = product.stockQty <= 0
@@ -520,76 +468,67 @@ export default function QuickOrderPage() {
                       key={product.id}
                       onClick={() => !isOutOfStock && handleAddToCart(product, 1)}
                       className={cn(
-                        "group relative flex flex-col justify-between overflow-hidden rounded-3xl border bg-white p-3.5 shadow-xs transition-all select-none cursor-pointer",
+                        "group relative flex flex-col justify-between overflow-hidden rounded-xl border bg-white p-3 transition select-none cursor-pointer",
                         isOutOfStock
-                          ? "opacity-55 cursor-not-allowed border-slate-200"
+                          ? "opacity-50 cursor-not-allowed border-slate-200"
                           : qtyInCart > 0
-                          ? "border-[#6C4CD8] ring-2 ring-[#6C4CD8]/20 shadow-md"
-                          : "border-slate-200/90 hover:border-[#6C4CD8]/50 hover:shadow-md hover:-translate-y-0.5",
+                          ? "border-slate-900 ring-1 ring-slate-900"
+                          : "border-slate-200 hover:border-slate-300",
                       )}
                     >
-                      {/* Cart Quantity Badge */}
                       {qtyInCart > 0 && (
-                        <span className="absolute top-2.5 right-2.5 z-10 grid size-6 place-items-center rounded-full bg-[#6C4CD8] text-xs font-black text-white shadow-md animate-in zoom-in-50">
+                        <span className="absolute top-2 right-2 z-10 grid size-5 place-items-center rounded-full bg-slate-900 text-[10px] font-medium text-white shadow-xs">
                           {qtyInCart}
                         </span>
                       )}
 
                       <div>
-                        {/* Thumbnail */}
-                        <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-slate-100 border border-slate-100">
+                        <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-slate-100 border border-slate-100">
                           <Image
                             src={product.image}
                             alt={product.name}
                             fill
                             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                            className="object-cover transition duration-300 group-hover:scale-105"
+                            className="object-cover"
                           />
-                          {product.status === "DRAFT" && (
-                            <span className="absolute bottom-2 left-2 rounded-md bg-slate-900/80 px-1.5 py-0.5 text-[9px] font-black text-white backdrop-blur-xs">
-                              DRAFT
-                            </span>
-                          )}
                         </div>
 
-                        {/* Title & Monospaced SKU */}
-                        <div className="pt-2.5 space-y-1">
-                          <h3 className="text-xs sm:text-sm font-extrabold text-slate-950 line-clamp-2 leading-tight">
+                        <div className="pt-2 space-y-0.5">
+                          <h3 className="text-xs font-medium text-slate-900 line-clamp-2 leading-snug">
                             {product.name}
                           </h3>
-                          <div className="flex items-center gap-1 font-mono text-[11px] font-semibold text-slate-500">
-                            <Barcode className="size-3 text-slate-400" />
-                            <span className="truncate">{product.sku || "NO-SKU"}</span>
-                          </div>
+                          {product.sku && (
+                            <p className="font-mono text-[10px] text-slate-400 truncate">
+                              {product.sku}
+                            </p>
+                          )}
                         </div>
                       </div>
 
-                      {/* Pricing & Stock Footer */}
-                      <div className="pt-3 flex items-center justify-between border-t border-slate-100 mt-2">
+                      <div className="pt-2.5 flex items-center justify-between border-t border-slate-100 mt-2">
                         <div>
-                          <div className="text-xs sm:text-sm font-black text-[#6C4CD8] tabular-nums">
+                          <div className="text-xs font-semibold text-slate-900 tabular-nums">
                             {formatMoney(product.price)}
                           </div>
                           {product.costPrice !== null && product.price > 0 && (
-                            <span className="text-[10px] font-semibold text-slate-400 block tabular-nums">
-                              Cost: ${product.costPrice.toFixed(2)} · {(((product.price - product.costPrice) / product.price) * 100).toFixed(0)}% margin
+                            <span className="text-[10px] text-slate-400 block tabular-nums">
+                              Cost: ${product.costPrice.toFixed(2)} · {(((product.price - product.costPrice) / product.price) * 100).toFixed(0)}%
                             </span>
                           )}
                           <span
                             className={cn(
-                              "text-[10px] font-bold",
+                              "text-[10px]",
                               isOutOfStock
                                 ? "text-rose-600"
                                 : product.stockQty < 5
                                 ? "text-amber-600"
-                                : "text-emerald-700",
+                                : "text-slate-500",
                             )}
                           >
                             {isOutOfStock ? "Out of stock" : `${product.stockQty} in stock`}
                           </span>
                         </div>
 
-                        {/* Add Button */}
                         <button
                           type="button"
                           disabled={isOutOfStock || qtyInCart >= product.stockQty}
@@ -597,14 +536,9 @@ export default function QuickOrderPage() {
                             e.stopPropagation()
                             handleAddToCart(product, 1)
                           }}
-                          className={cn(
-                            "grid size-8 place-items-center rounded-xl transition cursor-pointer",
-                            qtyInCart > 0
-                              ? "bg-[#6C4CD8] text-white shadow-xs"
-                              : "bg-purple-50 text-[#6C4CD8] hover:bg-[#6C4CD8] hover:text-white",
-                          )}
+                          className="grid size-7 place-items-center rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition"
                         >
-                          <Plus className="size-4" />
+                          <Plus className="size-3.5" />
                         </button>
                       </div>
                     </article>
@@ -614,109 +548,87 @@ export default function QuickOrderPage() {
             )}
           </section>
 
-          {/* ── RIGHT: REGISTER & CHECKOUT PANEL ── */}
-          <aside className="rounded-3xl border border-slate-200/90 bg-white p-5 shadow-xs space-y-5 lg:sticky lg:top-20">
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <div className="flex items-center gap-2.5">
-                <span className="grid size-9 place-items-center rounded-xl bg-purple-50 text-[#6C4CD8]">
-                  <ShoppingCart className="size-4" />
-                </span>
-                <div>
-                  <h2 className="text-sm font-black text-slate-950">Active Cart</h2>
-                  <p className="text-[11px] text-slate-400 font-medium">
-                    {totalItemCount} item{totalItemCount === 1 ? "" : "s"}
-                  </p>
-                </div>
+          {/* Right: Register Sidebar */}
+          <aside className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs space-y-4 lg:sticky lg:top-20">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-900">Current Order</h2>
+                <p className="text-xs text-slate-400">
+                  {totalItemCount} item{totalItemCount === 1 ? "" : "s"}
+                </p>
               </div>
 
               {cartItems.length > 0 && (
                 <button
                   type="button"
                   onClick={handleClearCart}
-                  className="inline-flex items-center gap-1 text-xs font-bold text-rose-600 hover:text-rose-700 transition cursor-pointer"
+                  className="text-xs text-rose-600 hover:text-rose-700 transition"
                 >
-                  <Trash2 className="size-3.5" /> Clear Cart
+                  Clear all
                 </button>
               )}
             </div>
 
-            {/* Cart Items List */}
-            <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+            {/* Cart Items */}
+            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
               {cartItems.length === 0 ? (
-                <div className="flex min-h-36 flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 p-6 text-center space-y-1">
-                  <ShoppingCart className="size-6 text-slate-300" />
-                  <p className="text-xs font-bold text-slate-600">Register is empty</p>
-                  <p className="text-[10px] text-slate-400">
-                    Scan barcodes or tap products to ring up sale
-                  </p>
+                <div className="py-8 text-center text-xs text-slate-400">
+                  No items added yet.
                 </div>
               ) : (
                 cartItems.map(({ product, quantity, unitPrice, lineTotal }) => (
                   <div
                     key={product.id}
-                    className="flex items-center gap-2.5 rounded-2xl border border-slate-100 bg-slate-50/60 p-2.5 text-xs"
+                    className="flex items-center gap-2 rounded-lg border border-slate-100 bg-slate-50/50 p-2 text-xs"
                   >
-                    <div className="relative size-11 shrink-0 overflow-hidden rounded-xl bg-white border border-slate-200">
-                      <Image src={product.image} alt={product.name} fill className="object-cover" />
-                    </div>
-
                     <div className="min-w-0 flex-1 space-y-0.5">
-                      <h4 className="font-extrabold text-slate-900 truncate">{product.name}</h4>
-                      <div className="flex items-center gap-1">
-                        <span className="font-mono text-[10px] text-slate-400">
-                          {product.sku || "NO-SKU"}
-                        </span>
-                        <span className="text-slate-300">•</span>
-                        <div className="flex items-center gap-0.5">
-                          <span className="text-[10px] text-slate-400">$</span>
-                          <input
-                            type="number"
-                            step="0.01"
-                            max={product.fullPrice}
-                            min="0"
-                            value={unitPrice}
-                            onChange={(e) =>
-                              handleUnitPriceChange(product, parseFloat(e.target.value) || 0)
-                            }
-                            className="w-14 rounded border border-slate-200 bg-white px-1 py-0.5 text-[11px] font-bold text-slate-900 text-right outline-none"
-                          />
-                        </div>
+                      <h4 className="font-medium text-slate-900 truncate">{product.name}</h4>
+                      <div className="flex items-center gap-1 text-[11px] text-slate-400">
+                        <span>$</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          max={product.fullPrice}
+                          min="0"
+                          value={unitPrice}
+                          onChange={(e) =>
+                            handleUnitPriceChange(product, parseFloat(e.target.value) || 0)
+                          }
+                          className="w-12 rounded border border-slate-200 bg-white px-1 text-[11px] text-slate-900 outline-none"
+                        />
                       </div>
                     </div>
 
-                    {/* Quantity Stepper */}
-                    <div className="flex items-center rounded-xl bg-white border border-slate-200 p-0.5 shadow-xs shrink-0">
+                    {/* Stepper */}
+                    <div className="flex items-center rounded border border-slate-200 bg-white p-0.5">
                       <button
                         type="button"
                         onClick={() => handleSetQuantity(product.id, -1)}
-                        className="grid size-6 place-items-center rounded-lg text-slate-600 hover:bg-slate-100"
+                        className="grid size-5 place-items-center text-slate-500 hover:bg-slate-100"
                       >
-                        <Minus className="size-3" />
+                        <Minus className="size-2.5" />
                       </button>
-                      <span className="w-6 text-center font-black text-slate-950 tabular-nums text-xs">
+                      <span className="w-5 text-center text-xs font-medium tabular-nums">
                         {quantity}
                       </span>
                       <button
                         type="button"
                         onClick={() => handleSetQuantity(product.id, 1)}
                         disabled={quantity >= product.stockQty}
-                        className="grid size-6 place-items-center rounded-lg text-slate-600 hover:bg-slate-100 disabled:opacity-30"
+                        className="grid size-5 place-items-center text-slate-500 hover:bg-slate-100 disabled:opacity-30"
                       >
-                        <Plus className="size-3" />
+                        <Plus className="size-2.5" />
                       </button>
                     </div>
 
-                    {/* Line Total */}
-                    <div className="w-14 text-right font-black text-slate-950 tabular-nums shrink-0">
+                    <div className="w-12 text-right font-medium text-slate-900 tabular-nums">
                       {formatMoney(lineTotal)}
                     </div>
 
-                    {/* Remove */}
                     <button
                       type="button"
                       onClick={() => handleRemoveItem(product.id)}
-                      className="text-slate-400 hover:text-rose-600 p-1"
+                      className="text-slate-400 hover:text-rose-600 p-0.5"
                     >
                       <X className="size-3.5" />
                     </button>
@@ -727,38 +639,36 @@ export default function QuickOrderPage() {
 
             {/* Customer Details Toggle */}
             <div className="pt-2 border-t border-slate-100 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-black uppercase tracking-wider text-slate-500">
-                  Customer
-                </span>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-500">Customer</span>
                 <button
                   type="button"
                   onClick={() => setIsNamedCustomer(!isNamedCustomer)}
-                  className="text-xs font-bold text-[#6C4CD8] hover:underline"
+                  className="text-slate-700 hover:underline"
                 >
-                  {isNamedCustomer ? "Switch to Walk-in" : "+ Add Customer Info"}
+                  {isNamedCustomer ? "Switch to Walk-in" : "+ Add customer info"}
                 </button>
               </div>
 
               {isNamedCustomer ? (
-                <div className="grid grid-cols-2 gap-2 animate-in fade-in-50 duration-200">
+                <div className="grid grid-cols-2 gap-2 text-xs">
                   <input
                     type="text"
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="Customer Name"
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-900 outline-none focus:border-[#6C4CD8] focus:bg-white"
+                    placeholder="Name"
+                    className="w-full rounded-md border border-slate-200 px-2 py-1 outline-none"
                   />
                   <input
                     type="tel"
                     value={customerPhone}
                     onChange={(e) => setCustomerPhone(e.target.value)}
-                    placeholder="Phone (012...)"
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-900 outline-none focus:border-[#6C4CD8] focus:bg-white"
+                    placeholder="Phone"
+                    className="w-full rounded-md border border-slate-200 px-2 py-1 outline-none"
                   />
                 </div>
               ) : (
-                <div className="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600 border border-slate-100">
+                <div className="flex items-center gap-1.5 text-xs text-slate-500">
                   <User className="size-3.5 text-slate-400" />
                   <span>Walk-in Customer</span>
                 </div>
@@ -766,66 +676,56 @@ export default function QuickOrderPage() {
             </div>
 
             {/* Payment Method Selector */}
-            <div className="pt-2 border-t border-slate-100 space-y-2.5">
-              <span className="text-xs font-black uppercase tracking-wider text-slate-500">
-                Payment Method
-              </span>
-
-              <div className="grid grid-cols-2 gap-2">
+            <div className="pt-2 border-t border-slate-100 space-y-2 text-xs">
+              <span className="text-slate-500 font-medium block">Payment Method</span>
+              <div className="grid grid-cols-2 gap-1.5">
                 <button
                   type="button"
                   onClick={() => setPaymentMethod("CASH")}
                   className={cn(
-                    "flex items-center justify-center gap-2 rounded-2xl py-2.5 text-xs font-bold transition cursor-pointer border",
+                    "rounded-lg py-2 font-medium transition cursor-pointer border",
                     paymentMethod === "CASH"
-                      ? "border-[#6C4CD8] bg-purple-50 text-[#6C4CD8] shadow-xs"
-                      : "border-slate-200 bg-slate-50/60 text-slate-600 hover:bg-slate-100",
+                      ? "border-slate-900 bg-slate-900 text-white"
+                      : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100",
                   )}
                 >
-                  <Banknote className="size-4" />
-                  <span>Cash Payment</span>
+                  Cash
                 </button>
-
                 <button
                   type="button"
                   onClick={() => setPaymentMethod("KHQR")}
                   className={cn(
-                    "flex items-center justify-center gap-2 rounded-2xl py-2.5 text-xs font-bold transition cursor-pointer border",
+                    "rounded-lg py-2 font-medium transition cursor-pointer border",
                     paymentMethod === "KHQR"
-                      ? "border-[#6C4CD8] bg-purple-50 text-[#6C4CD8] shadow-xs"
-                      : "border-slate-200 bg-slate-50/60 text-slate-600 hover:bg-slate-100",
+                      ? "border-slate-900 bg-slate-900 text-white"
+                      : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100",
                   )}
                 >
-                  <QrCode className="size-4" />
-                  <span>KHQR Counter</span>
+                  KHQR Counter
                 </button>
               </div>
 
-              {/* CASH MODE: Cash Tendered Input & Live Change */}
+              {/* Cash Controls */}
               {paymentMethod === "CASH" && (
-                <div className="rounded-2xl bg-slate-50 p-3 border border-slate-200/80 space-y-2.5 animate-in fade-in-50 duration-150">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-slate-600">Amount Tendered ($):</span>
-                    <div className="flex items-center gap-1 w-32">
-                      <span className="text-xs font-bold text-slate-400">$</span>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={amountTenderedInput}
-                        onChange={(e) => setAmountTenderedInput(e.target.value)}
-                        placeholder={total.toFixed(2)}
-                        className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-black text-slate-950 text-right outline-none focus:border-[#6C4CD8]"
-                      />
-                    </div>
+                <div className="rounded-lg bg-slate-50 p-2.5 border border-slate-200 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-600">Amount Tendered ($):</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={amountTenderedInput}
+                      onChange={(e) => setAmountTenderedInput(e.target.value)}
+                      placeholder={total.toFixed(2)}
+                      className="w-24 rounded border border-slate-200 bg-white px-2 py-0.5 text-right font-medium text-slate-900 outline-none"
+                    />
                   </div>
 
-                  {/* Cash Presets */}
                   <div className="flex flex-wrap gap-1">
                     <button
                       type="button"
                       onClick={() => handleQuickCashPreset(total)}
-                      className="rounded-lg bg-white px-2 py-1 text-[10px] font-bold text-slate-700 border border-slate-200 hover:bg-purple-50 hover:text-[#6C4CD8]"
+                      className="rounded bg-white px-1.5 py-0.5 text-[10px] text-slate-700 border border-slate-200 hover:bg-slate-100"
                     >
                       Exact (${total.toFixed(2)})
                     </button>
@@ -834,23 +734,22 @@ export default function QuickOrderPage() {
                         key={bill}
                         type="button"
                         onClick={() => handleQuickCashPreset(bill)}
-                        className="rounded-lg bg-white px-2 py-1 text-[10px] font-bold text-slate-700 border border-slate-200 hover:bg-purple-50 hover:text-[#6C4CD8]"
+                        className="rounded bg-white px-1.5 py-0.5 text-[10px] text-slate-700 border border-slate-200 hover:bg-slate-100"
                       >
                         ${bill}
                       </button>
                     ))}
                   </div>
 
-                  {/* Live Change Due Calculation */}
                   {amountTenderedNum > 0 && (
                     <div
                       className={cn(
-                        "flex items-center justify-between pt-1 border-t border-slate-200/60 text-xs font-bold",
+                        "flex items-center justify-between pt-1 border-t border-slate-200 text-xs font-medium",
                         amountTenderedNum >= total ? "text-emerald-700" : "text-rose-600",
                       )}
                     >
-                      <span>{amountTenderedNum >= total ? "Change Due:" : "Short by:"}</span>
-                      <span className="font-black tabular-nums text-sm">
+                      <span>{amountTenderedNum >= total ? "Change Due:" : "Remaining:"}</span>
+                      <span className="tabular-nums">
                         {amountTenderedNum >= total
                           ? formatMoney(liveChangeDue)
                           : formatMoney(total - amountTenderedNum)}
@@ -860,42 +759,31 @@ export default function QuickOrderPage() {
                 </div>
               )}
 
-              {/* KHQR MODE: Counter Confirmation Notice (No generated QR / No spinner) */}
               {paymentMethod === "KHQR" && (
-                <div className="rounded-2xl bg-purple-50/70 p-3.5 border border-purple-200/70 text-xs space-y-1.5 animate-in fade-in-50 duration-150">
-                  <div className="flex items-center gap-1.5 font-extrabold text-[#6C4CD8]">
-                    <QrCode className="size-4" />
-                    <span>In-Store KHQR Payment</span>
-                  </div>
-                  <p className="text-[11px] text-slate-600 leading-relaxed font-medium">
-                    Show the counter KHQR stand to the customer. Once they confirm payment in their
-                    banking app, click below to finalize the sale.
-                  </p>
+                <div className="rounded-lg bg-slate-50 p-2.5 border border-slate-200 text-xs text-slate-600">
+                  Confirm customer has paid via the counter KHQR stand before completing sale.
                 </div>
               )}
             </div>
 
-            {/* Total Display */}
-            <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-              <div>
-                <span className="text-xs font-black text-slate-500 uppercase tracking-wider block">
-                  Grand Total
-                </span>
-                <span className="text-2xl font-black text-[#6C4CD8] tabular-nums">
+            {/* Total & Submit */}
+            <div className="pt-2 border-t border-slate-100 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-slate-500">Total Due</span>
+                <span className="text-lg font-semibold text-slate-900 tabular-nums">
                   {formatMoney(total)}
                 </span>
               </div>
 
-              {/* Complete Sale CTA */}
               <Button
                 type="button"
                 disabled={cartItems.length === 0 || !isCashTenderValid || isSubmitting}
                 onClick={handleCompleteSale}
-                className="h-12 px-6 rounded-2xl bg-[#6C4CD8] text-sm font-black text-white shadow-md shadow-[#6C4CD8]/25 hover:bg-[#5B3DC0] disabled:opacity-50 transition cursor-pointer"
+                className="w-full h-10 rounded-lg bg-slate-900 hover:bg-slate-800 text-xs font-medium text-white transition disabled:opacity-50"
               >
                 {isSubmitting ? (
-                  <span className="flex items-center gap-2">
-                    <Loader2 className="size-4 animate-spin" /> Processing...
+                  <span className="flex items-center gap-1.5">
+                    <Loader2 className="size-3.5 animate-spin" /> Processing...
                   </span>
                 ) : paymentMethod === "KHQR" ? (
                   `Confirm Paid (${formatMoney(total)})`
@@ -908,118 +796,86 @@ export default function QuickOrderPage() {
         </div>
       </div>
 
-      {/* ── RECEIPT / COMPLETION MODAL ── */}
+      {/* ── Receipt Modal ── */}
       {completedSale && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 animate-in fade-in-0 duration-200">
-          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl space-y-5 border border-slate-100">
-            {/* Modal Header */}
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+          <div className="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl space-y-4 border border-slate-200 text-xs">
             <div className="text-center space-y-1">
-              <div className="mx-auto grid size-12 place-items-center rounded-2xl bg-emerald-100 text-emerald-700 mb-2">
-                <CheckCircle2 className="size-7" />
+              <div className="mx-auto grid size-10 place-items-center rounded-full bg-emerald-50 text-emerald-700 mb-1">
+                <CheckCircle2 className="size-5" />
               </div>
-              <h3 className="text-xl font-black text-slate-950">Sale Completed!</h3>
-              <p className="text-xs text-slate-500 font-medium">
+              <h3 className="text-sm font-semibold text-slate-900">Sale Complete</h3>
+              <p className="text-[11px] text-slate-400">
                 Receipt #{completedSale.sale?.uuid?.slice(0, 8).toUpperCase() || "SALE"}
               </p>
             </div>
 
-            {/* Printable Receipt Paper */}
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-3 text-xs">
-              <div className="flex justify-between border-b border-slate-200 pb-2">
-                <span className="text-slate-500 font-semibold">Store:</span>
-                <span className="font-bold text-slate-900">
-                  {sellerProfile?.businessName || "PhsarDigital Store"}
-                </span>
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-2">
+              <div className="flex justify-between text-slate-600">
+                <span>Customer</span>
+                <span className="text-slate-900">{completedSale.sale?.buyerName || "Walk-in Customer"}</span>
+              </div>
+              <div className="flex justify-between text-slate-600">
+                <span>Payment</span>
+                <span className="text-slate-900">{completedSale.paymentMethod || "CASH"}</span>
               </div>
 
-              <div className="flex justify-between border-b border-slate-200 pb-2">
-                <span className="text-slate-500 font-semibold">Customer:</span>
-                <span className="font-bold text-slate-900">
-                  {completedSale.sale?.buyerName || "Walk-in Customer"}
-                </span>
-              </div>
-
-              <div className="flex justify-between border-b border-slate-200 pb-2">
-                <span className="text-slate-500 font-semibold">Payment Mode:</span>
-                <span className="font-black text-slate-900">
-                  {completedSale.paymentMethod || "CASH"}
-                </span>
-              </div>
-
-              {/* Items List */}
-              <div className="space-y-1.5 py-1">
+              <div className="border-t border-slate-200 pt-2 space-y-1">
                 {completedSale.sale?.items?.map((item, idx) => (
                   <div key={idx} className="flex justify-between text-slate-700">
-                    <span className="truncate pr-2">
-                      {item.quantity}x {item.title}
-                    </span>
-                    <span className="font-bold tabular-nums shrink-0">
-                      {formatMoney(item.lineTotal)}
-                    </span>
+                    <span className="truncate pr-2">{item.quantity}x {item.title}</span>
+                    <span className="tabular-nums">{formatMoney(item.lineTotal)}</span>
                   </div>
                 ))}
               </div>
 
-              {/* Financial Totals */}
               <div className="border-t border-slate-200 pt-2 space-y-1">
-                <div className="flex justify-between text-slate-900 font-extrabold text-sm">
-                  <span>Total Amount:</span>
-                  <span className="text-[#6C4CD8] tabular-nums">
-                    {formatMoney(completedSale.sale?.totalPrice)}
-                  </span>
+                <div className="flex justify-between text-slate-900 font-medium">
+                  <span>Total</span>
+                  <span className="tabular-nums">{formatMoney(completedSale.sale?.totalPrice)}</span>
                 </div>
-
-                {/* Amount Tendered (Cash only) */}
-                {completedSale.amountTendered !== undefined &&
-                  completedSale.amountTendered !== null && (
-                    <div className="flex justify-between text-slate-500">
-                      <span>Cash Tendered:</span>
-                      <span className="font-bold tabular-nums">
-                        {formatMoney(completedSale.amountTendered)}
-                      </span>
-                    </div>
-                  )}
-
-                {/* Change Due (Render nothing if null/not calculated, do NOT render $0.00) */}
-                {completedSale.changeDue !== undefined &&
-                  completedSale.changeDue !== null && (
-                    <div className="flex justify-between text-emerald-700 font-bold">
-                      <span>Change Returned:</span>
-                      <span className="font-black tabular-nums">
-                        {formatMoney(completedSale.changeDue)}
-                      </span>
-                    </div>
-                  )}
+                {completedSale.amountTendered !== undefined && completedSale.amountTendered !== null && (
+                  <div className="flex justify-between text-slate-500">
+                    <span>Cash Tendered</span>
+                    <span className="tabular-nums">{formatMoney(completedSale.amountTendered)}</span>
+                  </div>
+                )}
+                {completedSale.changeDue !== undefined && completedSale.changeDue !== null && (
+                  <div className="flex justify-between text-emerald-700 font-medium">
+                    <span>Change</span>
+                    <span className="tabular-nums">{formatMoney(completedSale.changeDue)}</span>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Actions */}
-            <div className="grid grid-cols-2 gap-2.5 pt-1">
+            <div className="grid grid-cols-2 gap-2 pt-1">
               <Button
                 type="button"
                 variant="outline"
+                size="sm"
                 onClick={() => window.print()}
-                className="rounded-xl border-slate-200 text-xs font-bold"
+                className="text-xs h-8"
               >
-                <Printer className="size-3.5 mr-1.5" /> Print Receipt
+                <Printer className="size-3.5 mr-1" /> Print
               </Button>
-
               <Button
                 type="button"
+                size="sm"
                 onClick={handleStartNextSale}
-                className="rounded-xl bg-[#6C4CD8] text-xs font-bold text-white hover:bg-[#5B3DC0]"
+                className="bg-slate-900 hover:bg-slate-800 text-white text-xs h-8"
               >
-                Start Next Sale →
+                Next sale
               </Button>
             </div>
 
             {completedSale.sale?.uuid && (
-              <div className="text-center">
+              <div className="text-center pt-1">
                 <Link
                   href={`/seller-dashboard/orders/${completedSale.sale.uuid}`}
-                  className="text-[11px] font-bold text-[#6C4CD8] hover:underline"
+                  className="text-[11px] text-slate-500 hover:text-slate-900 underline"
                 >
-                  View full order #{completedSale.sale.uuid.slice(0, 8)} in Seller Orders →
+                  View in seller orders
                 </Link>
               </div>
             )}

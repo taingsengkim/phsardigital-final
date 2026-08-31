@@ -11,16 +11,12 @@ import { z } from "zod"
 import {
   AlertCircle,
   ArrowLeft,
-  ArrowRight,
-  BadgeCheck,
-  Banknote,
+  Barcode,
   Check,
-  CheckCircle2,
   ChevronDown,
   ChevronRight,
   DollarSign,
   Eye,
-  EyeOff,
   ImagePlus,
   Info,
   Layers,
@@ -29,14 +25,11 @@ import {
   Package,
   Plus,
   Search,
-  Sparkles,
   Star,
   Tag,
   Trash2,
   TrendingDown,
-  Warehouse,
   X,
-  Zap,
 } from "lucide-react"
 import { toast } from "sonner"
 import {
@@ -162,13 +155,13 @@ function flattenCategoryTree(
   })
 }
 
-// ─── Micro UI Primitives ─────────────────────────────────────────────────────
+// ─── Clean UI Primitives ─────────────────────────────────────────────────────
 function FieldError({ message }: { message?: string }) {
   if (!message) return null
   return (
-    <div className="mt-2 flex items-center gap-1.5">
+    <div className="mt-1.5 flex items-center gap-1.5">
       <AlertCircle className="size-3.5 text-rose-500 shrink-0" />
-      <p className="text-xs font-semibold text-rose-600">{message}</p>
+      <p className="text-xs text-rose-600">{message}</p>
     </div>
   )
 }
@@ -187,13 +180,13 @@ function Label({
   return (
     <label
       htmlFor={htmlFor}
-      className="mb-2 flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-slate-500"
+      className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-slate-700"
     >
-      {children}
+      <span>{children}</span>
       {required && <span className="text-rose-500">*</span>}
       {hint && (
-        <span title={hint} className="ml-auto cursor-help">
-          <Info className="size-3.5 text-slate-300 hover:text-slate-500 transition" />
+        <span title={hint} className="ml-auto text-slate-400 hover:text-slate-600 cursor-help">
+          <Info className="size-3.5" />
         </span>
       )}
     </label>
@@ -201,10 +194,10 @@ function Label({
 }
 
 const INPUT_BASE =
-  "w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-violet-400 focus:ring-3 focus:ring-violet-100"
+  "w-full rounded-lg border border-slate-200 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-1 focus:ring-slate-400"
 
 const INPUT_ERROR =
-  "border-rose-300 bg-rose-50/40 focus:border-rose-400 focus:ring-rose-100"
+  "border-rose-300 bg-rose-50/30 focus:border-rose-400 focus:ring-rose-200"
 
 // ─── Section Card ────────────────────────────────────────────────────────────
 function Card({
@@ -215,36 +208,26 @@ function Card({
   className?: string
 }) {
   return (
-    <div
-      className={cn(
-        "rounded-2xl border border-slate-200/80 bg-white shadow-sm",
-        className,
-      )}
-    >
+    <div className={cn("rounded-xl border border-slate-200/90 bg-white shadow-xs", className)}>
       {children}
     </div>
   )
 }
 
 function CardHeader({
-  icon: Icon,
-  label,
   title,
+  description,
   badge,
 }: {
-  icon: React.ElementType
-  label: string
   title: string
+  description?: string
   badge?: React.ReactNode
 }) {
   return (
-    <div className="flex items-center gap-4 border-b border-slate-100 px-6 py-5">
-      <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
-        <Icon className="size-5" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</p>
-        <h2 className="text-base font-extrabold text-slate-900 leading-snug">{title}</h2>
+    <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+      <div>
+        <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
+        {description && <p className="text-xs text-slate-500 mt-0.5">{description}</p>}
       </div>
       {badge}
     </div>
@@ -262,12 +245,12 @@ function AttributeField({
   onChange: (value: string) => void
 }) {
   const id = `attr-${attribute.code}`
-  const base = cn(INPUT_BASE, "h-11")
+  const base = cn(INPUT_BASE, "h-10 text-sm")
 
   const labelEl = (
     <Label htmlFor={id} required={attribute.required}>
       {attribute.label}
-      {attribute.unit ? <span className="ml-1 text-slate-400 normal-case font-semibold">({attribute.unit})</span> : null}
+      {attribute.unit ? <span className="ml-1 text-slate-400">({attribute.unit})</span> : null}
     </Label>
   )
 
@@ -276,7 +259,7 @@ function AttributeField({
       <div>
         {labelEl}
         <select id={id} value={value} onChange={(e) => onChange(e.target.value)} className={base}>
-          <option value="">Select…</option>
+          <option value="">Select option</option>
           <option value="true">Yes</option>
           <option value="false">No</option>
         </select>
@@ -289,7 +272,7 @@ function AttributeField({
       <div>
         {labelEl}
         <select id={id} value={value} onChange={(e) => onChange(e.target.value)} className={base}>
-          <option value="">Select {attribute.label.toLowerCase()}…</option>
+          <option value="">Select {attribute.label.toLowerCase()}</option>
           {(attribute.options ?? []).map((o) => (
             <option key={o.uuid ?? o.value} value={o.value}>
               {o.label || o.value}
@@ -304,19 +287,19 @@ function AttributeField({
     const selected = new Set(value.split(",").filter(Boolean))
     return (
       <fieldset>
-        <legend className="mb-2 text-[11px] font-black uppercase tracking-widest text-slate-500">
+        <legend className="mb-1.5 text-xs font-medium text-slate-700">
           {attribute.label}
           {attribute.required && <span className="ml-1 text-rose-500">*</span>}
         </legend>
-        <div className="flex flex-wrap gap-2 rounded-xl border border-slate-200 bg-slate-50/40 p-3 min-h-11">
+        <div className="flex flex-wrap gap-1.5 rounded-lg border border-slate-200 bg-slate-50/50 p-2.5 min-h-10">
           {(attribute.options ?? []).map((o) => (
             <label
               key={o.uuid ?? o.value}
               className={cn(
-                "cursor-pointer select-none rounded-lg px-3 py-1.5 text-xs font-bold transition-all",
+                "cursor-pointer select-none rounded-md px-2.5 py-1 text-xs font-medium transition",
                 selected.has(o.value)
-                  ? "bg-violet-600 text-white shadow-sm"
-                  : "bg-white text-slate-600 border border-slate-200 hover:border-violet-300 hover:text-violet-700",
+                  ? "bg-slate-900 text-white"
+                  : "bg-white text-slate-700 border border-slate-200 hover:border-slate-300",
               )}
             >
               <input
@@ -347,7 +330,7 @@ function AttributeField({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={`Enter ${attribute.label.toLowerCase()}`}
-        className={cn(base, "h-11")}
+        className={base}
       />
     </div>
   )
@@ -386,7 +369,6 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
     getValues,
     reset,
     control,
-    watch,
     formState: { errors },
   } = useForm<CreateProductForm>({
     resolver: zodResolver(createProductSchema),
@@ -532,18 +514,6 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
     return uri ? getFileUrl(uri) : null
   }, [picked, coverId, listing])
 
-  // Completeness tracking for progress bar
-  const completeness = React.useMemo(() => {
-    let score = 0
-    const total = 5
-    if (watchedTitle?.trim().length >= 3) score++
-    if (watchedCategoryUuid) score++
-    if (watchedPrice > 0) score++
-    if (watchedStockQty >= 0) score++
-    if (picked.length > 0 || isEditing) score++
-    return Math.round((score / total) * 100)
-  }, [watchedTitle, watchedCategoryUuid, watchedPrice, watchedStockQty, picked, isEditing])
-
   // Custom specs helpers
   const addSpec = () =>
     setCustomSpecs((prev) => [...prev, { id: crypto.randomUUID(), key: "", value: "" }])
@@ -571,7 +541,7 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
     })
     writeSellerDrafts(drafts)
     setDraftSaved(true)
-    toast.success("Progress saved as a draft.")
+    toast.success("Draft saved successfully.")
   }
 
   // Submit
@@ -589,7 +559,7 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
     }
 
     if (!isEditing && data.images.length === 0) {
-      setError("images", { type: "manual", message: "Upload at least one product photo." })
+      setError("images", { type: "manual", message: "Please upload at least one product image." })
       window.scrollTo({ top: 0, behavior: "smooth" })
       return
     }
@@ -685,7 +655,7 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
       }
 
       dispatch(sellerApi.util.invalidateTags(["SellerListings"]))
-      toast.success(isEditing ? "Product updated!" : "Product published to marketplace!")
+      toast.success(isEditing ? "Product updated." : "Product published.")
       router.push(`/seller-dashboard/products/dashboard?success=${isEditing ? "updated" : "created"}`)
       router.refresh()
     } catch (err: any) {
@@ -698,7 +668,7 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
           return
         }
         setRequiresSubscription(true)
-        setFormError(msg || "Listing quota reached. Archive an item or upgrade your plan.")
+        setFormError(msg || "Listing quota reached. Upgrade your plan or archive an item.")
       } else if (status === 402) {
         setRequiresSubscription(true)
         setFormError(msg || "An active subscription is required to publish listings.")
@@ -712,222 +682,232 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
   const showValidationError = (errs: FieldErrors<CreateProductForm>) => {
     const first = Object.values(errs).find((e) => e?.message)
     setFormError(
-      typeof first?.message === "string" ? first.message : "Please fill in all required fields.",
+      typeof first?.message === "string" ? first.message : "Please complete all required fields.",
     )
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
+  // Margin Calculations
+  const activeSellingPrice = (watchedDiscountPrice && watchedDiscountPrice > 0 ? watchedDiscountPrice : watchedPrice) || 0
+  const hasCostPrice = watchedCostPrice !== undefined && watchedCostPrice !== null && !isNaN(Number(watchedCostPrice)) && Number(watchedCostPrice) >= 0
+  const costPriceNum = hasCostPrice ? Number(watchedCostPrice) : null
+  const profitPerUnit = costPriceNum !== null && activeSellingPrice > 0 ? activeSellingPrice - costPriceNum : null
+  const marginPercent = profitPerUnit !== null && activeSellingPrice > 0 ? (profitPerUnit / activeSellingPrice) * 100 : null
+
   return (
-    <div className="min-h-screen bg-[#F4F5F7]">
-      {/* ── Sticky Top Bar ── */}
-      <div className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-md">
-        <div className="mx-auto flex max-w-[1600px] items-center gap-4 px-5 py-3.5 sm:px-8">
+    <div className="min-h-screen bg-slate-50/50 pb-16">
+      {/* ── Top Header ── */}
+      <div className="sticky top-0 z-30 border-b border-slate-200 bg-white">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
           {/* Breadcrumb */}
-          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-400 min-w-0">
+          <div className="flex items-center gap-2 text-sm text-slate-500">
             <Link
               href="/seller-dashboard/products/dashboard"
-              className="flex items-center gap-1.5 text-slate-500 hover:text-violet-600 transition"
+              className="flex items-center gap-1 hover:text-slate-900 transition"
             >
               <ArrowLeft className="size-4" />
-              <span className="hidden sm:inline">Inventory</span>
+              <span>Inventory</span>
             </Link>
-            <ChevronRight className="size-3.5 text-slate-300 shrink-0" />
-            <span className="text-slate-900 font-extrabold truncate">
+            <ChevronRight className="size-3.5 text-slate-400" />
+            <span className="font-medium text-slate-900">
               {isEditing ? "Edit Product" : "New Listing"}
             </span>
           </div>
 
-          {/* Completeness Bar (new only) */}
-          {!isEditing && (
-            <div className="hidden sm:flex flex-1 items-center gap-3 max-w-xs mx-auto">
-              <div className="h-1.5 flex-1 rounded-full bg-slate-100 overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-violet-500 to-violet-700 transition-all duration-500"
-                  style={{ width: `${completeness}%` }}
-                />
-              </div>
-              <span className="text-[11px] font-black tabular-nums text-slate-400">
-                {completeness}%
-              </span>
-            </div>
-          )}
-
-          {/* Actions */}
-          <div className="ml-auto flex items-center gap-2 shrink-0">
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2">
             {!isEditing && (
               <button
                 type="button"
                 onClick={saveDraft}
-                className="hidden sm:inline-flex h-9 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600 shadow-xs hover:border-violet-200 hover:text-violet-700 transition"
+                className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 hover:bg-slate-50 transition"
               >
-                Save Draft
+                Save draft
               </button>
             )}
             <button
               type="button"
               disabled={isSubmitting}
               onClick={() => handleSubmit(submitProduct, showValidationError)()}
-              className="inline-flex h-9 items-center gap-2 rounded-xl bg-violet-600 px-5 text-xs font-extrabold text-white shadow-sm shadow-violet-200 hover:bg-violet-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
+              className="h-9 rounded-lg bg-slate-900 px-4 text-xs font-medium text-white hover:bg-slate-800 transition disabled:opacity-50"
             >
               {isSubmitting ? (
-                <Loader2 className="size-4 animate-spin" />
+                <span className="flex items-center gap-1.5">
+                  <Loader2 className="size-3.5 animate-spin" /> Saving...
+                </span>
+              ) : isEditing ? (
+                "Save changes"
               ) : (
-                <Zap className="size-4" />
+                "Publish product"
               )}
-              {isSubmitting ? "Saving…" : isEditing ? "Save Changes" : "Publish Now"}
             </button>
           </div>
         </div>
-
-        {/* Mobile Progress Bar */}
-        {!isEditing && (
-          <div className="h-0.5 bg-slate-100 sm:hidden">
-            <div
-              className="h-full bg-violet-600 transition-all duration-500"
-              style={{ width: `${completeness}%` }}
-            />
-          </div>
-        )}
       </div>
 
-      {/* ── Page Body ── */}
+      {/* ── Form Body ── */}
       <form
         noValidate
         onSubmit={handleSubmit(submitProduct, showValidationError)}
-        className="mx-auto max-w-[1600px] px-4 py-6 sm:px-8 sm:py-8"
+        className="mx-auto max-w-7xl px-4 py-6 sm:px-6"
       >
-        {/* Alert banners */}
+        {/* Banner Messages */}
         {draftSaved && (
-          <div className="mb-5 flex items-center justify-between rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm font-bold text-emerald-800 animate-in slide-in-from-top-2 duration-200">
-            <div className="flex items-center gap-2.5">
-              <CheckCircle2 className="size-4.5 text-emerald-600 shrink-0" />
-              Saved as draft — no progress lost.
-            </div>
+          <div className="mb-5 flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-xs text-emerald-800">
+            <span>Draft saved. Your work is kept in drafts.</span>
             <Link
               href="/seller-dashboard/products/drafts"
-              className="shrink-0 text-xs font-black text-emerald-700 underline hover:text-emerald-900"
+              className="font-medium underline hover:text-emerald-950"
             >
-              View Drafts →
+              View drafts
             </Link>
           </div>
         )}
 
         {formError && (
-          <div className="mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 animate-in slide-in-from-top-2 duration-200">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="size-5 text-rose-500 shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-extrabold text-rose-700">{formError}</p>
-              </div>
+          <div className="mb-5 flex items-center justify-between gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-800">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="size-4 text-rose-600 shrink-0" />
+              <span>{formError}</span>
             </div>
             {requiresSubscription && (
               <Link
                 href="/subscriptions"
-                className="shrink-0 inline-flex h-9 items-center rounded-xl bg-rose-600 px-4 text-xs font-extrabold text-white hover:bg-rose-700 transition"
+                className="font-medium underline text-rose-900 shrink-0"
               >
-                Upgrade Plan →
+                Upgrade plan
               </Link>
             )}
           </div>
         )}
 
-        {isEditing && listingError && (
-          <div className="mb-5 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm font-bold text-rose-700">
-            Could not load this product. It may no longer exist or belong to another store.
-          </div>
-        )}
-
-        {/* Main 2-col layout */}
-        <div className="grid gap-6 lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_400px]">
-          {/* ── LEFT: Form Sections ── */}
-          <div className="min-w-0 space-y-5">
-            {/* ① Basic Information */}
+        {/* 2-Column Layout */}
+        <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+          {/* Left Column: Form Fields */}
+          <div className="space-y-6">
+            {/* 1. Basic Information */}
             <Card>
-              <CardHeader icon={Package} label="Step 1" title="Product Information" />
-              <div className="space-y-5 p-6">
-                {/* Title */}
+              <CardHeader title="Product Details" description="Title, shop barcode, and description" />
+              <div className="p-6 space-y-4">
                 <div>
-                  <Label required hint="Write a clear, keyword-rich title (3–120 chars)">
+                  <Label required hint="Give your product a clear, descriptive title">
                     Product Title
                   </Label>
                   <input
                     {...register("title")}
-                    placeholder="e.g. Sony WH-1000XM5 Noise-Cancelling Headphones — Black"
-                    className={cn(INPUT_BASE, "h-12 text-base", errors.title && INPUT_ERROR)}
+                    placeholder="e.g. Sony WH-1000XM5 Wireless Headphones"
+                    className={cn(INPUT_BASE, "h-10", errors.title && INPUT_ERROR)}
                   />
-                  <div className="mt-2 flex items-center justify-between">
+                  <div className="mt-1 flex items-center justify-between">
                     <FieldError message={errors.title?.message} />
-                    <span
-                      className={cn(
-                        "ml-auto text-[11px] font-semibold tabular-nums",
-                        (watchedTitle?.length || 0) > 100
-                          ? "text-rose-500"
-                          : "text-slate-300",
-                      )}
-                    >
+                    <span className="ml-auto text-[11px] text-slate-400">
                       {watchedTitle?.length || 0}/120
                     </span>
                   </div>
                 </div>
 
-                {/* SKU / Barcode */}
-                <div>
-                  <Label hint="Stock Keeping Unit / Barcode for hardware scanner lookups (max 64 chars)">
-                    SKU / Barcode (Optional)
-                  </Label>
-                  <input
-                    {...register("sku")}
-                    placeholder="e.g., SONY-WH1000XM5-BLK or 8806091234567"
-                    className={cn(INPUT_BASE, "h-12 font-mono text-sm", errors.sku && INPUT_ERROR)}
-                  />
-                  <FieldError message={errors.sku?.message} />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <Label hint="Optional internal shop code or barcode for fast POS scanning">
+                      SKU / Shop Code (Optional)
+                    </Label>
+                    <input
+                      {...register("sku")}
+                      placeholder="e.g. TS-001 or 880609123456"
+                      className={cn(INPUT_BASE, "h-10 font-mono text-xs", errors.sku && INPUT_ERROR)}
+                    />
+                    <FieldError message={errors.sku?.message} />
+                  </div>
+
+                  <div>
+                    <Label required>Category</Label>
+                    <div ref={catDropRef} className="relative">
+                      <button
+                        type="button"
+                        disabled={categoriesLoading}
+                        onClick={() => setCatOpen((o) => !o)}
+                        className={cn(
+                          "flex h-10 w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-3 text-left text-sm text-slate-900 outline-none transition hover:bg-slate-50",
+                          catOpen && "border-slate-400 ring-1 ring-slate-400",
+                          errors.categoryUuid && "border-rose-300",
+                        )}
+                      >
+                        <span className="truncate">
+                          {categoriesLoading ? (
+                            <span className="text-slate-400">Loading categories...</span>
+                          ) : selectedCategory ? (
+                            selectedCategory.displayPath
+                          ) : (
+                            <span className="text-slate-400">Select category</span>
+                          )}
+                        </span>
+                        <ChevronDown className={cn("size-4 text-slate-400 transition", catOpen && "rotate-180")} />
+                      </button>
+
+                      {catOpen && (
+                        <div className="absolute top-full left-0 right-0 z-40 mt-1 max-h-60 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
+                          <div className="p-2 border-b border-slate-100">
+                            <input
+                              type="search"
+                              autoFocus
+                              value={catSearch}
+                              onChange={(e) => setCatSearch(e.target.value)}
+                              placeholder="Search categories..."
+                              className="h-8 w-full rounded-md border border-slate-200 bg-slate-50 px-2.5 text-xs outline-none focus:border-slate-400"
+                            />
+                          </div>
+                          <div className="py-1">
+                            {filteredCategories.map((cat) => (
+                              <button
+                                key={cat.uuid}
+                                type="button"
+                                onClick={() => {
+                                  setAttrValues({})
+                                  setValue("categoryUuid", cat.uuid, { shouldValidate: true })
+                                  setCatOpen(false)
+                                  setCatSearch("")
+                                }}
+                                className={cn(
+                                  "flex w-full items-center justify-between px-3 py-2 text-left text-xs transition hover:bg-slate-50",
+                                  cat.uuid === watchedCategoryUuid ? "bg-slate-50 font-medium text-slate-900" : "text-slate-600",
+                                )}
+                                style={{ paddingLeft: `${12 + cat.depth * 12}px` }}
+                              >
+                                <span>{cat.name}</span>
+                                {cat.uuid === watchedCategoryUuid && <Check className="size-3.5 text-slate-900" />}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <FieldError message={errors.categoryUuid?.message} />
+                  </div>
                 </div>
 
-                {/* Description */}
                 <div>
-                  <Label required hint="Describe specs, condition, box contents, and highlights">
-                    Full Description
+                  <Label required hint="Detailed specs, what is in the box, and warranty">
+                    Description
                   </Label>
                   <textarea
                     {...register("description")}
-                    rows={7}
-                    placeholder="Include key features, specifications, box contents, warranty, and anything a buyer needs to make a confident purchase decision…"
-                    className={cn(
-                      INPUT_BASE,
-                      "py-3.5 leading-relaxed resize-y",
-                      errors.description && INPUT_ERROR,
-                    )}
+                    rows={5}
+                    placeholder="Provide details about condition, specifications, and warranty..."
+                    className={cn(INPUT_BASE, "py-2.5 resize-y text-sm", errors.description && INPUT_ERROR)}
                   />
-                  <div className="mt-2 flex items-center justify-between">
-                    <FieldError message={errors.description?.message} />
-                    <span className="ml-auto text-[11px] font-semibold text-slate-300 tabular-nums">
-                      {useWatch({ control, name: "description" })?.length || 0}/5000
-                    </span>
-                  </div>
+                  <FieldError message={errors.description?.message} />
                 </div>
               </div>
             </Card>
 
-            {/* ② Images */}
+            {/* 2. Photos */}
             <Card>
-              <CardHeader
-                icon={ImagePlus}
-                label="Step 2"
-                title="Photos & Gallery"
-                badge={
-                  <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-black text-slate-500">
-                    Max 8 images
-                  </span>
-                }
-              />
+              <CardHeader title="Product Images" description="Upload up to 8 high-resolution photos" />
               <div className="p-6">
                 {isEditing ? (
                   <ListingGalleryManager listing={listing} listingUuid={editUuid} />
                 ) : (
                   <div className="space-y-3">
-                    <p className="text-xs text-slate-500 font-medium">
-                      Upload up to 8 high-resolution photos. Drag to reorder — the starred photo becomes your cover image visible to buyers.
-                    </p>
                     <NewListingImages
                       images={picked}
                       coverId={coverId}
@@ -935,10 +915,7 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
                       onChange={(next, nextCoverId) => {
                         setPicked(next)
                         setCoverId(nextCoverId)
-                        setValue("images", next.map((p) => p.file), {
-                          shouldDirty: true,
-                          shouldValidate: true,
-                        })
+                        setValue("images", next.map((p) => p.file), { shouldValidate: true })
                       }}
                     />
                     <FieldError message={errors.images?.message} />
@@ -947,20 +924,18 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
               </div>
             </Card>
 
-            {/* ③ Pricing & Inventory */}
+            {/* 3. Pricing & Inventory */}
             <Card>
-              <CardHeader icon={Banknote} label="Step 3" title="Pricing & Inventory" />
-              <div className="p-6">
-                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              <CardHeader title="Pricing & Stock" description="Cost, regular price, sale price, and inventory count" />
+              <div className="p-6 space-y-4">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                   {/* Cost Price */}
                   <div>
                     <Label hint="What your shop paid per unit. Private to you and never visible to buyers.">
-                      Cost Price (Optional)
+                      Cost Price (USD)
                     </Label>
                     <div className="relative">
-                      <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-base font-black text-slate-400">
-                        $
-                      </span>
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">$</span>
                       <input
                         {...register("costPrice", {
                           setValueAs: (v) => (v === "" || isNaN(Number(v)) ? undefined : Number(v)),
@@ -969,11 +944,7 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
                         step="0.01"
                         min="0"
                         placeholder="0.00"
-                        className={cn(
-                          INPUT_BASE,
-                          "h-12 pl-8 font-black text-base tabular-nums",
-                          errors.costPrice && INPUT_ERROR,
-                        )}
+                        className={cn(INPUT_BASE, "h-10 pl-7 text-sm tabular-nums", errors.costPrice && INPUT_ERROR)}
                       />
                     </div>
                     <FieldError message={errors.costPrice?.message} />
@@ -983,20 +954,14 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
                   <div>
                     <Label required>Regular Price (USD)</Label>
                     <div className="relative">
-                      <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-base font-black text-slate-400">
-                        $
-                      </span>
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">$</span>
                       <input
                         {...register("price", { valueAsNumber: true })}
                         type="number"
                         step="0.01"
                         min="0"
                         placeholder="0.00"
-                        className={cn(
-                          INPUT_BASE,
-                          "h-12 pl-8 font-black text-base tabular-nums",
-                          errors.price && INPUT_ERROR,
-                        )}
+                        className={cn(INPUT_BASE, "h-10 pl-7 text-sm font-medium tabular-nums", errors.price && INPUT_ERROR)}
                       />
                     </div>
                     <FieldError message={errors.price?.message} />
@@ -1004,19 +969,16 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
 
                   {/* Discount Price */}
                   <div>
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center justify-between mb-1.5">
                       <Label>Sale Price (Optional)</Label>
                       {discountPct !== null && (
-                        <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-black text-emerald-800 flex items-center gap-1">
-                          <TrendingDown className="size-3" />
-                          {discountPct}% OFF
+                        <span className="text-[10px] font-medium text-emerald-700 bg-emerald-50 rounded px-1.5 py-0.5">
+                          {discountPct}% off
                         </span>
                       )}
                     </div>
                     <div className="relative">
-                      <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-base font-black text-slate-400">
-                        $
-                      </span>
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">$</span>
                       <input
                         {...register("discountPrice", {
                           setValueAs: (v) => (v === "" || isNaN(Number(v)) ? undefined : Number(v)),
@@ -1025,663 +987,230 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
                         step="0.01"
                         min="0"
                         placeholder="0.00"
-                        className={cn(
-                          INPUT_BASE,
-                          "h-12 pl-8 font-black text-base tabular-nums",
-                          errors.discountPrice && INPUT_ERROR,
-                        )}
+                        className={cn(INPUT_BASE, "h-10 pl-7 text-sm tabular-nums", errors.discountPrice && INPUT_ERROR)}
                       />
                     </div>
                     <FieldError message={errors.discountPrice?.message} />
                   </div>
 
-                  {/* Stock */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label required hint="Total units available to sell">
-                        Stock Units
-                      </Label>
-                      <span
-                        className={cn(
-                          "rounded-full px-2 py-0.5 text-[10px] font-black",
-                          watchedStockQty > 4
-                            ? "bg-emerald-100 text-emerald-800"
-                            : watchedStockQty > 0
-                            ? "bg-amber-100 text-amber-800"
-                            : "bg-rose-100 text-rose-800",
-                        )}
-                      >
-                        {watchedStockQty > 4
-                          ? `${watchedStockQty} In Stock`
-                          : watchedStockQty > 0
-                          ? `Low (${watchedStockQty})`
-                          : "Out of Stock"}
-                      </span>
-                    </div>
-
-                    {/* Number input with stepper buttons */}
-                    <div className="flex items-center rounded-2xl border border-slate-200 bg-white p-1 shadow-xs focus-within:border-[#6C4CD8] focus-within:ring-2 focus-within:ring-[#6C4CD8]/20">
+                  {/* Stock Units */}
+                  <div>
+                    <Label required>Stock Units</Label>
+                    <div className="flex items-center rounded-lg border border-slate-200 bg-white p-0.5">
                       <button
                         type="button"
                         onClick={() => {
                           const current = Number(getValues("stockQty") || 0)
-                          setValue("stockQty", Math.max(0, current - 1), {
-                            shouldDirty: true,
-                            shouldValidate: true,
-                          })
+                          setValue("stockQty", Math.max(0, current - 1), { shouldValidate: true })
                         }}
-                        className="grid size-10 place-items-center rounded-xl bg-slate-50 text-slate-700 hover:bg-slate-100 transition"
+                        className="grid size-8 place-items-center rounded text-slate-500 hover:bg-slate-100"
                       >
-                        <Minus className="size-4" />
+                        <Minus className="size-3.5" />
                       </button>
-
                       <input
                         {...register("stockQty", { valueAsNumber: true })}
                         type="number"
-                        step="1"
                         min="0"
-                        placeholder="10"
-                        className="w-full text-center font-black text-base tabular-nums outline-none"
+                        step="1"
+                        className="w-full text-center text-sm font-medium tabular-nums outline-none"
                       />
-
                       <button
                         type="button"
                         onClick={() => {
                           const current = Number(getValues("stockQty") || 0)
-                          setValue("stockQty", current + 1, {
-                            shouldDirty: true,
-                            shouldValidate: true,
-                          })
+                          setValue("stockQty", current + 1, { shouldValidate: true })
                         }}
-                        className="grid size-10 place-items-center rounded-xl bg-slate-50 text-slate-700 hover:bg-slate-100 transition"
+                        className="grid size-8 place-items-center rounded text-slate-500 hover:bg-slate-100"
                       >
-                        <Plus className="size-4" />
+                        <Plus className="size-3.5" />
                       </button>
                     </div>
                     <FieldError message={errors.stockQty?.message} />
                   </div>
                 </div>
 
-                {/* Quick Add Presets Row */}
-                <div className="flex items-center gap-1.5 pt-2">
-                  <span className="text-[10px] font-bold text-slate-400">Quick Stock Add:</span>
-                  {[5, 10, 25, 50, 100].map((addAmount) => (
+                {/* Quick Add Presets */}
+                <div className="flex items-center gap-1 text-xs text-slate-500 pt-1">
+                  <span>Quick stock add:</span>
+                  {[5, 10, 25, 50, 100].map((amt) => (
                     <button
-                      key={addAmount}
+                      key={amt}
                       type="button"
                       onClick={() => {
                         const current = Number(getValues("stockQty") || 0)
-                        setValue("stockQty", current + addAmount, {
-                          shouldDirty: true,
-                          shouldValidate: true,
-                        })
-                        toast.success(`Added +${addAmount} units (Total: ${current + addAmount})`)
+                        setValue("stockQty", current + amt, { shouldValidate: true })
                       }}
-                      className="rounded-lg bg-purple-50 px-2 py-0.5 text-[10px] font-extrabold text-[#6C4CD8] hover:bg-[#6C4CD8] hover:text-white transition"
+                      className="rounded border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-700 hover:bg-slate-100 transition"
                     >
-                      +{addAmount}
+                      +{amt}
                     </button>
                   ))}
                 </div>
 
-                {/* Live Margin & Price Visual Summary Bar */}
-                <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                {/* Live Margin & Profit Banner */}
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-xs">
                   <div className="flex items-center gap-3">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-xs font-bold text-slate-400">Selling Price:</span>
-                      <span className="text-xl font-black text-slate-900 tabular-nums">
-                        ${((watchedDiscountPrice && watchedDiscountPrice > 0 ? watchedDiscountPrice : watchedPrice) || 0).toFixed(2)}
-                      </span>
-                    </div>
-
-                    {/* Live Margin Tag */}
-                    {watchedCostPrice !== undefined && watchedCostPrice !== null && !isNaN(Number(watchedCostPrice)) && Number(watchedCostPrice) >= 0 ? (
-                      (() => {
-                        const selling = (watchedDiscountPrice && watchedDiscountPrice > 0 ? watchedDiscountPrice : watchedPrice) || 0
-                        const cost = Number(watchedCostPrice)
-                        const profit = selling - cost
-                        const margin = selling > 0 ? (profit / selling) * 100 : 0
-
-                        if (profit < 0) {
-                          return (
-                            <span className="rounded-xl bg-amber-100 px-3 py-1 text-xs font-extrabold text-amber-900 border border-amber-200">
-                              ⚠️ Selling below cost · -${Math.abs(profit).toFixed(2)} loss/unit ({margin.toFixed(1)}% margin)
-                            </span>
-                          )
-                        }
-
-                        return (
-                          <span className="rounded-xl bg-emerald-100 px-3 py-1 text-xs font-extrabold text-emerald-900 border border-emerald-200">
-                            Margin {margin.toFixed(1)}% · +${profit.toFixed(2)} profit/unit
-                          </span>
-                        )
-                      })()
-                    ) : (
-                      <span className="text-xs font-semibold text-slate-400">
-                        Cost price: <span className="font-bold text-slate-500">Not set</span> · Margin unavailable
-                      </span>
-                    )}
-                  </div>
-
-                  <span className="text-xs font-bold text-slate-500">
-                    {watchedStockQty > 0 ? (
-                      <span className="text-emerald-700 font-black">{watchedStockQty} units ready</span>
-                    ) : (
-                      <span className="text-rose-600 font-black">Out of stock</span>
-                    )}
-                  </span>
-                </div>
-
-                {/* Price visual summary */}
-                {watchedPrice > 0 && (
-                  <div className="mt-5 flex flex-wrap items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-xl font-black text-slate-900 tabular-nums">
-                        ${(watchedDiscountPrice || watchedPrice).toFixed(2)}
-                      </span>
-                      {watchedDiscountPrice && watchedDiscountPrice < watchedPrice && (
-                        <span className="text-sm font-semibold text-slate-400 line-through tabular-nums">
-                          ${watchedPrice.toFixed(2)}
-                        </span>
-                      )}
-                      {discountPct !== null && (
-                        <span className="rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-black text-white">
-                          -{discountPct}%
-                        </span>
-                      )}
-                    </div>
-                    <span className="ml-auto text-xs font-bold text-slate-400">
-                      {watchedStockQty > 0 ? (
-                        <span className="text-emerald-600">{watchedStockQty} units in stock</span>
-                      ) : (
-                        <span className="text-rose-600">Out of stock</span>
-                      )}
+                    <span className="text-slate-600">
+                      Selling Price: <strong className="font-medium text-slate-900">${activeSellingPrice.toFixed(2)}</strong>
                     </span>
-                  </div>
-                )}
-              </div>
-            </Card>
 
-            {/* ④ Category + Dynamic Attributes */}
-            <Card>
-              <CardHeader icon={Layers} label="Step 4" title="Category & Specifications" />
-              <div className="p-6 space-y-5">
-                {/* Category Search Dropdown */}
-                <div>
-                  <Label required>Product Category</Label>
-                  <div ref={catDropRef} className="relative">
-                    <button
-                      type="button"
-                      disabled={categoriesLoading}
-                      onClick={() => setCatOpen((o) => !o)}
-                      className={cn(
-                        "flex h-12 w-full items-center rounded-xl border border-slate-200 bg-white px-4 text-left text-sm font-bold text-slate-900 outline-none transition hover:bg-slate-50 focus:border-violet-400 focus:ring-3 focus:ring-violet-100",
-                        catOpen && "border-violet-400 ring-3 ring-violet-100",
-                        errors.categoryUuid && "border-rose-300 ring-3 ring-rose-100",
-                      )}
-                    >
-                      <span className="flex-1 truncate text-sm">
-                        {categoriesLoading ? (
-                          <span className="text-slate-400">Loading categories…</span>
-                        ) : selectedCategory ? (
-                          selectedCategory.displayPath
-                        ) : (
-                          <span className="text-slate-300">Select a category…</span>
-                        )}
-                      </span>
-                      <ChevronDown
-                        className={cn(
-                          "ml-2 size-4 shrink-0 text-slate-400 transition-transform",
-                          catOpen && "rotate-180",
-                        )}
-                      />
-                    </button>
-
-                    {catOpen && (
-                      <div className="absolute top-[calc(100%+4px)] left-0 right-0 z-40 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl animate-in fade-in-0 slide-in-from-top-1 duration-150">
-                        {/* Search Input */}
-                        <div className="border-b border-slate-100 p-3">
-                          <div className="relative">
-                            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-                            <input
-                              type="search"
-                              autoFocus
-                              value={catSearch}
-                              onChange={(e) => setCatSearch(e.target.value)}
-                              placeholder="Search categories…"
-                              className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm font-medium outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
-                            />
-                          </div>
-                        </div>
-
-                        {/* List */}
-                        <div className="max-h-60 overflow-y-auto py-1">
-                          {filteredCategories.length === 0 ? (
-                            <p className="px-4 py-3 text-xs text-slate-400">No categories found</p>
-                          ) : (
-                            filteredCategories.map((cat) => (
-                              <button
-                                key={cat.uuid}
-                                type="button"
-                                onClick={() => {
-                                  setAttrValues({})
-                                  setValue("categoryUuid", cat.uuid, {
-                                    shouldDirty: true,
-                                    shouldValidate: true,
-                                  })
-                                  setCatOpen(false)
-                                  setCatSearch("")
-                                }}
-                                className={cn(
-                                  "flex w-full items-center gap-2 px-4 py-2.5 text-left text-xs font-bold transition hover:bg-violet-50",
-                                  cat.uuid === watchedCategoryUuid
-                                    ? "bg-violet-50 text-violet-700"
-                                    : "text-slate-700",
-                                  cat.depth > 0 && "pl-6",
-                                  cat.depth > 1 && "pl-10",
-                                )}
-                                style={{ paddingLeft: `${16 + cat.depth * 16}px` }}
-                              >
-                                {cat.depth > 0 && (
-                                  <span className="text-slate-300 font-normal">└</span>
-                                )}
-                                <span className="flex-1 truncate">{cat.name}</span>
-                                {cat.uuid === watchedCategoryUuid && (
-                                  <Check className="size-4 text-violet-600 shrink-0" />
-                                )}
-                              </button>
-                            ))
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <FieldError message={errors.categoryUuid?.message} />
-                </div>
-
-                {/* Dynamic Schema Fields */}
-                {watchedCategoryUuid && (
-                  <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-4 space-y-4">
-                    <p className="text-[11px] font-black uppercase tracking-widest text-violet-600">
-                      {attrsLoading ? "Loading attributes…" : `${attributeSchema?.categoryName || "Category"} Specifications`}
-                    </p>
-
-                    {attrsLoading ? (
-                      <div className="flex items-center gap-2.5 text-xs text-slate-400 py-2">
-                        <Loader2 className="size-4 animate-spin text-violet-500" />
-                        Fetching fields for this category…
-                      </div>
-                    ) : attrsError ? (
-                      <div className="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-bold text-amber-800">
-                        <span>Failed to load attributes.</span>
-                        <button type="button" onClick={() => refetchAttrs()} className="underline">
-                          Retry
-                        </button>
-                      </div>
-                    ) : categoryAttributes.length === 0 ? (
-                      <p className="text-xs text-slate-400 italic">
-                        No extra attributes required for this category.
-                      </p>
-                    ) : (
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        {categoryAttributes.map((attr) => (
-                          <AttributeField
-                            key={attr.uuid || attr.code}
-                            attribute={attr}
-                            value={attrValues[attr.code] ?? ""}
-                            onChange={(v) =>
-                              setAttrValues((prev) => ({ ...prev, [attr.code]: v }))
-                            }
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </Card>
-
-            {/* ⑤ Custom Specs */}
-            <Card>
-              <CardHeader
-                icon={Tag}
-                label="Step 5 — Optional"
-                title="Custom Specifications"
-                badge={
-                  <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-bold text-slate-400">
-                    Optional
-                  </span>
-                }
-              />
-              <div className="p-6 space-y-3">
-                <p className="text-xs text-slate-500 font-medium">
-                  Add extra specs like Brand, Warranty, Material, Dimensions, Model Number, Condition, etc.
-                </p>
-
-                {customSpecs.length === 0 && (
-                  <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/50 py-6 text-center text-xs text-slate-400 font-medium">
-                    No custom specifications yet. Click below to add one.
-                  </div>
-                )}
-
-                <div className="space-y-2.5">
-                  {customSpecs.map((spec, i) => (
-                    <div key={spec.id} className="flex items-center gap-2.5">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-50 text-[11px] font-black text-violet-600">
-                        {i + 1}
-                      </div>
-                      <input
-                        type="text"
-                        value={spec.key}
-                        onChange={(e) => updateSpec(spec.id, "key", e.target.value)}
-                        placeholder="Label (e.g. Warranty)"
-                        className="w-1/3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold text-slate-900 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
-                      />
-                      <input
-                        type="text"
-                        value={spec.value}
-                        onChange={(e) => updateSpec(spec.id, "value", e.target.value)}
-                        placeholder="Value (e.g. 1 Year Official)"
-                        className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-medium text-slate-900 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeSpec(spec.id)}
-                        className="grid size-8 shrink-0 place-items-center rounded-lg text-slate-300 transition hover:bg-rose-50 hover:text-rose-500"
-                      >
-                        <Trash2 className="size-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={addSpec}
-                  className="mt-1 flex items-center gap-2 rounded-xl border border-dashed border-violet-300 px-4 py-2.5 text-xs font-extrabold text-violet-600 transition hover:bg-violet-50 hover:border-violet-400"
-                >
-                  <Plus className="size-4" /> Add Specification Row
-                </button>
-              </div>
-            </Card>
-
-            {/* ⑥ Visibility & Promotion */}
-            <Card>
-              <CardHeader icon={Sparkles} label="Step 6" title="Visibility & Promotion" />
-              <div className="p-6">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {/* Status */}
-                  <div>
-                    <Label>Listing Status</Label>
-                    <select
-                      {...register("status")}
-                      className={cn(INPUT_BASE, "h-12")}
-                    >
-                      <option value="ACTIVE">Active — Visible on Marketplace</option>
-                      <option value="DRAFT">Draft — Saved Privately</option>
-                      <option value="ARCHIVED">Archived — Inactive & Hidden</option>
-                    </select>
-                    <p className="mt-2 text-[11px] text-slate-400 font-medium">
-                      {watchedStatus === "ACTIVE"
-                        ? "Buyers can find and purchase this product immediately."
-                        : watchedStatus === "DRAFT"
-                        ? "Only you can see this listing. Publish it when ready."
-                        : "Listing is hidden from buyers but kept in your inventory."}
-                    </p>
-                  </div>
-
-                  {/* Featured Toggle */}
-                  <div>
-                    <Label hint="Featured products get premium placement on the homepage">
-                      Featured Spotlight
-                    </Label>
-                    <label
-                      className={cn(
-                        "flex h-12 cursor-pointer items-center justify-between rounded-xl border px-4 transition hover:bg-slate-50",
-                        watchedIsFeatured
-                          ? "border-amber-300 bg-amber-50/50"
-                          : "border-slate-200 bg-white",
-                      )}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <Star
-                          className={cn(
-                            "size-4 transition",
-                            watchedIsFeatured
-                              ? "text-amber-500 fill-amber-400"
-                              : "text-slate-300",
-                          )}
-                        />
-                        <span
-                          className={cn(
-                            "text-sm font-bold",
-                            watchedIsFeatured ? "text-amber-700" : "text-slate-600",
-                          )}
-                        >
-                          {watchedIsFeatured ? "Featured on Homepage" : "Mark as Featured"}
+                    {hasCostPrice ? (
+                      profitPerUnit !== null && profitPerUnit < 0 ? (
+                        <span className="rounded bg-amber-100 px-2 py-0.5 font-medium text-amber-900">
+                          Selling below cost (-${Math.abs(profitPerUnit).toFixed(2)} loss/unit)
                         </span>
-                      </div>
-                      <input
-                        type="checkbox"
-                        {...register("isFeatured")}
-                        className="size-4.5 accent-amber-500 rounded"
-                      />
-                    </label>
-                  </div>
-                </div>
-              </div>
-            </Card>
-          </div>
-
-          {/* ── RIGHT: Sticky Preview Panel ── */}
-          <aside className="space-y-4 lg:sticky lg:top-20 self-start">
-            {/* Live Preview Card */}
-            <Card>
-              <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-                <div className="flex items-center gap-2">
-                  <Eye className="size-4 text-violet-600" />
-                  <span className="text-xs font-black uppercase tracking-widest text-slate-600">
-                    Live Preview
-                  </span>
-                </div>
-                <span className="rounded-full bg-violet-50 px-2.5 py-0.5 text-[10px] font-black text-violet-600">
-                  Real-time
-                </span>
-              </div>
-
-              {/* Product Listing Card Mockup */}
-              <div className="p-4">
-                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                  {/* Image */}
-                  <div className="relative aspect-square w-full overflow-hidden bg-gradient-to-br from-slate-100 to-slate-50">
-                    {previewThumb ? (
-                      <Image
-                        src={previewThumb}
-                        alt="Preview"
-                        fill
-                        className="object-cover"
-                      />
-                    ) : (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-slate-300">
-                        <Package className="size-12" />
-                        <span className="text-[10px] font-bold">No photo yet</span>
-                      </div>
-                    )}
-
-                    {/* Badges over image */}
-                    <div className="absolute top-3 left-3 flex flex-col gap-1.5">
-                      {watchedIsFeatured && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-black text-slate-900 shadow-sm">
-                          <Star className="size-2.5 fill-slate-900" /> Featured
-                        </span>
-                      )}
-                      {watchedStatus === "DRAFT" && (
-                        <span className="rounded-full bg-slate-700/80 px-2 py-0.5 text-[10px] font-black text-white backdrop-blur-sm">
-                          Draft
-                        </span>
-                      )}
-                      {watchedStatus === "ARCHIVED" && (
-                        <span className="rounded-full bg-slate-400/80 px-2 py-0.5 text-[10px] font-black text-white backdrop-blur-sm">
-                          Archived
-                        </span>
-                      )}
-                    </div>
-
-                    {discountPct !== null && (
-                      <span className="absolute top-3 right-3 rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-black text-white shadow-sm">
-                        -{discountPct}%
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Card Content */}
-                  <div className="p-4 space-y-2.5">
-                    {selectedCategory && (
-                      <span className="text-[10px] font-extrabold uppercase tracking-widest text-violet-600">
-                        {selectedCategory.name}
-                      </span>
-                    )}
-
-                    <h3 className="text-sm font-extrabold text-slate-950 leading-snug line-clamp-2 min-h-[2.5rem]">
-                      {watchedTitle?.trim() || (
-                        <span className="text-slate-300 font-medium">
-                          Your product title will appear here…
-                        </span>
-                      )}
-                    </h3>
-
-                    {/* Fake Stars */}
-                    <div className="flex items-center gap-1">
-                      {[1, 2, 3, 4, 5].map((i) => (
-                        <Star key={i} className="size-3 fill-amber-400 text-amber-400" />
-                      ))}
-                      <span className="ml-1 text-[10px] font-bold text-slate-400">
-                        New listing
-                      </span>
-                    </div>
-
-                    {/* Price */}
-                    <div className="flex items-baseline gap-2 pt-0.5">
-                      {watchedPrice > 0 ? (
-                        <>
-                          <span className="text-lg font-black text-slate-950 tabular-nums">
-                            ${(watchedDiscountPrice && watchedDiscountPrice < watchedPrice ? watchedDiscountPrice : watchedPrice).toFixed(2)}
-                          </span>
-                          {watchedDiscountPrice && watchedDiscountPrice < watchedPrice && (
-                            <span className="text-xs font-semibold text-slate-400 line-through tabular-nums">
-                              ${watchedPrice.toFixed(2)}
-                            </span>
-                          )}
-                        </>
                       ) : (
-                        <span className="text-base font-black text-slate-300">$0.00</span>
-                      )}
-                    </div>
-
-                    {/* Stock + Status bar */}
-                    <div className="flex items-center justify-between border-t border-slate-100 pt-2.5 text-[11px] font-bold">
-                      <span
-                        className={cn(
-                          watchedStockQty > 0 ? "text-emerald-600" : "text-rose-500",
-                        )}
-                      >
-                        {watchedStockQty > 0 ? `${watchedStockQty} in stock` : "Out of stock"}
+                        <span className="rounded bg-emerald-100 px-2 py-0.5 font-medium text-emerald-900">
+                          Margin: {marginPercent?.toFixed(1)}% (+${profitPerUnit?.toFixed(2)} profit/unit)
+                        </span>
+                      )
+                    ) : (
+                      <span className="text-slate-400">
+                        Cost price not set (margin unavailable)
                       </span>
-                    </div>
+                    )}
                   </div>
+
+                  <span className="text-slate-600">
+                    {watchedStockQty > 0 ? `${watchedStockQty} units available` : "Out of stock"}
+                  </span>
                 </div>
               </div>
             </Card>
 
-            {/* Completeness Checklist */}
-            {!isEditing && (
+            {/* 4. Specifications */}
+            {watchedCategoryUuid && categoryAttributes.length > 0 && (
               <Card>
-                <div className="px-5 py-4 space-y-3">
-                  <p className="text-[11px] font-black uppercase tracking-widest text-slate-500">
-                    Listing Readiness
-                  </p>
-                  <div className="space-y-2">
-                    {[
-                      { label: "Product title (3+ chars)", done: (watchedTitle?.trim().length || 0) >= 3 },
-                      { label: "Category selected", done: Boolean(watchedCategoryUuid) },
-                      { label: "Price set", done: watchedPrice > 0 },
-                      { label: "Stock quantity", done: watchedStockQty >= 0 },
-                      { label: "At least 1 photo", done: picked.length > 0 },
-                    ].map((item) => (
-                      <div key={item.label} className="flex items-center gap-2.5">
-                        <div
-                          className={cn(
-                            "grid size-5 shrink-0 place-items-center rounded-full transition-all",
-                            item.done
-                              ? "bg-emerald-100 text-emerald-600"
-                              : "bg-slate-100 text-slate-300",
-                          )}
-                        >
-                          <Check className="size-3" strokeWidth={3} />
-                        </div>
-                        <span
-                          className={cn(
-                            "text-xs font-semibold",
-                            item.done ? "text-slate-700" : "text-slate-400",
-                          )}
-                        >
-                          {item.label}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Progress Bar */}
-                  <div className="pt-2">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[11px] font-black text-slate-400">Overall Progress</span>
-                      <span className="text-[11px] font-black tabular-nums text-violet-600">
-                        {completeness}%
-                      </span>
-                    </div>
-                    <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
-                      <div
-                        className={cn(
-                          "h-full rounded-full transition-all duration-500",
-                          completeness === 100 ? "bg-emerald-500" : "bg-violet-600",
-                        )}
-                        style={{ width: `${completeness}%` }}
+                <CardHeader title="Category Specifications" description="Attributes defined for this category" />
+                <div className="p-6">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {categoryAttributes.map((attr) => (
+                      <AttributeField
+                        key={attr.uuid || attr.code}
+                        attribute={attr}
+                        value={attrValues[attr.code] ?? ""}
+                        onChange={(v) =>
+                          setAttrValues((prev) => ({ ...prev, [attr.code]: v }))
+                        }
                       />
-                    </div>
+                    ))}
                   </div>
                 </div>
               </Card>
             )}
 
-            {/* Publish CTA */}
+            {/* 5. Custom Specs */}
+            <Card>
+              <CardHeader title="Custom Specifications" description="Optional extra specifications like Warranty, Dimensions, etc." />
+              <div className="p-6 space-y-3">
+                {customSpecs.map((spec) => (
+                  <div key={spec.id} className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={spec.key}
+                      onChange={(e) => updateSpec(spec.id, "key", e.target.value)}
+                      placeholder="Label (e.g. Warranty)"
+                      className="w-1/3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-slate-400"
+                    />
+                    <input
+                      type="text"
+                      value={spec.value}
+                      onChange={(e) => updateSpec(spec.id, "value", e.target.value)}
+                      placeholder="Value (e.g. 1 Year)"
+                      className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-slate-400"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeSpec(spec.id)}
+                      className="text-slate-400 hover:text-rose-600 p-1"
+                    >
+                      <Trash2 className="size-4" />
+                    </button>
+                  </div>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={addSpec}
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-700 hover:text-slate-900 pt-1"
+                >
+                  <Plus className="size-3.5" /> Add specification row
+                </button>
+              </div>
+            </Card>
+          </div>
+
+          {/* Right Column: Visibility & Preview */}
+          <div className="space-y-6">
+            {/* Visibility / Status */}
+            <Card>
+              <CardHeader title="Listing Status" />
+              <div className="p-5 space-y-4">
+                <div>
+                  <Label>Status</Label>
+                  <select {...register("status")} className={cn(INPUT_BASE, "h-10 text-sm")}>
+                    <option value="ACTIVE">Active (Visible in marketplace)</option>
+                    <option value="DRAFT">Draft (Private)</option>
+                    <option value="ARCHIVED">Archived (Hidden)</option>
+                  </select>
+                </div>
+
+                <div className="pt-2 border-t border-slate-100">
+                  <label className="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      {...register("isFeatured")}
+                      className="size-4 rounded border-slate-300 text-slate-900"
+                    />
+                    <span>Feature on store homepage</span>
+                  </label>
+                </div>
+              </div>
+            </Card>
+
+            {/* Preview Card */}
+            <Card>
+              <CardHeader title="Marketplace Preview" />
+              <div className="p-4">
+                <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+                  <div className="relative aspect-square w-full bg-slate-100">
+                    {previewThumb ? (
+                      <Image src={previewThumb} alt="Preview" fill className="object-cover" />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-slate-400 text-xs">
+                        No image uploaded
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-3.5 space-y-1.5">
+                    <p className="text-[11px] text-slate-400 font-medium">{selectedCategory?.name || "Category"}</p>
+                    <p className="text-xs font-medium text-slate-900 line-clamp-2">
+                      {watchedTitle || "Product title will appear here"}
+                    </p>
+                    <div className="flex items-baseline gap-2 pt-1">
+                      <span className="text-sm font-semibold text-slate-900">
+                        ${((watchedDiscountPrice && watchedDiscountPrice > 0 ? watchedDiscountPrice : watchedPrice) || 0).toFixed(2)}
+                      </span>
+                      {watchedDiscountPrice && watchedDiscountPrice < watchedPrice && (
+                        <span className="text-xs text-slate-400 line-through">
+                          ${watchedPrice.toFixed(2)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* Bottom Submit */}
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full h-12 rounded-2xl bg-violet-600 text-sm font-extrabold text-white shadow-md shadow-violet-200/60 transition hover:bg-violet-700 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full h-11 rounded-lg bg-slate-900 text-xs font-medium text-white hover:bg-slate-800 transition disabled:opacity-50"
             >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="size-4.5 animate-spin" />
-                  Saving…
-                </>
-              ) : (
-                <>
-                  <Zap className="size-4.5" />
-                  {isEditing ? "Save Changes" : "Publish to Marketplace"}
-                </>
-              )}
+              {isSubmitting ? "Saving..." : isEditing ? "Save changes" : "Publish product"}
             </button>
-
-            {!isEditing && (
-              <button
-                type="button"
-                onClick={saveDraft}
-                className="w-full h-10 rounded-2xl border border-slate-200 bg-white text-xs font-extrabold text-slate-600 transition hover:border-violet-300 hover:text-violet-700"
-              >
-                Save as Draft
-              </button>
-            )}
-          </aside>
+          </div>
         </div>
       </form>
     </div>

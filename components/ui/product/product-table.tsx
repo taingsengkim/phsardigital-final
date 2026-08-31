@@ -9,23 +9,13 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
-  Barcode,
-  Check,
-  ChevronDown,
   Edit,
-  ExternalLink,
-  Info,
-  Layers,
   Loader2,
   Minus,
   Package,
   PackagePlus,
-  Percent,
   Plus,
   Search,
-  Sparkles,
-  Tag,
-  Trash2,
   X,
 } from "lucide-react"
 import { toast } from "sonner"
@@ -62,7 +52,9 @@ export const ProductTable: React.FC<{ products?: ProductRow[] }> = ({ products =
   const [updateSellerListing] = useUpdateSellerListingMutation()
 
   const [query, setQuery] = React.useState("")
-  const [filterMode, setFilterMode] = React.useState<"ALL" | "ACTIVE" | "DRAFT" | "MISSING_COST" | "LOW_STOCK">("ALL")
+  const [filterMode, setFilterMode] = React.useState<
+    "ALL" | "ACTIVE" | "DRAFT" | "MISSING_COST" | "LOW_STOCK"
+  >("ALL")
   const [marginSortDirection, setMarginSortDirection] = React.useState<"asc" | "desc" | null>(null)
   const [updatingId, setUpdatingId] = React.useState<string | null>(null)
 
@@ -80,26 +72,30 @@ export const ProductTable: React.FC<{ products?: ProductRow[] }> = ({ products =
   // Filter & Sort Logic
   const visibleProducts = React.useMemo(() => {
     let list = products.filter((product) => {
-      // Search query
       const matchesQuery = `${product.title} ${product.category} ${product.sku || ""}`
         .toLowerCase()
         .includes(query.trim().toLowerCase())
       if (!matchesQuery) return false
 
-      // Filter chips
       if (filterMode === "ACTIVE") return product.status === "active"
       if (filterMode === "DRAFT") return product.status === "deactive"
-      if (filterMode === "MISSING_COST") return product.costPrice === null || product.costPrice === undefined
+      if (filterMode === "MISSING_COST")
+        return product.costPrice === null || product.costPrice === undefined
       if (filterMode === "LOW_STOCK") return product.stockQty < 5
 
       return true
     })
 
-    // Client-side margin sort
     if (marginSortDirection !== null) {
       list = [...list].sort((a, b) => {
-        const marginA = a.marginPercent !== null && a.marginPercent !== undefined ? a.marginPercent : -99999
-        const marginB = b.marginPercent !== null && b.marginPercent !== undefined ? b.marginPercent : -99999
+        const marginA =
+          a.marginPercent !== null && a.marginPercent !== undefined
+            ? a.marginPercent
+            : -99999
+        const marginB =
+          b.marginPercent !== null && b.marginPercent !== undefined
+            ? b.marginPercent
+            : -99999
 
         if (marginSortDirection === "asc") return marginA - marginB
         return marginB - marginA
@@ -109,7 +105,6 @@ export const ProductTable: React.FC<{ products?: ProductRow[] }> = ({ products =
     return list
   }, [products, query, filterMode, marginSortDirection])
 
-  // Toggle Margin Sort
   const handleToggleMarginSort = () => {
     if (marginSortDirection === null) setMarginSortDirection("desc")
     else if (marginSortDirection === "desc") setMarginSortDirection("asc")
@@ -170,7 +165,7 @@ export const ProductTable: React.FC<{ products?: ProductRow[] }> = ({ products =
 
       dispatch(sellerApi.util.invalidateTags(["SellerListings"]))
       toast.success(
-        `Restocked "${restockProduct.title}": ${restockProduct.stockQty} → ${newStock} units!`,
+        `Restocked "${restockProduct.title}": ${restockProduct.stockQty} → ${newStock} units`,
       )
       setRestockProduct(null)
     } catch (err: any) {
@@ -181,55 +176,50 @@ export const ProductTable: React.FC<{ products?: ProductRow[] }> = ({ products =
   }
 
   return (
-    <div className="rounded-3xl border border-slate-200/90 bg-white p-6 shadow-xs space-y-6">
+    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs space-y-5">
       {/* Header & Search */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="grid size-9 place-items-center rounded-xl bg-purple-50 text-[#6C4CD8]">
-            <Package className="size-4.5" />
-          </div>
-          <div>
-            <h2 className="text-xl font-black text-slate-950">Store Inventory & Margins</h2>
-            <p className="text-xs text-slate-500 font-medium">
-              Track item costs, unit margins, barcodes, and manage stock levels
-            </p>
-          </div>
+        <div>
+          <h2 className="text-base font-semibold text-slate-900">Store Inventory</h2>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Track costs, calculate margins, and manage inventory levels
+          </p>
         </div>
 
-        <div className="relative w-full sm:max-w-md">
-          <Search className="absolute top-1/2 left-4 size-4 -translate-y-1/2 text-slate-400" />
+        <div className="relative w-full sm:max-w-xs">
+          <Search className="absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-slate-400" />
           <input
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by title, SKU shop code, or category..."
-            className="w-full rounded-2xl border border-slate-200 bg-slate-50/70 py-2.5 pr-4 pl-11 text-xs sm:text-sm font-medium text-slate-900 outline-none focus:border-[#6C4CD8] focus:bg-white focus:ring-2 focus:ring-[#6C4CD8]/20"
+            placeholder="Search title, SKU, or category..."
+            className="w-full rounded-lg border border-slate-200 bg-white py-1.5 pr-3 pl-9 text-xs text-slate-900 outline-none focus:border-slate-400"
           />
         </div>
       </div>
 
       {/* Filter Chips */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs">
         <button
           type="button"
           onClick={() => setFilterMode("ALL")}
           className={cn(
-            "rounded-xl px-3.5 py-1.5 text-xs font-bold transition cursor-pointer shrink-0",
+            "rounded-md px-3 py-1 font-medium transition shrink-0",
             filterMode === "ALL"
-              ? "bg-[#6C4CD8] text-white shadow-xs"
+              ? "bg-slate-900 text-white"
               : "bg-slate-100 text-slate-600 hover:bg-slate-200",
           )}
         >
-          All Products ({products.length})
+          All ({products.length})
         </button>
 
         <button
           type="button"
           onClick={() => setFilterMode("ACTIVE")}
           className={cn(
-            "rounded-xl px-3.5 py-1.5 text-xs font-bold transition cursor-pointer shrink-0",
+            "rounded-md px-3 py-1 font-medium transition shrink-0",
             filterMode === "ACTIVE"
-              ? "bg-[#6C4CD8] text-white shadow-xs"
+              ? "bg-slate-900 text-white"
               : "bg-slate-100 text-slate-600 hover:bg-slate-200",
           )}
         >
@@ -240,39 +230,38 @@ export const ProductTable: React.FC<{ products?: ProductRow[] }> = ({ products =
           type="button"
           onClick={() => setFilterMode("DRAFT")}
           className={cn(
-            "rounded-xl px-3.5 py-1.5 text-xs font-bold transition cursor-pointer shrink-0",
+            "rounded-md px-3 py-1 font-medium transition shrink-0",
             filterMode === "DRAFT"
-              ? "bg-[#6C4CD8] text-white shadow-xs"
+              ? "bg-slate-900 text-white"
               : "bg-slate-100 text-slate-600 hover:bg-slate-200",
           )}
         >
-          Draft / Inactive
+          Draft
         </button>
 
-        {/* Missing Cost Price Filter Chip */}
         <button
           type="button"
           onClick={() => setFilterMode("MISSING_COST")}
           className={cn(
-            "rounded-xl px-3.5 py-1.5 text-xs font-extrabold transition cursor-pointer shrink-0 flex items-center gap-1.5",
+            "rounded-md px-3 py-1 font-medium transition shrink-0 flex items-center gap-1.5",
             filterMode === "MISSING_COST"
-              ? "bg-amber-600 text-white shadow-xs"
+              ? "bg-amber-700 text-white"
               : missingCostCount > 0
               ? "bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100"
               : "bg-slate-100 text-slate-600 hover:bg-slate-200",
           )}
         >
-          <AlertTriangle className="size-3.5" />
-          <span>Missing Cost Price ({missingCostCount})</span>
+          <AlertTriangle className="size-3" />
+          <span>Missing Cost ({missingCostCount})</span>
         </button>
 
         <button
           type="button"
           onClick={() => setFilterMode("LOW_STOCK")}
           className={cn(
-            "rounded-xl px-3.5 py-1.5 text-xs font-bold transition cursor-pointer shrink-0",
+            "rounded-md px-3 py-1 font-medium transition shrink-0",
             filterMode === "LOW_STOCK"
-              ? "bg-[#6C4CD8] text-white shadow-xs"
+              ? "bg-slate-900 text-white"
               : "bg-slate-100 text-slate-600 hover:bg-slate-200",
           )}
         >
@@ -282,45 +271,45 @@ export const ProductTable: React.FC<{ products?: ProductRow[] }> = ({ products =
 
       {/* Table */}
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[1050px] border-separate border-spacing-0">
+        <table className="w-full min-w-[960px] border-collapse text-left text-xs">
           <thead>
-            <tr className="text-left text-xs font-black uppercase tracking-wider text-slate-400">
-              <th className="pb-4 font-black">Product</th>
-              <th className="pb-4 font-black">Shop Code / SKU</th>
-              <th className="pb-4 font-black">Selling Price</th>
-              <th className="pb-4 font-black">Cost Price</th>
-              <th className="pb-4 font-black cursor-pointer select-none" onClick={handleToggleMarginSort}>
-                <div className="inline-flex items-center gap-1.5 hover:text-slate-900 transition">
-                  <span>Unit Margin</span>
+            <tr className="border-b border-slate-200 text-slate-500 font-medium">
+              <th className="pb-3 pr-4 font-medium">Product</th>
+              <th className="pb-3 pr-4 font-medium">SKU / Code</th>
+              <th className="pb-3 pr-4 font-medium">Price</th>
+              <th className="pb-3 pr-4 font-medium">Cost</th>
+              <th
+                className="pb-3 pr-4 font-medium cursor-pointer select-none"
+                onClick={handleToggleMarginSort}
+              >
+                <div className="inline-flex items-center gap-1 hover:text-slate-900 transition">
+                  <span>Margin</span>
                   {marginSortDirection === "desc" ? (
-                    <ArrowDown className="size-3.5 text-[#6C4CD8]" />
+                    <ArrowDown className="size-3 text-slate-900" />
                   ) : marginSortDirection === "asc" ? (
-                    <ArrowUp className="size-3.5 text-[#6C4CD8]" />
+                    <ArrowUp className="size-3 text-slate-900" />
                   ) : (
                     <ArrowUpDown className="size-3 text-slate-400" />
                   )}
                 </div>
               </th>
-              <th className="pb-4 font-black">Stock Level</th>
-              <th className="pb-4 font-black">Quick Restock</th>
-              <th className="pb-4 pr-4 font-black text-right">Actions</th>
+              <th className="pb-3 pr-4 font-medium">Stock</th>
+              <th className="pb-3 pr-4 font-medium">Restock</th>
+              <th className="pb-3 font-medium text-right">Actions</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-slate-100">
             {visibleProducts.map((product) => {
               const targetUuid = product.uuid || product.id
               const isUpdatingThis = updatingId === targetUuid
               const hasCost = product.costPrice !== null && product.costPrice !== undefined
 
               return (
-                <tr
-                  key={product.id}
-                  className="group border-t border-slate-100 align-middle transition-colors hover:bg-slate-50/60"
-                >
+                <tr key={product.id} className="hover:bg-slate-50/70 transition">
                   {/* Product Info */}
-                  <td className="border-t border-slate-100 py-4 pr-4">
-                    <div className="flex items-center gap-3.5">
-                      <div className="relative size-14 shrink-0 overflow-hidden rounded-2xl bg-slate-100 border border-slate-200">
+                  <td className="py-3.5 pr-4">
+                    <div className="flex items-center gap-3">
+                      <div className="relative size-11 shrink-0 overflow-hidden rounded-lg bg-slate-100 border border-slate-200">
                         <Image
                           src={product.image}
                           alt={product.title}
@@ -329,155 +318,128 @@ export const ProductTable: React.FC<{ products?: ProductRow[] }> = ({ products =
                         />
                       </div>
                       <div className="min-w-0 max-w-[220px]">
-                        <p className="text-xs sm:text-sm font-extrabold text-slate-950 truncate leading-snug">
-                          {product.title}
-                        </p>
-                        <span className="text-[11px] font-semibold text-slate-500 block truncate">
-                          {product.category}
-                        </span>
+                        <p className="font-medium text-slate-900 truncate">{product.title}</p>
+                        <p className="text-[11px] text-slate-400 truncate">{product.category}</p>
                       </div>
                     </div>
                   </td>
 
-                  {/* SKU / Shop Code */}
-                  <td className="border-t border-slate-100 py-4 pr-4">
+                  {/* SKU */}
+                  <td className="py-3.5 pr-4">
                     {product.sku ? (
-                      <span className="font-mono text-xs font-bold text-[#6C4CD8] bg-purple-50 border border-purple-100 rounded-lg px-2 py-0.5 inline-block">
+                      <span className="font-mono text-xs text-slate-700 bg-slate-100 rounded px-1.5 py-0.5">
                         {product.sku}
                       </span>
                     ) : (
-                      <span className="text-xs text-slate-300 font-mono italic">Not set</span>
+                      <span className="text-slate-400 italic">Not set</span>
                     )}
                   </td>
 
-                  {/* Selling Price */}
-                  <td className="border-t border-slate-100 py-4 pr-4 text-sm font-black text-slate-900 tabular-nums">
+                  {/* Price */}
+                  <td className="py-3.5 pr-4 font-medium text-slate-900 tabular-nums">
                     {product.price}
                   </td>
 
-                  {/* Cost Price */}
-                  <td className="border-t border-slate-100 py-4 pr-4 text-xs font-bold tabular-nums">
+                  {/* Cost */}
+                  <td className="py-3.5 pr-4 tabular-nums text-slate-600">
                     {hasCost ? (
-                      <span className="text-slate-700">${Number(product.costPrice).toFixed(2)}</span>
+                      `$${Number(product.costPrice).toFixed(2)}`
                     ) : (
-                      <span className="text-amber-700 font-medium">Not set</span>
+                      <span className="text-amber-700">Not set</span>
                     )}
                   </td>
 
-                  {/* Unit Margin (Client-side Computed) */}
-                  <td className="border-t border-slate-100 py-4 pr-4">
-                    {hasCost && product.marginPercent !== null && product.marginPercent !== undefined && product.profitPerUnit !== null && product.profitPerUnit !== undefined ? (
+                  {/* Margin */}
+                  <td className="py-3.5 pr-4">
+                    {hasCost &&
+                    product.marginPercent !== null &&
+                    product.marginPercent !== undefined &&
+                    product.profitPerUnit !== null &&
+                    product.profitPerUnit !== undefined ? (
                       product.profitPerUnit < 0 ? (
-                        <span className="inline-flex items-center gap-1 rounded-xl bg-amber-50 px-2 py-0.5 text-[11px] font-extrabold text-amber-900 border border-amber-200">
+                        <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[11px] text-amber-800 border border-amber-200">
                           Below cost (-${Math.abs(product.profitPerUnit).toFixed(2)})
                         </span>
                       ) : (
                         <div className="space-y-0.5">
-                          <div className="text-xs font-black text-emerald-800 tabular-nums">
+                          <span className="font-medium text-emerald-800">
                             {product.marginPercent.toFixed(1)}%
-                          </div>
-                          <div className="text-[10px] font-bold text-slate-400 tabular-nums">
+                          </span>
+                          <span className="text-[10px] text-slate-400 block tabular-nums">
                             +${product.profitPerUnit.toFixed(2)} / unit
-                          </div>
+                          </span>
                         </div>
                       )
                     ) : (
-                      <span className="text-slate-300 text-xs font-black">—</span>
+                      <span className="text-slate-300">—</span>
                     )}
                   </td>
 
-                  {/* Stock Level Badge */}
-                  <td className="border-t border-slate-100 py-4 pr-4">
-                    <div className="space-y-1">
-                      <span
-                        className={cn(
-                          "inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1 text-xs font-black",
-                          product.stockQty > 4
-                            ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
-                            : product.stockQty > 0
-                            ? "bg-amber-50 text-amber-800 border border-amber-200"
-                            : "bg-rose-50 text-rose-800 border border-rose-200",
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            "size-1.5 rounded-full",
-                            product.stockQty > 4
-                              ? "bg-emerald-600"
-                              : product.stockQty > 0
-                              ? "bg-amber-600"
-                              : "bg-rose-600",
-                          )}
-                        />
-                        {product.stockQty > 4
-                          ? `${product.stockQty} in stock`
+                  {/* Stock Level */}
+                  <td className="py-3.5 pr-4">
+                    <span
+                      className={cn(
+                        "inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-medium",
+                        product.stockQty > 4
+                          ? "bg-slate-100 text-slate-700"
                           : product.stockQty > 0
-                          ? `Only ${product.stockQty} left`
-                          : "Out of stock"}
-                      </span>
-                    </div>
+                          ? "bg-amber-50 text-amber-800 border border-amber-200"
+                          : "bg-rose-50 text-rose-700 border border-rose-200",
+                      )}
+                    >
+                      {product.stockQty > 0 ? `${product.stockQty} in stock` : "Out of stock"}
+                    </span>
                   </td>
 
-                  {/* Quick Inline Stepper */}
-                  <td className="border-t border-slate-100 py-4 pr-4">
+                  {/* Quick Inline Stepper & Restock Button */}
+                  <td className="py-3.5 pr-4">
                     <div className="flex items-center gap-1.5">
-                      <div className="flex items-center rounded-xl bg-white border border-slate-200 p-0.5 shadow-xs">
+                      <div className="flex items-center rounded-md border border-slate-200 bg-white p-0.5">
                         <button
                           type="button"
                           disabled={product.stockQty <= 0 || isUpdatingThis}
                           onClick={() => handleInlineStockChange(product, -1)}
-                          className="grid size-7 place-items-center rounded-lg text-slate-600 hover:bg-slate-100 disabled:opacity-30 transition cursor-pointer"
-                          title="Decrease stock by 1"
+                          className="grid size-6 place-items-center text-slate-500 hover:bg-slate-100 rounded disabled:opacity-30"
+                          title="Decrease 1"
                         >
                           <Minus className="size-3" />
                         </button>
-
-                        <span className="w-8 text-center font-black text-slate-950 tabular-nums text-xs">
+                        <span className="w-6 text-center text-xs font-medium tabular-nums text-slate-900">
                           {isUpdatingThis ? (
-                            <Loader2 className="size-3 animate-spin mx-auto text-[#6C4CD8]" />
+                            <Loader2 className="size-3 animate-spin mx-auto text-slate-500" />
                           ) : (
                             product.stockQty
                           )}
                         </span>
-
                         <button
                           type="button"
                           disabled={isUpdatingThis}
                           onClick={() => handleInlineStockChange(product, 1)}
-                          className="grid size-7 place-items-center rounded-lg text-slate-600 hover:bg-slate-100 disabled:opacity-30 transition cursor-pointer"
-                          title="Increase stock by 1"
+                          className="grid size-6 place-items-center text-slate-500 hover:bg-slate-100 rounded disabled:opacity-30"
+                          title="Increase 1"
                         >
                           <Plus className="size-3" />
                         </button>
                       </div>
 
-                      {/* Open Restock Modal Button */}
-                      <Button
+                      <button
                         type="button"
-                        variant="outline"
-                        size="sm"
                         onClick={() => openRestockModal(product)}
-                        className="rounded-xl border-purple-200 bg-purple-50 text-[#6C4CD8] hover:bg-[#6C4CD8] hover:text-white text-xs font-bold px-2.5 h-8 transition cursor-pointer"
+                        className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-700 hover:bg-slate-100 transition"
                       >
-                        <PackagePlus className="size-3.5 mr-1" /> + Restock
-                      </Button>
+                        + Restock
+                      </button>
                     </div>
                   </td>
 
                   {/* Actions */}
-                  <td className="border-t border-slate-100 py-4 pr-4 text-right">
-                    <div className="flex items-center justify-end gap-1.5">
-                      <Button
-                        asChild
-                        variant="outline"
-                        size="sm"
-                        className="rounded-xl border-slate-200 text-xs font-bold h-8"
-                      >
-                        <Link href={`/seller-dashboard/products/new?edit=${targetUuid}`}>
-                          <Edit className="size-3.5 mr-1 text-slate-500" /> Edit
-                        </Link>
-                      </Button>
-                    </div>
+                  <td className="py-3.5 text-right">
+                    <Link
+                      href={`/seller-dashboard/products/new?edit=${targetUuid}`}
+                      className="inline-flex items-center gap-1 text-xs font-medium text-slate-700 hover:text-slate-900 hover:underline"
+                    >
+                      <Edit className="size-3 text-slate-400" /> Edit
+                    </Link>
                   </td>
                 </tr>
               )
@@ -485,8 +447,8 @@ export const ProductTable: React.FC<{ products?: ProductRow[] }> = ({ products =
 
             {visibleProducts.length === 0 && (
               <tr>
-                <td colSpan={8} className="border-t border-slate-100 py-12 text-center text-xs text-slate-400">
-                  No products match &ldquo;{query}&rdquo; for the selected filter.
+                <td colSpan={8} className="py-8 text-center text-xs text-slate-400">
+                  No products match your search or filter.
                 </td>
               </tr>
             )}
@@ -496,72 +458,33 @@ export const ProductTable: React.FC<{ products?: ProductRow[] }> = ({ products =
 
       {/* ── QUICK RESTOCK MODAL ── */}
       {restockProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 animate-in fade-in-0 duration-200">
-          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl space-y-5 border border-slate-100">
-            {/* Header */}
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+          <div className="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl space-y-4 border border-slate-200">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2.5">
-                <span className="grid size-9 place-items-center rounded-xl bg-purple-50 text-[#6C4CD8]">
-                  <PackagePlus className="size-4.5" />
-                </span>
-                <div>
-                  <h3 className="text-base font-black text-slate-950">Quick Restock</h3>
-                  <p className="text-[11px] text-slate-400 font-medium">
-                    Adjust inventory levels instantly
-                  </p>
-                </div>
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900">Adjust Inventory</h3>
+                <p className="text-xs text-slate-500">{restockProduct.title}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setRestockProduct(null)}
-                className="text-slate-400 hover:text-slate-600 p-1"
+                className="text-slate-400 hover:text-slate-600"
               >
-                <X className="size-5" />
+                <X className="size-4" />
               </button>
             </div>
 
-            {/* Product Summary */}
-            <div className="flex items-center gap-3.5 rounded-2xl bg-slate-50 p-3.5 border border-slate-200/80">
-              <div className="relative size-14 shrink-0 overflow-hidden rounded-xl bg-white border border-slate-200">
-                <Image
-                  src={restockProduct.image}
-                  alt={restockProduct.title}
-                  fill
-                  className="object-cover"
-                />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h4 className="text-xs sm:text-sm font-extrabold text-slate-950 truncate">
-                  {restockProduct.title}
-                </h4>
-                <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 mt-0.5">
-                  <span>Current:</span>
-                  <span className="font-black text-slate-900 tabular-nums">
-                    {restockProduct.stockQty} units
-                  </span>
-                  {restockProduct.sku && (
-                    <span className="font-mono text-[10px] text-purple-700">
-                      ({restockProduct.sku})
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Mode Switcher */}
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-1.5 rounded-2xl bg-slate-100 p-1">
+            <div className="space-y-3 text-xs">
+              <div className="grid grid-cols-2 gap-1 rounded-lg bg-slate-100 p-0.5">
                 <button
                   type="button"
                   onClick={() => setRestockMode("ADD")}
                   className={cn(
-                    "rounded-xl py-2 text-xs font-bold transition cursor-pointer",
-                    restockMode === "ADD"
-                      ? "bg-white text-[#6C4CD8] shadow-xs font-black"
-                      : "text-slate-600 hover:text-slate-900",
+                    "rounded-md py-1.5 font-medium transition",
+                    restockMode === "ADD" ? "bg-white text-slate-900 shadow-xs" : "text-slate-600",
                   )}
                 >
-                  + Add to Current Stock
+                  Add Units
                 </button>
                 <button
                   type="button"
@@ -570,67 +493,54 @@ export const ProductTable: React.FC<{ products?: ProductRow[] }> = ({ products =
                     setRestockAmount(restockProduct.stockQty)
                   }}
                   className={cn(
-                    "rounded-xl py-2 text-xs font-bold transition cursor-pointer",
-                    restockMode === "SET"
-                      ? "bg-white text-[#6C4CD8] shadow-xs font-black"
-                      : "text-slate-600 hover:text-slate-900",
+                    "rounded-md py-1.5 font-medium transition",
+                    restockMode === "SET" ? "bg-white text-slate-900 shadow-xs" : "text-slate-600",
                   )}
                 >
-                  Set Exact Quantity
+                  Set Quantity
                 </button>
               </div>
 
-              {/* Number Input & Stepper */}
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-xs font-extrabold uppercase tracking-wider text-slate-600">
-                  {restockMode === "ADD" ? "Units to Add:" : "New Total Units:"}
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-slate-600 font-medium">
+                  {restockMode === "ADD" ? "Units to add:" : "New total quantity:"}
                 </span>
 
-                <div className="flex items-center rounded-2xl border border-slate-200 bg-white p-1 shadow-xs w-44">
+                <div className="flex items-center rounded-md border border-slate-200 bg-white p-0.5 w-32">
                   <button
                     type="button"
                     onClick={() => setRestockAmount(Math.max(0, restockAmount - 1))}
-                    className="grid size-9 place-items-center rounded-xl bg-slate-50 text-slate-700 hover:bg-slate-100"
+                    className="grid size-7 place-items-center text-slate-500 hover:bg-slate-100 rounded"
                   >
-                    <Minus className="size-4" />
+                    <Minus className="size-3" />
                   </button>
-
                   <input
                     type="number"
                     min="0"
                     step="1"
                     value={restockAmount}
                     onChange={(e) => setRestockAmount(Math.max(0, parseInt(e.target.value) || 0))}
-                    className="w-full text-center font-black text-sm tabular-nums outline-none"
+                    className="w-full text-center text-xs font-medium tabular-nums outline-none"
                   />
-
                   <button
                     type="button"
                     onClick={() => setRestockAmount(restockAmount + 1)}
-                    className="grid size-9 place-items-center rounded-xl bg-slate-50 text-slate-700 hover:bg-slate-100"
+                    className="grid size-7 place-items-center text-slate-500 hover:bg-slate-100 rounded"
                   >
-                    <Plus className="size-4" />
+                    <Plus className="size-3" />
                   </button>
                 </div>
               </div>
 
-              {/* Quick Add Presets */}
-              <div className="flex flex-wrap gap-1.5 pt-1">
-                <span className="text-[10px] font-bold text-slate-400 self-center mr-1">
-                  Quick:
-                </span>
-                {[5, 10, 20, 50, 100, 500].map((amt) => (
+              {/* Quick Presets */}
+              <div className="flex items-center gap-1 text-slate-500">
+                <span>Quick:</span>
+                {[5, 10, 20, 50, 100].map((amt) => (
                   <button
                     key={amt}
                     type="button"
-                    onClick={() => {
-                      if (restockMode === "ADD") {
-                        setRestockAmount(amt)
-                      } else {
-                        setRestockAmount(amt)
-                      }
-                    }}
-                    className="rounded-xl bg-slate-100 px-2.5 py-1 text-xs font-extrabold text-slate-700 hover:bg-purple-50 hover:text-[#6C4CD8] transition border border-slate-200"
+                    onClick={() => setRestockAmount(amt)}
+                    className="rounded border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-700 hover:bg-slate-100"
                   >
                     {restockMode === "ADD" ? `+${amt}` : amt}
                   </button>
@@ -638,41 +548,33 @@ export const ProductTable: React.FC<{ products?: ProductRow[] }> = ({ products =
               </div>
 
               {/* Calculation Preview */}
-              <div className="flex items-center justify-between rounded-2xl bg-emerald-50 p-3.5 border border-emerald-200 text-xs font-bold text-emerald-800">
-                <span>Resulting New Stock:</span>
-                <span className="font-black text-base tabular-nums">
-                  {restockMode === "ADD"
-                    ? restockProduct.stockQty + restockAmount
-                    : restockAmount}{" "}
+              <div className="rounded-lg bg-slate-50 p-3 border border-slate-200 text-slate-600 flex justify-between">
+                <span>Resulting total:</span>
+                <strong className="text-slate-900 font-medium">
+                  {restockMode === "ADD" ? restockProduct.stockQty + restockAmount : restockAmount}{" "}
                   units
-                </span>
+                </strong>
               </div>
             </div>
 
-            {/* Actions */}
-            <div className="grid grid-cols-2 gap-2.5 pt-1">
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
               <Button
                 type="button"
                 variant="outline"
+                size="sm"
                 onClick={() => setRestockProduct(null)}
-                className="rounded-xl border-slate-200 text-xs font-bold"
+                className="text-xs h-8"
               >
                 Cancel
               </Button>
-
               <Button
                 type="button"
+                size="sm"
                 disabled={isSavingRestock}
                 onClick={handleSaveRestock}
-                className="rounded-xl bg-[#6C4CD8] hover:bg-[#5B3DC0] text-xs font-black text-white shadow-md shadow-[#6C4CD8]/25"
+                className="bg-slate-900 hover:bg-slate-800 text-white text-xs h-8"
               >
-                {isSavingRestock ? (
-                  <span className="flex items-center gap-2">
-                    <Loader2 className="size-4 animate-spin" /> Updating...
-                  </span>
-                ) : (
-                  "Update Inventory"
-                )}
+                {isSavingRestock ? "Saving..." : "Save inventory"}
               </Button>
             </div>
           </div>
