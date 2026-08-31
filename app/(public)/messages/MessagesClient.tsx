@@ -11,7 +11,9 @@ import {
 } from "@/lib/redux/service/sellerMessageApi"
 
 export default function MessagesClient() {
-  const sellerParam = useSearchParams().get("seller")?.trim() ?? ""
+  const searchParams = useSearchParams()
+  const sellerParam = searchParams.get("seller")?.trim() ?? ""
+  const listingParam = searchParams.get("listing")?.trim() ?? ""
   const { data: session, isPending } = useSession()
 
   if (isPending) {
@@ -19,7 +21,7 @@ export default function MessagesClient() {
   }
 
   if (!session?.user) return <SignInPrompt />
-  return <BuyerMessageCenter sellerParam={sellerParam} />
+  return <BuyerMessageCenter sellerParam={sellerParam} listingParam={listingParam} />
 }
 
 function SignInPrompt() {
@@ -35,7 +37,13 @@ function SignInPrompt() {
   )
 }
 
-function BuyerMessageCenter({ sellerParam }: { sellerParam: string }) {
+function BuyerMessageCenter({
+  sellerParam,
+  listingParam,
+}: {
+  sellerParam: string
+  listingParam: string
+}) {
   const { data: conversations = [], isLoading } = useGetConversationsQuery()
   const [startConversation] = useStartConversationMutation()
   const startedFor = React.useRef("")
@@ -48,5 +56,11 @@ function BuyerMessageCenter({ sellerParam }: { sellerParam: string }) {
     startConversation({ participantId: sellerParam })
   }, [conversations, isLoading, sellerParam, startConversation])
 
-  return <MessageCenter audience="buyer" />
+  return (
+    <MessageCenter
+      audience="buyer"
+      initialListingUuid={listingParam}
+      initialSellerId={sellerParam}
+    />
+  )
 }

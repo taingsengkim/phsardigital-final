@@ -2,8 +2,10 @@
 
 import * as React from "react"
 import Image from "next/image"
+import Link from "next/link"
 import {
   ArrowLeft,
+  ExternalLink,
   FileText,
   Images,
   Info,
@@ -16,8 +18,10 @@ import {
   Search,
   Send,
   ShieldCheck,
+  ShoppingBag,
   Smile,
   Square,
+  Tag,
   UserRound,
   X,
 } from "lucide-react"
@@ -32,9 +36,109 @@ import {
 } from "@/lib/redux/service/sellerMessageApi"
 import { useMessageWebSocket } from "@/lib/hooks/use-message-websocket"
 import { useStoreProfiles } from "@/lib/hooks/use-store-profiles"
-import type { ConversationMessage } from "@/lib/types/seller-message"
+import type { ConversationMessage, MessageListing } from "@/lib/types/seller-message"
 
 const PAGE_SIZE = 30
+
+function MessageListingCard({
+  listing,
+  alignLeft,
+}: {
+  listing: MessageListing
+  alignLeft?: boolean
+}) {
+  const isInactive = listing.status !== "ACTIVE"
+  const hasDiscount = Boolean(listing.fullPrice && listing.fullPrice > listing.price)
+  const productUrl = `/products/${encodeURIComponent(listing.slug || listing.uuid)}`
+
+  const statusBadge = React.useMemo(() => {
+    switch (listing.status) {
+      case "SOLD_OUT":
+        return (
+          <span className="rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+            Sold out
+          </span>
+        )
+      case "ARCHIVED":
+        return (
+          <span className="rounded-md bg-zinc-200 px-1.5 py-0.5 text-[10px] font-bold text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+            Archived
+          </span>
+        )
+      case "DRAFT":
+        return (
+          <span className="rounded-md bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+            Draft
+          </span>
+        )
+      case "SUSPENDED":
+      case "REMOVED":
+        return (
+          <span className="rounded-md bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-700 dark:bg-rose-900/40 dark:text-rose-300">
+            Unavailable
+          </span>
+        )
+      default:
+        return null
+    }
+  }, [listing.status])
+
+  const thumbnail = listing.thumbnailUrl
+    ? listing.thumbnailUrl.startsWith("http") || listing.thumbnailUrl.startsWith("/")
+      ? listing.thumbnailUrl
+      : getFileUrl(listing.thumbnailUrl)
+    : null
+
+  return (
+    <Link
+      href={productUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={cn(
+        "group/card mb-1.5 flex max-w-[280px] sm:max-w-[320px] items-center gap-3 rounded-2xl border border-border bg-card p-2.5 shadow-xs transition-all hover:border-primary/50 hover:bg-card/90 hover:shadow-md",
+        alignLeft ? "mr-auto" : "ml-auto",
+        isInactive && "opacity-85"
+      )}
+    >
+      <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-muted border border-border/60">
+        {thumbnail ? (
+          <Image
+            src={thumbnail}
+            alt={listing.title}
+            fill
+            sizes="56px"
+            className={cn("object-cover transition-transform group-hover/card:scale-105", isInactive && "grayscale-[40%]")}
+          />
+        ) : (
+          <div className="grid h-full w-full place-items-center text-muted-foreground text-xs font-bold">
+            Phsar
+          </div>
+        )}
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center justify-between gap-1">
+          <p className="truncate text-xs font-bold text-foreground leading-snug group-hover/card:text-primary transition-colors" title={listing.title}>
+            {listing.title}
+          </p>
+          <ExternalLink className="size-3 shrink-0 text-muted-foreground opacity-0 group-hover/card:opacity-100 transition-opacity" />
+        </div>
+
+        <div className="mt-1 flex items-baseline gap-1.5 flex-wrap">
+          <span className="text-sm font-black text-primary">
+            ${Number(listing.price || 0).toFixed(2)}
+          </span>
+          {hasDiscount && (
+            <span className="text-[11px] font-medium text-muted-foreground line-through">
+              ${Number(listing.fullPrice).toFixed(2)}
+            </span>
+          )}
+          {statusBadge}
+        </div>
+      </div>
+    </Link>
+  )
+}
 
 /* A conversation message only carries a text body, so an upload travels as a
    tagged JSON envelope that both the seller and the buyer view unwrap. */
@@ -173,7 +277,15 @@ function CustomerAvatar({
   )
 }
 
-export function MessageCenter({ audience = "seller" }: { audience?: "seller" | "buyer" }) {
+export function MessageCenter({
+  audience = "seller",
+  initialListingUuid,
+  initialSellerId,
+}: {
+  audience?: "seller" | "buyer"
+  initialListingUuid?: string
+  initialSellerId?: string
+}) {
   const connectionState = useMessageWebSocket()
   const {
     data: conversations = [],
@@ -186,6 +298,9 @@ export function MessageCenter({ audience = "seller" }: { audience?: "seller" | "
   const [markRead] = useMarkConversationReadMutation()
 
   const [selectedId, setSelectedId] = React.useState("")
+  const [pendingListingUuid, setPendingListingUuid] = React.useState<string | null>(
+    initialListingUuid || null,
+  )
   const [query, setQuery] = React.useState("")
   const [draft, setDraft] = React.useState("")
   const [attachment, setAttachment] = React.useState<File | null>(null)
@@ -198,6 +313,22 @@ export function MessageCenter({ audience = "seller" }: { audience?: "seller" | "
   /* Kept per conversation so switching threads resets the window without an
      effect that would fight the render. */
   const [sizes, setSizes] = React.useState<Record<string, number>>({})
+
+  React.useEffect(() => {
+    if (initialListingUuid) {
+      setPendingListingUuid(initialListingUuid)
+    }
+  }, [initialListingUuid])
+
+  React.useEffect(() => {
+    if (initialSellerId && conversations.length > 0) {
+      const match = conversations.find((c) => c.otherUserId === initialSellerId)
+      if (match && (!selectedId || selectedId !== match.uuid)) {
+        setSelectedId(match.uuid)
+        setMobilePane("thread")
+      }
+    }
+  }, [initialSellerId, conversations, selectedId])
 
   const activeId = selectedId || conversations[0]?.uuid || ""
   const active = conversations.find((item) => item.uuid === activeId)
@@ -335,12 +466,18 @@ export function MessageCenter({ audience = "seller" }: { audience?: "seller" | "
     const body = draft.trim()
     if ((!body && !attachment) || !activeId || isSending || isUploading) return
     const pendingFile = attachment
+    const listingToSend = pendingListingUuid
     setDraft("")
     stickToBottom.current = true
     try {
       if (body) {
-        const sent = await sendMessage({ conversationUuid: activeId, body }).unwrap()
+        const sent = await sendMessage({
+          conversationUuid: activeId,
+          body,
+          ...(listingToSend ? { listingUuid: listingToSend } : {}),
+        }).unwrap()
         if (sent.senderId) setOwnSenderIds((current) => new Set(current).add(sent.senderId))
+        setPendingListingUuid(null)
       }
       if (pendingFile) {
         setIsUploading(true)
@@ -356,11 +493,17 @@ export function MessageCenter({ audience = "seller" }: { audience?: "seller" | "
         if (sent.senderId) setOwnSenderIds((current) => new Set(current).add(sent.senderId))
       }
       setAttachment(null)
-    } catch (error) {
+    } catch (error: any) {
       setDraft(body) // keep what they typed so the send can be retried
-      toast.error(
-        error instanceof Error ? error.message : "Could not send the message.",
-      )
+      const errMsg =
+        error?.status === 404
+          ? "The product enquiry does not exist."
+          : error?.status === 400
+          ? "That product cannot be enquired in this conversation."
+          : error instanceof Error
+          ? error.message
+          : error?.data?.message || "Could not send the message."
+      toast.error(errMsg)
     } finally {
       setIsUploading(false)
     }
@@ -489,6 +632,30 @@ export function MessageCenter({ audience = "seller" }: { audience?: "seller" | "
                       >
                         {conversationPreview(conversation.lastMessage)}
                       </p>
+
+                      {conversation.lastListing && (
+                        <div className="mt-1.5 flex items-center gap-1.5 rounded-lg bg-primary/10 px-2 py-1 text-[11px] font-semibold text-primary">
+                          {conversation.lastListing.thumbnailUrl ? (
+                            <div className="relative h-4 w-4 shrink-0 overflow-hidden rounded bg-muted">
+                              <Image
+                                src={
+                                  conversation.lastListing.thumbnailUrl.startsWith("http") ||
+                                  conversation.lastListing.thumbnailUrl.startsWith("/")
+                                    ? conversation.lastListing.thumbnailUrl
+                                    : getFileUrl(conversation.lastListing.thumbnailUrl)
+                                }
+                                alt={conversation.lastListing.title}
+                                fill
+                                sizes="16px"
+                                className="object-cover"
+                              />
+                            </div>
+                          ) : (
+                            <ShoppingBag className="size-3 shrink-0" />
+                          )}
+                          <span className="truncate">re: {conversation.lastListing.title}</span>
+                        </div>
+                      )}
                     </div>
                     {conversation.unreadCount > 0 && (
                       <span className="grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-primary px-1.5 text-[10px] font-bold text-primary-foreground">
@@ -644,6 +811,11 @@ export function MessageCenter({ audience = "seller" }: { audience?: "seller" | "
                             </span>
                           </div>
                         )}
+                        {message.listing && (
+                          <div className={cn("w-full flex mb-1", alignLeft ? "justify-start pl-11" : "justify-end pr-6")}>
+                            <MessageListingCard listing={message.listing} alignLeft={alignLeft} />
+                          </div>
+                        )}
                         <div
                           className={cn(
                             "group/message flex w-full items-end gap-2",
@@ -739,6 +911,9 @@ export function MessageCenter({ audience = "seller" }: { audience?: "seller" | "
                             : "ml-auto items-end",
                         )}
                       >
+                        {message.listing && (
+                          <MessageListingCard listing={message.listing} alignLeft={alignLeft} />
+                        )}
                         <div
                           className={cn(
                             "rounded-2xl text-sm leading-relaxed",
@@ -814,6 +989,24 @@ export function MessageCenter({ audience = "seller" }: { audience?: "seller" | "
           </div>
 
           <div className="shrink-0 border-t border-border bg-card p-3 sm:p-4">
+            {pendingListingUuid && (
+              <div className="mb-2 flex items-center justify-between gap-2 rounded-xl bg-primary/10 px-3 py-2 text-xs font-semibold text-primary border border-primary/20 animate-in fade-in">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Tag className="size-4 shrink-0" />
+                  <span className="truncate">Attaching product enquiry to your next message</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPendingListingUuid(null)}
+                  aria-label="Remove product enquiry attachment"
+                  className="grid size-6 shrink-0 place-items-center rounded-full hover:bg-primary/20 transition-colors"
+                  title="Don't attach product"
+                >
+                  <X className="size-3.5" />
+                </button>
+              </div>
+            )}
+
             {attachment && (
               <div className="mb-2 flex items-center gap-2 rounded-xl bg-muted px-3 py-2 text-xs text-foreground">
                 {attachment.type.startsWith("audio/") ? (

@@ -7,6 +7,8 @@ export type PurchaseChannel = "ONLINE" | "POS"
 export interface PurchaseItem {
   listingUuid?: string
   title?: string
+  slug?: string | null
+  thumbnailUrl?: string | null
   quantity: number
   fullPrice?: number | null
   unitPrice: number
@@ -25,10 +27,13 @@ export interface Purchase {
   buyerPhone?: string
   sellerId?: string
   businessName?: string
+  storeLogoUrl?: string | null
   totalPrice: number
   status: PurchaseStatus
   channel?: PurchaseChannel
   shippingAddress?: string | null
+  deliveryLatitude?: number | null
+  deliveryLongitude?: number | null
   deliveryPhotos?: DeliveryPhoto[] | null
   note?: string | null
   items?: PurchaseItem[] | null

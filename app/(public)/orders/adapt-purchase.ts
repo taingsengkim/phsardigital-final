@@ -42,13 +42,19 @@ export function adaptPurchase(purchase: Purchase): UserOrder {
       ? "/picture/pic2.jpg"
       : `/picture/pic${(index % 7) + 1}.jpg`;
 
+    const image = item.thumbnailUrl
+      ? item.thumbnailUrl.startsWith("http") || item.thumbnailUrl.startsWith("/")
+        ? item.thumbnailUrl
+        : getFileUrl(item.thumbnailUrl)
+      : fallbackImg;
+
     return {
       id: item.listingUuid ?? `${purchase.uuid}-${index}`,
       title: item.title ?? "Product",
       price: typeof item.unitPrice === "number" && !isNaN(item.unitPrice) ? item.unitPrice : 0,
       quantity: item.quantity ?? 1,
-      image: fallbackImg,
-      slug: item.listingUuid ?? "",
+      image,
+      slug: item.slug || item.listingUuid || "",
     };
   });
 

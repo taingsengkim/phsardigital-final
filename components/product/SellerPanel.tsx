@@ -22,6 +22,7 @@ type Props = {
   fallbackLogoUri?: string | null;
   sellerId?: string | null;
   productCount?: number | null;
+  listingUuid?: string | null;
 };
 
 const BUSINESS_TYPE_LABELS: Record<string, string> = {
@@ -58,6 +59,7 @@ export default function SellerPanel({
   fallbackLogoUri,
   sellerId,
   productCount,
+  listingUuid,
 }: Props) {
   const name = seller?.businessName?.trim() || fallbackName;
   const logoUri = seller?.logoUri || fallbackLogoUri || null;
@@ -236,13 +238,13 @@ export default function SellerPanel({
             <Link
               href={
                 sellerId
-                  ? `/messages?seller=${encodeURIComponent(sellerId)}`
+                  ? `/messages?seller=${encodeURIComponent(sellerId)}${listingUuid ? `&listing=${encodeURIComponent(listingUuid)}` : ""}`
                   : "/messages"
               }
               className="inline-flex items-center gap-2 rounded-xl border border-[#E2DFEC] bg-white px-6 py-3 text-[15px] font-bold text-[#6C4CD8] transition hover:bg-[#F1EFFA]"
             >
               <MessageCircle size={16} />
-              Chat
+              Chat with shop
             </Link>
 
             {phoneHref && (

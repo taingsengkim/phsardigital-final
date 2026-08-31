@@ -1,3 +1,21 @@
+export type ListingStatus =
+  | "ACTIVE"
+  | "SOLD_OUT"
+  | "ARCHIVED"
+  | "DRAFT"
+  | "SUSPENDED"
+  | "REMOVED"
+
+export interface MessageListing {
+  uuid: string
+  title: string
+  slug: string
+  thumbnailUrl?: string | null
+  price: number
+  fullPrice?: number | null
+  status: ListingStatus
+}
+
 export interface SellerConversation {
   uuid: string
   otherUserId: string
@@ -6,6 +24,7 @@ export interface SellerConversation {
   lastMessage?: string
   lastMessageAt?: string
   unreadCount: number
+  lastListing?: MessageListing | null
 }
 
 export interface ConversationMessage {
@@ -16,6 +35,7 @@ export interface ConversationMessage {
   body: string
   isRead: boolean
   sentAt: string
+  listing?: MessageListing | null
 }
 
 export interface MessagePage {
@@ -24,5 +44,5 @@ export interface MessagePage {
 }
 
 export interface MessagePageRequest { conversationUuid: string; pageNumber?: number; pageSize?: number }
-export interface SendMessageRequest { conversationUuid: string; body: string }
+export interface SendMessageRequest { conversationUuid: string; body: string; listingUuid?: string }
 export interface StartConversationRequest { participantId: string }

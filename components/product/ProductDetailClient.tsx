@@ -22,6 +22,7 @@ import {
   Star,
   Truck,
   ArrowRight,
+  MessageCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import RatingStars from "@/components/product/RatingStars";
@@ -443,6 +444,16 @@ export default function ProductDetailClient({
       >
         {t("buy_now")}
       </button>
+
+      {sellerId && (
+        <Link
+          href={`/messages?seller=${encodeURIComponent(sellerId)}&listing=${encodeURIComponent(listing.uuid)}`}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[#E2DFEC] bg-[#F8F7FC] py-3 text-[15px] font-bold text-[#6C4CD8] transition hover:border-[#6C4CD8] hover:bg-[#F1EFFA]"
+        >
+          <MessageCircle size={17} />
+          Chat with shop about this item
+        </Link>
+      )}
 
       {/* ── trust badges ── */}
       <div className="grid grid-cols-3 gap-3">

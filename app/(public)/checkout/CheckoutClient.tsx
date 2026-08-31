@@ -327,7 +327,13 @@ export default function CheckoutClient() {
   const [showEditCartModal, setShowEditCartModal] = useState(false);
   const [showDeleteCartConfirmModal, setShowDeleteCartConfirmModal] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [orderCompleted, setOrderCompleted] = useState<{ id: string; ref: string; total: number; storeName: string } | null>(null);
+  const [orderCompleted, setOrderCompleted] = useState<{
+    id: string;
+    ref: string;
+    total: number;
+    storeName: string;
+    sellerId?: string;
+  } | null>(null);
 
   function triggerToast(msg: string) {
     setToastMessage(msg);
@@ -1000,21 +1006,30 @@ export default function CheckoutClient() {
         );
       }
 
-      /* An address-book id when we have one, and the written-out address
-         either way — the loose fields are what the seller actually reads on
-         the order, and they stay correct even if the address is edited later. */
+      /* The backend requires EITHER addressId OR shippingAddress, NOT both.
+         If an addressId is present, pass addressId; otherwise pass loose shipping fields. */
       const order = await checkout({
         sellerId: target.sellerId,
         cartUuid: target.cartUuid,
-        ...(savedAddressId ? { addressId: savedAddressId } : {}),
-        shippingAddress: fullAddressString,
-        recipientName: fullName.trim(),
-        recipientPhone: phone.trim(),
+        ...(savedAddressId
+          ? { addressId: savedAddressId }
+          : {
+              shippingAddress: fullAddressString,
+              recipientName: fullName.trim(),
+              recipientPhone: phone.trim(),
+            }),
         ...(deliveryNote.trim() ? { note: deliveryNote.trim() } : {}),
       }).unwrap();
 
       const store = selectedStore;
-      setOrderCompleted({ id: order.uuid, ref: orderRef(order.uuid), total: grandTotal, storeName: store });
+      const currentSellerId = target.sellerId || activeItems[0]?.sellerId || undefined;
+      setOrderCompleted({
+        id: order.uuid,
+        ref: orderRef(order.uuid),
+        total: grandTotal,
+        storeName: store,
+        sellerId: currentSellerId,
+      });
       setActiveChatStore(store);
 
       // Update chat threads list with newly created order thread
@@ -1069,8 +1084,14 @@ export default function CheckoutClient() {
 
       // Move to Stage 2: Invoice Sent Success Screen
       setStage("invoice_success");
-    } catch {
-      setError("Failed to process invoice. Please try again.");
+    } catch (err: any) {
+      const errMsg =
+        err?.data?.message ||
+        err?.data?.errorDetails?.[0]?.fieldMessage ||
+        err?.message ||
+        "Failed to process invoice. Please try again.";
+      setError(errMsg);
+      triggerToast(errMsg);
     } finally {
       setSubmitting(false);
     }
@@ -1195,14 +1216,27 @@ export default function CheckoutClient() {
             </div>
           </div>
 
-          {/* Chat with Seller Button → Opens Full Page Chat Portal */}
-          <button
-            onClick={() => setStage("full_chat_page")}
-            className="w-full flex items-center justify-center gap-2.5 rounded-2xl bg-[#6C4CD8] py-4 text-[17px] font-bold text-white shadow-[0_8px_25px_rgba(108,76,216,0.35)] transition hover:bg-[#5B3DC0]"
+          {/* Chat with Seller Button → Opens Real Live Messages / Chat System */}
+          <Link
+            href={
+              orderCompleted.sellerId
+                ? `/messages?seller=${encodeURIComponent(orderCompleted.sellerId)}`
+                : "/messages"
+            }
+            className="w-full flex items-center justify-center gap-2.5 rounded-2xl bg-[#6C4CD8] py-4 text-[17px] font-bold text-white shadow-[0_8px_25px_rgba(108,76,216,0.35)] transition-all hover:scale-[1.02] hover:bg-[#5B3DC0] cursor-pointer"
           >
             <MessageSquare size={20} />
             Chat with {orderCompleted.storeName}
-          </button>
+          </Link>
+
+          {/* View Order Status & Tracking Button */}
+          <Link
+            href="/orders"
+            className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-[#EDEBF3] bg-[#FAF9FD] py-3.5 text-[15px] font-bold text-[#1A1330] transition hover:bg-[#F0EDFB] hover:text-[#6C4CD8]"
+          >
+            <Truck size={18} className="text-[#6C4CD8]" />
+            View Order Status &amp; Tracking
+          </Link>
 
           {remainingStores.length > 0 && (
             <div className="mt-6 rounded-2xl bg-purple-50 border border-purple-200 p-5 text-left text-purple-900">
@@ -2055,7 +2089,7 @@ export default function CheckoutClient() {
                     </div>
                   </div>
 
-                  <div className="overflow-hidden rounded-2xl border-2 border-[#E2DFEC] shadow-xs">
+                  <div className="relative z-0 isolate overflow-hidden rounded-2xl border-2 border-[#E2DFEC] shadow-xs">
                     <PinPicker
                       value={isValidCoords(latitude, longitude) ? { lat: latitude!, lng: longitude! } : null}
                       onChange={({ lat, lng }) => {
@@ -2380,7 +2414,7 @@ export default function CheckoutClient() {
 
       {/* ── ADDRESS CHANGE CONFIRMATION MODAL ── */}
       {showAddressChangeConfirmModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in">
           <div className="w-full max-w-lg overflow-hidden rounded-3xl bg-white p-7 shadow-2xl space-y-6">
             <div className="flex items-center justify-between border-b border-[#F0EDFB] pb-4">
               <div className="flex items-center gap-3">
@@ -2473,7 +2507,7 @@ export default function CheckoutClient() {
 
       {/* ── STEP 1: CONFIRMATION POPUP MODAL ── */}
       {showConfirmModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
           <div className="w-full max-w-lg overflow-hidden rounded-3xl bg-white p-7 shadow-2xl space-y-6">
             <div className="flex items-center justify-between border-b border-[#F0EDFB] pb-4">
               <div className="flex items-center gap-3">
@@ -2545,7 +2579,7 @@ export default function CheckoutClient() {
 
       {/* ── SCROLLABLE EDIT QUANTITY POPUP MODAL ── */}
       {showEditCartModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 sm:p-6 backdrop-blur-xs animate-in fade-in">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4 sm:p-6 backdrop-blur-xs animate-in fade-in">
           <div className="w-full max-w-2xl sm:max-w-3xl overflow-hidden rounded-3xl bg-white p-6 sm:p-8 shadow-2xl space-y-6">
             <div className="flex items-center justify-between border-b border-[#F0EDFB] pb-4">
               <div>
@@ -2669,7 +2703,7 @@ export default function CheckoutClient() {
 
       {/* ── DELETE STORE CART CONFIRMATION MODAL ── */}
       {showDeleteCartConfirmModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in">
           <div className="w-full max-w-lg overflow-hidden rounded-3xl bg-white p-7 sm:p-8 shadow-2xl space-y-6 border border-[#EDEBF3]">
             <div className="flex items-center gap-4 border-b border-[#F0EDFB] pb-4">
               <div className="flex h-13 w-13 shrink-0 items-center justify-center rounded-2xl bg-rose-50 border border-rose-100 text-rose-600">
@@ -2719,7 +2753,7 @@ export default function CheckoutClient() {
       {/* ── FULL-SIZE PHOTO PREVIEW LIGHTBOX MODAL ── */}
       {viewPhotoUrl && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-xs animate-in fade-in"
+          className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 p-4 backdrop-blur-xs animate-in fade-in"
           onClick={() => setViewPhotoUrl(null)}
         >
           <div

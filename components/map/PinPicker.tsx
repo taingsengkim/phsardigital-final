@@ -100,7 +100,7 @@ export default function PinPicker({
 
   return (
     <div
-      className="overflow-hidden rounded-2xl border border-[#E2DFEC]"
+      className="relative z-0 isolate overflow-hidden rounded-2xl border border-[#E2DFEC]"
       style={{ height }}
     >
       <MapContainer

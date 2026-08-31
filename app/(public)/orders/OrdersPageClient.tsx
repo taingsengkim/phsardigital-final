@@ -19,6 +19,7 @@ import {
   ShoppingBag,
   ExternalLink,
   Check,
+  Trash2,
 } from "lucide-react";
 import type { UserOrder, OrderStatus } from "./types";
 import { adaptPurchase } from "./adapt-purchase";
@@ -43,6 +44,17 @@ export default function OrdersPageClient() {
     () => (purchasePage?.content ?? []).map(adaptPurchase),
     [purchasePage],
   );
+  const [dismissedOrderIds, setDismissedOrderIds] = useState<string[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("psardigital_dismissed_orders");
+        return saved ? JSON.parse(saved) : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  });
   const [activeTab, setActiveTab] = useState<"all" | OrderStatus>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [trackingOrder, setTrackingOrder] = useState<UserOrder | null>(null);
@@ -53,17 +65,37 @@ export default function OrdersPageClient() {
     setTimeout(() => setToastMessage((c) => (c === msg ? null : c)), 3500);
   }
 
-  // Filter logic
-  const filteredOrders = orders.filter((order) => {
-    const matchesStatus = activeTab === "all" || order.status === activeTab;
-    const q = searchQuery.toLowerCase().trim();
-    const matchesSearch =
-      !q ||
-      order.id.toLowerCase().includes(q) ||
-      order.storeName.toLowerCase().includes(q) ||
-      order.items.some((i) => i.title.toLowerCase().includes(q));
-    return matchesStatus && matchesSearch;
-  });
+  function handleRemoveCancelledOrder(orderUuid: string, orderRefId: string) {
+    setDismissedOrderIds((prev) => {
+      const updated = Array.from(new Set([...prev, orderUuid]));
+      try {
+        localStorage.setItem("psardigital_dismissed_orders", JSON.stringify(updated));
+      } catch {
+        // ignore storage errors
+      }
+      return updated;
+    });
+    showToast(`Cancelled order ${orderRefId} removed from your view.`);
+  }
+
+  // Filter logic (excluding dismissed orders)
+  const activeOrders = useMemo(
+    () => orders.filter((order) => !dismissedOrderIds.includes(order.uuid)),
+    [orders, dismissedOrderIds],
+  );
+
+  const filteredOrders = useMemo(() => {
+    return activeOrders.filter((order) => {
+      const matchesStatus = activeTab === "all" || order.status === activeTab;
+      const q = searchQuery.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
+        order.id.toLowerCase().includes(q) ||
+        order.storeName.toLowerCase().includes(q) ||
+        order.items.some((i) => i.title.toLowerCase().includes(q));
+      return matchesStatus && matchesSearch;
+    });
+  }, [activeOrders, activeTab, searchQuery]);
 
   const getStatusBadge = (status: OrderStatus) => {
     switch (status) {
@@ -239,6 +271,16 @@ export default function OrdersPageClient() {
                     ${order.total.toFixed(2)}
                   </div>
                   <div>{getStatusBadge(order.status)}</div>
+                  {order.status === "CANCELLED" && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveCancelledOrder(order.uuid, order.id)}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg text-rose-400 hover:bg-rose-50 hover:text-rose-600 transition cursor-pointer"
+                      title="Remove cancelled order from view"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -308,6 +350,18 @@ export default function OrdersPageClient() {
                     </motion.button>
                   )}
 
+                  {order.status === "CANCELLED" && (
+                    <motion.button
+                      whileHover={{ scale: 1.04 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => handleRemoveCancelledOrder(order.uuid, order.id)}
+                      className="flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs sm:text-sm font-bold text-rose-700 hover:bg-rose-100 cursor-pointer"
+                    >
+                      <Trash2 size={15} />
+                      Remove
+                    </motion.button>
+                  )}
+
                   <motion.button
                     whileHover={{ scale: 1.04 }}
                     whileTap={{ scale: 0.95 }}
@@ -318,15 +372,17 @@ export default function OrdersPageClient() {
                     Track Package
                   </motion.button>
 
-                  <motion.button
-                    whileHover={{ scale: 1.04 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => handleReorder(order)}
-                    className="flex items-center gap-1.5 rounded-xl bg-[#6C4CD8] px-4 py-2.5 text-xs sm:text-sm font-extrabold text-white shadow-sm hover:bg-[#5B3EC4] cursor-pointer"
-                  >
-                    <RefreshCw size={15} />
-                    Buy Again
-                  </motion.button>
+                  {order.status === "COMPLETED" && (
+                    <motion.button
+                      whileHover={{ scale: 1.04 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => handleReorder(order)}
+                      className="flex items-center gap-1.5 rounded-xl bg-[#6C4CD8] px-4 py-2.5 text-xs sm:text-sm font-extrabold text-white shadow-sm hover:bg-[#5B3EC4] cursor-pointer"
+                    >
+                      <RefreshCw size={15} />
+                      Buy Again
+                    </motion.button>
+                  )}
 
                   <Link href={order.storeSlug ? `/messages?seller=${encodeURIComponent(order.storeSlug)}` : "/messages"}>
                     <motion.button

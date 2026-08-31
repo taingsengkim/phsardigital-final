@@ -160,6 +160,7 @@ export default async function ProductDetailPage({ params }: Props) {
           fallbackLogoUri={sellerSummary?.logoUri}
           sellerId={sellerId}
           productCount={storeProductCount}
+          listingUuid={listing.uuid}
         />
 
         {/* ── details / reviews / shipping ── */}

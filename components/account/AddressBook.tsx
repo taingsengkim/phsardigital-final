@@ -872,7 +872,7 @@ export default function AddressBook({ defaultRecipient, defaultPhone, onToast }:
               </div>
             </div>
 
-            <div className="overflow-hidden rounded-2xl border-2 border-[#E2DFEC] shadow-xs">
+            <div className="relative z-0 isolate overflow-hidden rounded-2xl border-2 border-[#E2DFEC] shadow-xs">
               <PinPicker
                 value={coordsValid ? { lat: latitude!, lng: longitude! } : null}
                 onChange={({ lat, lng }) => {
@@ -1000,7 +1000,7 @@ export default function AddressBook({ defaultRecipient, defaultPhone, onToast }:
       {/* ── FULL-SIZE PHOTO PREVIEW LIGHTBOX MODAL ── */}
       {viewPhotoUrl && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-xs animate-in fade-in"
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 p-4 backdrop-blur-xs animate-in fade-in"
           onClick={() => setViewPhotoUrl(null)}
         >
           <div

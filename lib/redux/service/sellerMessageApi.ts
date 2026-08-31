@@ -16,7 +16,11 @@ export const sellerMessageApi = createApi({
       providesTags: (_result, _error, arg) => [{ type: "Messages", id: arg.conversationUuid }],
     }),
     sendConversationMessage: builder.mutation<ConversationMessage, SendMessageRequest>({
-      query: ({ conversationUuid, body }) => ({ url: `/${encodeURIComponent(conversationUuid)}/messages`, method: "POST", body: { body } }),
+      query: ({ conversationUuid, body, listingUuid }) => ({
+        url: `/${encodeURIComponent(conversationUuid)}/messages`,
+        method: "POST",
+        body: { body, ...(listingUuid ? { listingUuid } : {}) },
+      }),
       // Show the message straight away instead of waiting for the round-trip.
       // The sentinel senderId never matches the other participant, so both the
       // buyer and seller views render it as their own; the refetch that follows
