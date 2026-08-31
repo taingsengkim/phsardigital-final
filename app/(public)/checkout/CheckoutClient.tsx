@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -35,6 +36,8 @@ import {
   Edit2,
   Trash2,
   Loader2,
+  AlertCircle,
+  Crosshair,
 } from "lucide-react";
 import { cn, displayImageUrl } from "@/lib/utils";
 import { getListingBySlug } from "@/app/api/listings";
@@ -42,13 +45,26 @@ import { getCart, getCarts, updateCartItemQty, deleteCartItem, deleteSellerCart 
 import { useCheckoutMutation } from "@/lib/redux/service/purchaseApi";
 import {
   useCreateAddressMutation,
+  useUpdateAddressMutation,
+  useDeleteAddressMutation,
   useGetAddressesQuery,
   type Address,
   type CreateAddressRequest,
 } from "@/lib/api/addressApi";
 import { useSession } from "@/lib/auth-client";
 import { useGetMeQuery } from "@/lib/api/authApi";
+import type { LatLng } from "@/components/map/PinPicker";
+import { isValidCoords } from "@/lib/maps";
 import type { Listing } from "@/lib/types";
+
+const PinPicker = dynamic(() => import("@/components/map/PinPicker"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-[240px] items-center justify-center rounded-2xl border border-[#E2DFEC] bg-[#F4F2FA]">
+      <Loader2 className="size-6 animate-spin text-[#6C4CD8]" />
+    </div>
+  ),
+});
 
 type CheckoutItem = {
   id: number | string;
@@ -76,7 +92,8 @@ type SavedAddress = {
   province?: string;
   district?: string;
   commune?: string;
-  googleMapLink?: string;
+  latitude?: number | null;
+  longitude?: number | null;
   photo?: string | null;
   photos?: string[];
   city?: string;
@@ -127,8 +144,9 @@ function toSavedAddress(address: Address): SavedAddress {
     streetNo: address.streetNo ?? "",
     province: address.province ?? (isCity ? "Phnom Penh" : ""),
     city: isCity ? "Phnom Penh" : (address.province ?? ""),
+    latitude: address.latitude ?? null,
+    longitude: address.longitude ?? null,
     address: address.formattedAddress ?? "",
-    googleMapLink: address.locationName ?? "",
     photos: (address.landmarkPhotos ?? []).map((p) => p.url ?? "").filter(Boolean),
   };
 }
@@ -151,7 +169,6 @@ const INITIAL_SAVED_ADDRESSES: SavedAddress[] = [
     sangkat: "Tuol Sangkae 2",
     village: "Phum 1",
     streetNo: "House #42B, Street 271",
-    googleMapLink: "https://maps.google.com",
     city: "Phnom Penh",
     address: "House #42B, Street 271, Tuol Sangkae 2, Ruessei Kaev",
   },
@@ -165,7 +182,6 @@ const INITIAL_SAVED_ADDRESSES: SavedAddress[] = [
     sangkat: "Wat Phnom",
     village: "Phum 4",
     streetNo: "Canadia Tower, 18th Floor, Monivong Blvd",
-    googleMapLink: "https://maps.google.com",
     city: "Phnom Penh",
     address: "Canadia Tower, 18th Floor, Monivong Blvd, Wat Phnom, Daun Penh",
   },
@@ -179,7 +195,6 @@ const INITIAL_SAVED_ADDRESSES: SavedAddress[] = [
     district: "Svay Dangkum",
     commune: "Sala Kamreuk",
     village: "House #12, National Road 06",
-    googleMapLink: "https://maps.google.com",
     city: "Siem Reap",
     address: "House #12, National Road 06, Svay Dangkum",
   },
@@ -323,10 +338,12 @@ export default function CheckoutClient() {
 
   // Saved Addresses & User Profile State
   const { data: session } = useSession();
-  const { data: userProfile } = useGetMeQuery(undefined, { skip: !session?.user });
+  const { data: userProfile } = useGetMeQuery();
   const [checkout] = useCheckoutMutation();
-  const { data: serverAddresses, isLoading: isLoadingAddresses } = useGetAddressesQuery(undefined, { skip: !session?.user });
-  const [createAddress] = useCreateAddressMutation();
+  const { data: serverAddresses, isLoading: isLoadingAddresses } = useGetAddressesQuery();
+  const [createAddress, { isLoading: isSavingAddress }] = useCreateAddressMutation();
+  const [updateAddress, { isLoading: isUpdatingAddress }] = useUpdateAddressMutation();
+  const [deleteAddress, { isLoading: isDeletingAddress }] = useDeleteAddressMutation();
   /* Checkout needs the cart's uuid and the seller's id, but the screen tracks
      the chosen shop by name — so keep the identifiers alongside it. */
   const [cartsByStore, setCartsByStore] = useState<
@@ -355,21 +372,38 @@ export default function CheckoutClient() {
   const [streetNo, setStreetNo] = useState("");
 
   // Province User Fields
-  const [province, setProvince] = useState("Siem Reap");
+  const [province, setProvince] = useState("");
   const [district, setDistrict] = useState("");
   const [commune, setCommune] = useState("");
 
+  // Map Coordinates State
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
+
   // Shared Optional Fields
-  const [googleMapLink, setGoogleMapLink] = useState("");
   const [housePhotos, setHousePhotos] = useState<string[]>([]);
   const [viewPhotoUrl, setViewPhotoUrl] = useState<string | null>(null);
 
-  const [paymentMethod, setPaymentMethod] = useState<"pay_now_shop" | "cod">("pay_now_shop");
+  // Address validation errors
+  const [addressErrors, setAddressErrors] = useState<Record<string, string>>({});
+
+  function clearAddressError(field: string) {
+    setAddressErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  }
+
+  const [paymentMethod, setPaymentMethod] = useState<"cod">("cod");
   const [deliveryNote, setDeliveryNote] = useState("");
 
   // New location options
   const [newLabel, setNewLabel] = useState("");
   const [saveNewAddress, setSaveNewAddress] = useState(true);
+  const [showAddressChangeConfirmModal, setShowAddressChangeConfirmModal] = useState(false);
+  const [isConfirmingAddressSave, setIsConfirmingAddressSave] = useState(false);
 
   // Auto-populate from saved address or user profile
   useEffect(() => {
@@ -391,9 +425,6 @@ export default function CheckoutClient() {
       }
       if (userProfile.phone && !phone) {
         setPhone(userProfile.phone);
-      }
-      if (!locationTitle) {
-        setLocationTitle("Home (Phnom Penh)");
       }
     }
   }, [serverAddresses, userProfile, session, hasUserModifiedAddress]);
@@ -604,6 +635,7 @@ export default function CheckoutClient() {
 
   // Handle choosing a saved address
   function handleSelectSavedAddress(addr: SavedAddress) {
+    setAddressErrors({});
     setSelectedAddressId(addr.id);
     setLocationTitle(addr.label || "Saved Location");
     setFullName(addr.fullName);
@@ -615,19 +647,27 @@ export default function CheckoutClient() {
       setSangkat(addr.sangkat || "");
       setVillage(addr.village || "");
       setStreetNo(addr.streetNo || addr.address || "");
+      setProvince("");
+      setDistrict("");
+      setCommune("");
     } else {
-      setProvince(addr.province || addr.city || "Siem Reap");
+      setProvince(addr.province || addr.city || "");
       setDistrict(addr.district || "");
       setCommune(addr.commune || "");
       setVillage(addr.village || addr.address || "");
+      setKhan("");
+      setSangkat("");
+      setStreetNo("");
     }
-    setGoogleMapLink(addr.googleMapLink || "");
+    setLatitude(addr.latitude ?? null);
+    setLongitude(addr.longitude ?? null);
     setHousePhotos(addr.photos || (addr.photo ? [addr.photo] : []));
   }
 
   // Handle clicking + Add New Location
   function handleAddNewAddressClick() {
     setHasUserModifiedAddress(true);
+    setAddressErrors({});
     setSelectedAddressId("new");
     setLocationTitle("");
     const derivedName =
@@ -642,10 +682,11 @@ export default function CheckoutClient() {
     setSangkat("");
     setVillage("");
     setStreetNo("");
-    setProvince("Siem Reap");
+    setProvince("");
     setDistrict("");
     setCommune("");
-    setGoogleMapLink("");
+    setLatitude(null);
+    setLongitude(null);
     setHousePhotos([]);
     setNewLabel("");
   }
@@ -719,34 +760,116 @@ export default function CheckoutClient() {
   const shippingFee = subtotal >= 50 ? 0 : 1.5;
   const grandTotal = Math.max(0, subtotal - discountAmount + shippingFee);
 
-  // Address completeness validation (all address inputs required except photo upload)
+  // Address completeness boolean
   const isAddressValid = Boolean(
-    fullName.trim() &&
-    phone.trim() &&
-    locationTitle.trim() &&
-    googleMapLink.trim() &&
+    fullName.trim().length >= 2 &&
+    phone.trim().replace(/[\s-]/g, "").length >= 8 &&
+    locationTitle.trim().length >= 2 &&
     (locationType === "city"
       ? khan.trim() && sangkat.trim() && village.trim() && streetNo.trim()
       : province.trim() && district.trim() && commune.trim() && village.trim())
   );
 
-  // Step 1: Open Confirmation Popup Modal
+  // Check if current form fields differ from the selected saved address
+  const selectedSavedAddress = useMemo(
+    () => savedAddresses.find((a) => a.id === selectedAddressId),
+    [savedAddresses, selectedAddressId]
+  );
+
+  const isAddressModified = useMemo(() => {
+    if (selectedAddressId === "new") {
+      return Boolean(locationTitle || fullName || phone || khan || sangkat || village || streetNo || province || district || commune);
+    }
+    if (!selectedSavedAddress) return false;
+
+    if (locationTitle.trim() !== (selectedSavedAddress.label || "").trim()) return true;
+    if (fullName.trim() !== (selectedSavedAddress.fullName || "").trim()) return true;
+    if (phone.trim() !== (selectedSavedAddress.phone || "").trim()) return true;
+    if (locationType !== selectedSavedAddress.locationType) return true;
+
+    if (locationType === "city") {
+      if (khan.trim() !== (selectedSavedAddress.khan || "").trim()) return true;
+      if (sangkat.trim() !== (selectedSavedAddress.sangkat || "").trim()) return true;
+      if (village.trim() !== (selectedSavedAddress.village || "").trim()) return true;
+      if (streetNo.trim() !== (selectedSavedAddress.streetNo || "").trim()) return true;
+    } else {
+      if (province.trim() !== (selectedSavedAddress.province || "").trim()) return true;
+      if (district.trim() !== (selectedSavedAddress.district || "").trim()) return true;
+      if (commune.trim() !== (selectedSavedAddress.commune || "").trim()) return true;
+      if (village.trim() !== (selectedSavedAddress.village || "").trim()) return true;
+    }
+
+    if (latitude !== (selectedSavedAddress.latitude ?? null)) return true;
+    if (longitude !== (selectedSavedAddress.longitude ?? null)) return true;
+
+    return false;
+  }, [
+    selectedAddressId,
+    selectedSavedAddress,
+    locationTitle,
+    fullName,
+    phone,
+    locationType,
+    khan,
+    sangkat,
+    village,
+    streetNo,
+    province,
+    district,
+    commune,
+    latitude,
+    longitude,
+  ]);
+
+  // Address validation helper
+  function validateAddressFields(): boolean {
+    const errs: Record<string, string> = {};
+
+    if (!locationTitle.trim()) {
+      errs.locationTitle = "Location title is required (e.g. Home, Work Office)";
+    } else if (locationTitle.trim().length < 2) {
+      errs.locationTitle = "Location title must be at least 2 characters";
+    }
+
+    if (!fullName.trim()) {
+      errs.fullName = "Recipient name is required";
+    } else if (fullName.trim().length < 2) {
+      errs.fullName = "Recipient name must be at least 2 characters";
+    }
+
+    const cleanPhone = phone.trim().replace(/[\s-]/g, "");
+    if (!cleanPhone) {
+      errs.phone = "Phone number is required";
+    } else if (!/^(0|\+855)[0-9]{8,9}$/.test(cleanPhone) && !/^[0-9]{8,10}$/.test(cleanPhone)) {
+      errs.phone = "Enter a valid Cambodian phone number (e.g. 012 345 678)";
+    }
+
+    if (locationType === "city") {
+      if (!khan.trim()) errs.khan = "Khan is required";
+      if (!sangkat.trim()) errs.sangkat = "Sangkat is required";
+      if (!village.trim()) errs.village = "Village (Phum) is required";
+      if (!streetNo.trim()) errs.streetNo = "Street / House number is required";
+    } else {
+      if (!province.trim()) errs.province = "Please select a province";
+      if (!district.trim()) errs.district = "District (Srok) is required";
+      if (!commune.trim()) errs.commune = "Commune (Khum) is required";
+      if (!village.trim()) errs.village = "Village (Phum) is required";
+    }
+
+    setAddressErrors(errs);
+    if (Object.keys(errs).length > 0) {
+      const firstError = Object.values(errs)[0];
+      setError(firstError);
+      triggerToast(firstError);
+      return false;
+    }
+    return true;
+  }
+
+  // Step 1: Open Confirmation Popup Modal (or require address change confirmation first)
   function handleInitiateCheckout(e: React.FormEvent) {
     e.preventDefault();
-    if (!fullName.trim() || !phone.trim() || !locationTitle.trim()) {
-      setError("Please fill in your Full Name, Phone Number, and Location Title.");
-      return;
-    }
-    if (locationType === "city" && (!khan.trim() || !sangkat.trim() || !village.trim() || !streetNo.trim())) {
-      setError("Please fill in all Phnom Penh address fields (Khan, Sangkat, Village, and Street No).");
-      return;
-    }
-    if (locationType === "province" && (!province.trim() || !district.trim() || !commune.trim() || !village.trim())) {
-      setError("Please fill in all Province address fields (Province, District, Commune, and Village).");
-      return;
-    }
-    if (!googleMapLink.trim()) {
-      setError("Please enter your GoogleMap link.");
+    if (!validateAddressFields()) {
       return;
     }
     if (!selectedStore) {
@@ -754,7 +877,47 @@ export default function CheckoutClient() {
       return;
     }
     setError(null);
+
+    // If the address was modified or is new/unsaved, ask the user to confirm first
+    if (isAddressModified) {
+      setShowAddressChangeConfirmModal(true);
+      return;
+    }
+
     setShowConfirmModal(true);
+  }
+
+  // Confirm Address Changes and proceed directly to order summary modal
+  async function handleConfirmAddressChangeAndProceed() {
+    if (!validateAddressFields()) {
+      setShowAddressChangeConfirmModal(false);
+      return;
+    }
+
+    setIsConfirmingAddressSave(true);
+    try {
+      if (selectedAddressId === "new") {
+        const created = await createAddress(toAddressRequest()).unwrap();
+        if (created?.id) {
+          setSelectedAddressId(created.id);
+        }
+        triggerToast("Delivery address confirmed and saved to address book!");
+      } else if (isServerAddressId(selectedAddressId)) {
+        await updateAddress({
+          id: selectedAddressId,
+          body: toAddressRequest(),
+        }).unwrap();
+        triggerToast("Delivery address confirmed and updated in address book!");
+      }
+      setShowAddressChangeConfirmModal(false);
+      setShowConfirmModal(true);
+    } catch {
+      triggerToast("Failed to save address to address book, but proceeding with order.");
+      setShowAddressChangeConfirmModal(false);
+      setShowConfirmModal(true);
+    } finally {
+      setIsConfirmingAddressSave(false);
+    }
   }
 
   function toAddressRequest(): CreateAddressRequest {
@@ -763,14 +926,41 @@ export default function CheckoutClient() {
       label: newLabel.trim() || locationTitle.trim() || (locationType === "city" ? "Home (Phnom Penh)" : "Province Location"),
       recipient: fullName.trim(),
       phone: phone.trim(),
-      locationName: googleMapLink.trim() || locationTitle.trim(),
-      streetNo: streetNo.trim(),
-      province: locationType === "province" ? province.trim() : "Phnom Penh",
+      locationName: locationTitle.trim(),
+      streetNo: locationType === "city" ? streetNo.trim() || undefined : undefined,
+      province: locationType === "province" ? province.trim() : undefined,
       district: locationType === "province" ? district.trim() : khan.trim(),
       commune: locationType === "province" ? commune.trim() : sangkat.trim(),
       village: village.trim(),
+      latitude: latitude != null ? latitude : undefined,
+      longitude: longitude != null ? longitude : undefined,
       isDefault: false,
     };
+  }
+
+  // Direct Address Book Save / Update button handler
+  async function handleSaveAddressBookDirect() {
+    if (!validateAddressFields()) {
+      return;
+    }
+
+    try {
+      if (selectedAddressId === "new") {
+        const created = await createAddress(toAddressRequest()).unwrap();
+        if (created?.id) {
+          setSelectedAddressId(created.id);
+        }
+        triggerToast("New delivery address saved to your address book!");
+      } else if (isServerAddressId(selectedAddressId)) {
+        await updateAddress({
+          id: selectedAddressId,
+          body: toAddressRequest(),
+        }).unwrap();
+        triggerToast("Saved address updated in your address book!");
+      }
+    } catch {
+      triggerToast("Failed to save address. Please check your details and try again.");
+    }
   }
 
   // Step 2: Confirm Order & Issue Invoice to Seller
@@ -859,22 +1049,20 @@ export default function CheckoutClient() {
         {
           id: "m2",
           sender: "seller",
-          text: `Hello ${fullName}! Invoice ${orderRef(order.uuid)} has been received and confirmed by ${store}.`,
-          isQrCard: paymentMethod === "pay_now_shop",
+          text: `Hello ${fullName}! Invoice ${orderRef(order.uuid)} has been received and confirmed by ${store}. We are preparing your order for Pay on Delivery!`,
+          isQrCard: false,
           time: "10:15 AM",
         },
         {
           id: "m3",
           sender: "buyer",
-          text: paymentMethod === "pay_now_shop"
-            ? `📷 [Payment Receipt Slip Attached: $${grandTotal.toFixed(2)} via ABA PAY KHQR]`
-            : `Confirmed! I will be available at ${phone} for delivery.`,
+          text: `Confirmed! I will be available at ${phone} for delivery with payment ready.`,
           time: "10:16 AM",
         },
         {
           id: "m4",
           sender: "seller",
-          text: `Invoice status updated to PAID & VERIFIED! Your order is being dispatched via Express Delivery (Tracking #EX-94820). Thank you for shopping with ${store}!`,
+          text: `Your order is being dispatched via Express Delivery! You can pay cash or transfer to the courier upon arrival. Thank you for shopping with ${store}!`,
           time: "10:17 AM",
         },
       ]);
@@ -998,7 +1186,7 @@ export default function CheckoutClient() {
             <div className="flex justify-between text-[#8B85A0]">
               <span>Payment Option</span>
               <span className="font-semibold text-[#1A1330]">
-                {paymentMethod === "pay_now_shop" ? "Pay Now with Shop (KHQR)" : "Cash on Delivery (COD)"}
+                Pay on Delivery (COD)
               </span>
             </div>
             <div className="flex justify-between text-[#8B85A0]">
@@ -1188,7 +1376,7 @@ export default function CheckoutClient() {
                       <div className="border-t border-[#F0EDFB] pt-3 text-[12.5px] text-[#8B85A0] space-y-1">
                         <p><strong>Deliver To:</strong> {fullName} ({phone})</p>
                         <p><strong>Address:</strong> {fullAddressString}</p>
-                        <p><strong>Payment Option:</strong> {paymentMethod === "pay_now_shop" ? "Pay Now (KHQR)" : "Cash on Delivery"}</p>
+                        <p><strong>Payment Option:</strong> Pay on Delivery (COD)</p>
                       </div>
 
                       <div className="border-t border-[#EDEBF3] pt-3 flex justify-between font-extrabold text-[16px] text-[#1A1330]">
@@ -1348,6 +1536,21 @@ export default function CheckoutClient() {
                 </div>
               </div>
 
+              {/* Address Modification Alert Banner */}
+              {isAddressModified && (
+                <div className="mb-6 rounded-2xl bg-amber-50/90 border border-amber-200 p-4 flex items-start gap-3.5 shadow-xs">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
+                    <AlertTriangle size={18} />
+                  </div>
+                  <div className="flex-1 text-xs">
+                    <p className="font-extrabold text-amber-900 text-[13px]">Address Details Modified</p>
+                    <p className="font-medium text-amber-700 mt-0.5 leading-relaxed">
+                      You have modified the address fields. You can save and update your address book below, or you will be asked to confirm and save these changes when checking out.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* ── SAVED LOCATION SELECTOR CARDS ── */}
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-2.5">
@@ -1401,9 +1604,14 @@ export default function CheckoutClient() {
                           </p>
                         </div>
                         {addr.fullName && (
-                          <p className="mt-1.5 text-[10.5px] font-semibold text-[#6B6580] truncate border-t border-[#F0EDFB] pt-1">
-                            {addr.fullName} · {addr.phone}
-                          </p>
+                          <div className="mt-1.5 flex items-center justify-between border-t border-[#F0EDFB] pt-1 text-[10.5px] font-semibold text-[#6B6580]">
+                            <span className="truncate">
+                              {addr.fullName} · {addr.phone}
+                            </span>
+                            {addr.latitude != null && addr.longitude != null && (
+                              <span className="shrink-0 text-[#6C4CD8] font-bold">📍 Map Pin</span>
+                            )}
+                          </div>
                         )}
                       </div>
                     );
@@ -1435,7 +1643,10 @@ export default function CheckoutClient() {
                   <div className="flex items-center gap-3">
                     <button
                       type="button"
-                      onClick={() => setLocationType("city")}
+                      onClick={() => {
+                        setLocationType("city");
+                        setAddressErrors({});
+                      }}
                       className={cn(
                         "flex-1 rounded-xl py-3 px-4 text-sm font-extrabold border-2 transition-all flex items-center justify-center gap-2 cursor-pointer",
                         locationType === "city"
@@ -1448,7 +1659,10 @@ export default function CheckoutClient() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setLocationType("province")}
+                      onClick={() => {
+                        setLocationType("province");
+                        setAddressErrors({});
+                      }}
                       className={cn(
                         "flex-1 rounded-xl py-3 px-4 text-sm font-extrabold border-2 transition-all flex items-center justify-center gap-2 cursor-pointer",
                         locationType === "province"
@@ -1475,26 +1689,50 @@ export default function CheckoutClient() {
                     id="locationTitle"
                     type="text"
                     value={locationTitle}
-                    onChange={(e) => setLocationTitle(e.target.value)}
-                    required
-                    placeholder="e.g. Home (Phnom Penh), Work Office, Siem Reap Villa, Condo"
-                    className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
+                    onChange={(e) => {
+                      setLocationTitle(e.target.value);
+                      clearAddressError("locationTitle");
+                    }}
+                    placeholder="e.g. Home, Work Office, Siem Reap Villa, Condo"
+                    className={cn(
+                      "w-full rounded-xl border px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none transition",
+                      addressErrors.locationTitle
+                        ? "border-rose-500 bg-rose-50/30 focus:border-rose-600 focus:bg-white"
+                        : "border-[#E2DFEC] bg-[#F6F5FA] focus:border-[#6C4CD8] focus:bg-white"
+                    )}
                   />
+                  {addressErrors.locationTitle && (
+                    <p className="mt-1 text-xs font-semibold text-rose-600 flex items-center gap-1">
+                      <AlertCircle size={12} /> {addressErrors.locationTitle}
+                    </p>
+                  )}
                 </div>
 
                 <div>
                   <label htmlFor="fullName" className="mb-1.5 block text-[13px] font-bold text-[#1A1330]">
-                    Full Name *
+                    Full Name (Recipient) *
                   </label>
                   <input
                     id="fullName"
                     type="text"
                     value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    required
-                    placeholder="Enter your full name"
-                    className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
+                    onChange={(e) => {
+                      setFullName(e.target.value);
+                      clearAddressError("fullName");
+                    }}
+                    placeholder="Enter recipient full name"
+                    className={cn(
+                      "w-full rounded-xl border px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none transition",
+                      addressErrors.fullName
+                        ? "border-rose-500 bg-rose-50/30 focus:border-rose-600 focus:bg-white"
+                        : "border-[#E2DFEC] bg-[#F6F5FA] focus:border-[#6C4CD8] focus:bg-white"
+                    )}
                   />
+                  {addressErrors.fullName && (
+                    <p className="mt-1 text-xs font-semibold text-rose-600 flex items-center gap-1">
+                      <AlertCircle size={12} /> {addressErrors.fullName}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -1505,11 +1743,23 @@ export default function CheckoutClient() {
                     id="phone"
                     type="text"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    required
+                    onChange={(e) => {
+                      setPhone(e.target.value);
+                      clearAddressError("phone");
+                    }}
                     placeholder="012 345 6789"
-                    className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
+                    className={cn(
+                      "w-full rounded-xl border px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none transition",
+                      addressErrors.phone
+                        ? "border-rose-500 bg-rose-50/30 focus:border-rose-600 focus:bg-white"
+                        : "border-[#E2DFEC] bg-[#F6F5FA] focus:border-[#6C4CD8] focus:bg-white"
+                    )}
                   />
+                  {addressErrors.phone && (
+                    <p className="mt-1 text-xs font-semibold text-rose-600 flex items-center gap-1">
+                      <AlertCircle size={12} /> {addressErrors.phone}
+                    </p>
+                  )}
                 </div>
 
                 {/* ── CITY USER FIELDS (Phnom Penh) ── */}
@@ -1523,11 +1773,23 @@ export default function CheckoutClient() {
                         id="khan"
                         type="text"
                         value={khan}
-                        onChange={(e) => setKhan(e.target.value)}
-                        required
+                        onChange={(e) => {
+                          setKhan(e.target.value);
+                          clearAddressError("khan");
+                        }}
                         placeholder="e.g. Daun Penh, Tuol Kork, Ruessei Kaev"
-                        className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
+                        className={cn(
+                          "w-full rounded-xl border px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none transition",
+                          addressErrors.khan
+                            ? "border-rose-500 bg-rose-50/30 focus:border-rose-600 focus:bg-white"
+                            : "border-[#E2DFEC] bg-[#F6F5FA] focus:border-[#6C4CD8] focus:bg-white"
+                        )}
                       />
+                      {addressErrors.khan && (
+                        <p className="mt-1 text-xs font-semibold text-rose-600 flex items-center gap-1">
+                          <AlertCircle size={12} /> {addressErrors.khan}
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -1538,41 +1800,77 @@ export default function CheckoutClient() {
                         id="sangkat"
                         type="text"
                         value={sangkat}
-                        onChange={(e) => setSangkat(e.target.value)}
-                        required
+                        onChange={(e) => {
+                          setSangkat(e.target.value);
+                          clearAddressError("sangkat");
+                        }}
                         placeholder="e.g. Wat Phnom, Tuol Sangkae 2"
-                        className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
+                        className={cn(
+                          "w-full rounded-xl border px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none transition",
+                          addressErrors.sangkat
+                            ? "border-rose-500 bg-rose-50/30 focus:border-rose-600 focus:bg-white"
+                            : "border-[#E2DFEC] bg-[#F6F5FA] focus:border-[#6C4CD8] focus:bg-white"
+                        )}
                       />
+                      {addressErrors.sangkat && (
+                        <p className="mt-1 text-xs font-semibold text-rose-600 flex items-center gap-1">
+                          <AlertCircle size={12} /> {addressErrors.sangkat}
+                        </p>
+                      )}
                     </div>
 
                     <div>
                       <label htmlFor="village" className="mb-1.5 block text-[13px] font-bold text-[#1A1330]">
-                        Village *
+                        Village (Phum) *
                       </label>
                       <input
                         id="village"
                         type="text"
                         value={village}
-                        onChange={(e) => setVillage(e.target.value)}
-                        required
+                        onChange={(e) => {
+                          setVillage(e.target.value);
+                          clearAddressError("village");
+                        }}
                         placeholder="e.g. Phum 1, Phum 4"
-                        className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
+                        className={cn(
+                          "w-full rounded-xl border px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none transition",
+                          addressErrors.village
+                            ? "border-rose-500 bg-rose-50/30 focus:border-rose-600 focus:bg-white"
+                            : "border-[#E2DFEC] bg-[#F6F5FA] focus:border-[#6C4CD8] focus:bg-white"
+                        )}
                       />
+                      {addressErrors.village && (
+                        <p className="mt-1 text-xs font-semibold text-rose-600 flex items-center gap-1">
+                          <AlertCircle size={12} /> {addressErrors.village}
+                        </p>
+                      )}
                     </div>
 
                     <div>
                       <label htmlFor="streetNo" className="mb-1.5 block text-[13px] font-bold text-[#1A1330]">
-                        Street No. *
+                        Street No. / House No. *
                       </label>
                       <input
                         id="streetNo"
                         type="text"
                         value={streetNo}
-                        onChange={(e) => setStreetNo(e.target.value)}
-                        required
+                        onChange={(e) => {
+                          setStreetNo(e.target.value);
+                          clearAddressError("streetNo");
+                        }}
                         placeholder="e.g. Street 271, House #42B"
-                        className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
+                        className={cn(
+                          "w-full rounded-xl border px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none transition",
+                          addressErrors.streetNo
+                            ? "border-rose-500 bg-rose-50/30 focus:border-rose-600 focus:bg-white"
+                            : "border-[#E2DFEC] bg-[#F6F5FA] focus:border-[#6C4CD8] focus:bg-white"
+                        )}
                       />
+                      {addressErrors.streetNo && (
+                        <p className="mt-1 text-xs font-semibold text-rose-600 flex items-center gap-1">
+                          <AlertCircle size={12} /> {addressErrors.streetNo}
+                        </p>
+                      )}
                     </div>
                   </>
                 )}
@@ -1587,9 +1885,18 @@ export default function CheckoutClient() {
                       <select
                         id="province"
                         value={province}
-                        onChange={(e) => setProvince(e.target.value)}
-                        className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition cursor-pointer"
+                        onChange={(e) => {
+                          setProvince(e.target.value);
+                          clearAddressError("province");
+                        }}
+                        className={cn(
+                          "w-full rounded-xl border px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none transition cursor-pointer",
+                          addressErrors.province
+                            ? "border-rose-500 bg-rose-50/30 focus:border-rose-600 focus:bg-white"
+                            : "border-[#E2DFEC] bg-[#F6F5FA] focus:border-[#6C4CD8] focus:bg-white"
+                        )}
                       >
+                        <option value="">-- Select Province --</option>
                         <option value="Siem Reap">Siem Reap (សៀមរាប)</option>
                         <option value="Battambang">Battambang (បាត់ដំបង)</option>
                         <option value="Kampong Cham">Kampong Cham (កំពង់ចាម)</option>
@@ -1602,7 +1909,24 @@ export default function CheckoutClient() {
                         <option value="Kratie">Kratie (ក្រចេះ)</option>
                         <option value="Ratanakiri">Ratanakiri (រតនគិរី)</option>
                         <option value="Mondulkiri">Mondulkiri (មណ្ឌលគិរី)</option>
+                        <option value="Kampong Speu">Kampong Speu (កំពង់ស្ពឺ)</option>
+                        <option value="Kampong Chhnang">Kampong Chhnang (កំពង់ឆ្នាំង)</option>
+                        <option value="Kampong Thom">Kampong Thom (កំពង់ធំ)</option>
+                        <option value="Pursat">Pursat (ពោធិ៍សាត់)</option>
+                        <option value="Banteay Meanchey">Banteay Meanchey (បន្ទាយមានជ័យ)</option>
+                        <option value="Koh Kong">Koh Kong (កោះកុង)</option>
+                        <option value="Kep">Kep (កែប)</option>
+                        <option value="Pailin">Pailin (ប៉ៃលិន)</option>
+                        <option value="Oddar Meanchey">Oddar Meanchey (ឧត្តរមានជ័យ)</option>
+                        <option value="Preah Vihear">Preah Vihear (ព្រះវិហារ)</option>
+                        <option value="Stung Treng">Stung Treng (ស្ទឹងត្រែង)</option>
+                        <option value="Tboung Khmum">Tboung Khmum (ត្បូងឃ្មុំ)</option>
                       </select>
+                      {addressErrors.province && (
+                        <p className="mt-1 text-xs font-semibold text-rose-600 flex items-center gap-1">
+                          <AlertCircle size={12} /> {addressErrors.province}
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -1613,11 +1937,23 @@ export default function CheckoutClient() {
                         id="district"
                         type="text"
                         value={district}
-                        onChange={(e) => setDistrict(e.target.value)}
-                        required
+                        onChange={(e) => {
+                          setDistrict(e.target.value);
+                          clearAddressError("district");
+                        }}
                         placeholder="e.g. Svay Dangkum, Prasat Bakong"
-                        className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
+                        className={cn(
+                          "w-full rounded-xl border px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none transition",
+                          addressErrors.district
+                            ? "border-rose-500 bg-rose-50/30 focus:border-rose-600 focus:bg-white"
+                            : "border-[#E2DFEC] bg-[#F6F5FA] focus:border-[#6C4CD8] focus:bg-white"
+                        )}
                       />
+                      {addressErrors.district && (
+                        <p className="mt-1 text-xs font-semibold text-rose-600 flex items-center gap-1">
+                          <AlertCircle size={12} /> {addressErrors.district}
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -1628,48 +1964,112 @@ export default function CheckoutClient() {
                         id="commune"
                         type="text"
                         value={commune}
-                        onChange={(e) => setCommune(e.target.value)}
-                        required
+                        onChange={(e) => {
+                          setCommune(e.target.value);
+                          clearAddressError("commune");
+                        }}
                         placeholder="e.g. Sala Kamreuk, Svay Dangkum"
-                        className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
+                        className={cn(
+                          "w-full rounded-xl border px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none transition",
+                          addressErrors.commune
+                            ? "border-rose-500 bg-rose-50/30 focus:border-rose-600 focus:bg-white"
+                            : "border-[#E2DFEC] bg-[#F6F5FA] focus:border-[#6C4CD8] focus:bg-white"
+                        )}
                       />
+                      {addressErrors.commune && (
+                        <p className="mt-1 text-xs font-semibold text-rose-600 flex items-center gap-1">
+                          <AlertCircle size={12} /> {addressErrors.commune}
+                        </p>
+                      )}
                     </div>
 
                     <div>
                       <label htmlFor="villageProvince" className="mb-1.5 block text-[13px] font-bold text-[#1A1330]">
-                        Village *
+                        Village (Phum) *
                       </label>
                       <input
                         id="villageProvince"
                         type="text"
                         value={village}
-                        onChange={(e) => setVillage(e.target.value)}
-                        required
+                        onChange={(e) => {
+                          setVillage(e.target.value);
+                          clearAddressError("village");
+                        }}
                         placeholder="e.g. Phum Wat Bo, Phum Mondul 1"
-                        className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
+                        className={cn(
+                          "w-full rounded-xl border px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none transition",
+                          addressErrors.village
+                            ? "border-rose-500 bg-rose-50/30 focus:border-rose-600 focus:bg-white"
+                            : "border-[#E2DFEC] bg-[#F6F5FA] focus:border-[#6C4CD8] focus:bg-white"
+                        )}
                       />
+                      {addressErrors.village && (
+                        <p className="mt-1 text-xs font-semibold text-rose-600 flex items-center gap-1">
+                          <AlertCircle size={12} /> {addressErrors.village}
+                        </p>
+                      )}
                     </div>
                   </>
                 )}
 
-                {/* ── GOOGLE MAP LINK (REQUIRED) ── */}
-                <div className="sm:col-span-2">
-                  <label htmlFor="googleMapLink" className="mb-1.5 flex items-center justify-between text-[13px] font-bold text-[#1A1330]">
-                    <span className="flex items-center gap-1.5">
-                      <Link2 size={15} className="text-[#6C4CD8]" />
-                      GoogleMap (Link) *
-                    </span>
-                    <span className="text-[12px] font-bold text-[#6C4CD8]">Required</span>
-                  </label>
-                  <input
-                    id="googleMapLink"
-                    type="url"
-                    value={googleMapLink}
-                    onChange={(e) => setGoogleMapLink(e.target.value)}
-                    required
-                    placeholder="https://maps.google.com/?q=11.5564,104.9282"
-                    className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[15px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition"
-                  />
+                {/* ── MAP PIN LOCATION PICKER ── */}
+                <div className="sm:col-span-2 space-y-3 pt-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <label className="text-[13px] font-extrabold text-[#1A1330] uppercase tracking-wide flex items-center gap-1.5">
+                        <MapPin size={15} className="text-[#6C4CD8]" />
+                        Pin Delivery Location On Map
+                      </label>
+                      <p className="text-xs text-[#8B85A0]">
+                        Click on the map or drag the purple pin to set exact delivery GPS coordinates
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {isValidCoords(latitude, longitude) && (
+                        <span className="rounded-full bg-[#EDE9FB] px-2.5 py-1 text-xs font-bold text-[#6C4CD8]">
+                          {latitude?.toFixed(4)}°, {longitude?.toFixed(4)}°
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (navigator.geolocation) {
+                            navigator.geolocation.getCurrentPosition(
+                              (pos) => {
+                                setLatitude(pos.coords.latitude);
+                                setLongitude(pos.coords.longitude);
+                                triggerToast("Located your GPS position!");
+                              },
+                              () => {
+                                triggerToast("Unable to retrieve your GPS position.");
+                              }
+                            );
+                          }
+                        }}
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-[#E2DFEC] bg-white px-3 py-1.5 text-xs font-semibold text-[#5A5470] transition hover:bg-[#F8F7FB] active:scale-95 cursor-pointer"
+                      >
+                        <Crosshair size={13} className="text-[#6C4CD8]" />
+                        Use Current GPS
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="overflow-hidden rounded-2xl border-2 border-[#E2DFEC] shadow-xs">
+                    <PinPicker
+                      value={isValidCoords(latitude, longitude) ? { lat: latitude!, lng: longitude! } : null}
+                      onChange={({ lat, lng }) => {
+                        setLatitude(lat);
+                        setLongitude(lng);
+                      }}
+                      height={240}
+                      fallbackCenter={
+                        locationType === "province" && province === "Siem Reap"
+                          ? { lat: 13.3671, lng: 103.8448 }
+                          : { lat: 11.5564, lng: 104.9282 }
+                      }
+                    />
+                  </div>
                 </div>
 
                 {/* ── HOUSE OR OFFICE PHOTOS (OPTIONAL MULTIPLE UPLOADS & LIGHTBOX VIEW) ── */}
@@ -1739,18 +2139,39 @@ export default function CheckoutClient() {
                   </div>
                 </div>
 
-                {selectedAddressId === "new" && (
-                  <div className="sm:col-span-2 flex items-center gap-2 pt-1">
-                    <input
-                      id="saveNewAddress"
-                      type="checkbox"
-                      checked={saveNewAddress}
-                      onChange={(e) => setSaveNewAddress(e.target.checked)}
-                      className="h-4 w-4 accent-[#6C4CD8]"
-                    />
-                    <label htmlFor="saveNewAddress" className="text-[13px] font-semibold text-[#1A1330] cursor-pointer">
-                      Save this location to my saved addresses for future checkouts
-                    </label>
+                {/* Direct Save to Address Book Action Banner (Only visible when user edits or enters a new address) */}
+                {isAddressModified && (
+                  <div className="sm:col-span-2 flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-[#F0EDFB] animate-in fade-in">
+                    <div className="flex items-center gap-2">
+                      {selectedAddressId === "new" ? (
+                        <span className="text-xs text-[#8B85A0]">
+                          Want to keep this for future orders? Save it directly to your address book.
+                        </span>
+                      ) : (
+                        <span className="text-xs font-semibold text-amber-800 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200/60">
+                          Address modified. Click to save changes to your address book.
+                        </span>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={isSavingAddress || isUpdatingAddress}
+                      onClick={handleSaveAddressBookDirect}
+                      className="inline-flex items-center gap-2 rounded-xl bg-[#EDE9FB] px-4 py-2.5 text-xs sm:text-sm font-extrabold text-[#6C4CD8] transition hover:bg-[#E0D9F7] active:scale-95 cursor-pointer disabled:opacity-50"
+                    >
+                      {(isSavingAddress || isUpdatingAddress) ? (
+                        <>
+                          <Loader2 size={15} className="animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Check size={15} />
+                          {selectedAddressId === "new" ? "Save to Address Book" : "Update in Address Book"}
+                        </>
+                      )}
+                    </button>
                   </div>
                 )}
 
@@ -1772,69 +2193,45 @@ export default function CheckoutClient() {
               </div>
             </section>
 
-            {/* Payment Options Section — Multi-Vendor Direct Settlement */}
+            {/* Payment Options Section — Platform Pay on Delivery */}
             <section className="rounded-3xl border border-[#EDEBF3] bg-white p-7 shadow-sm">
               <div className="flex items-center gap-3 border-b border-[#F0EDFB] pb-4 mb-6">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F1EFFA] text-[#6C4CD8]">
-                  <CreditCard size={20} />
+                  <Truck size={20} />
                 </div>
                 <div>
                   <h2 className="text-[20px] font-extrabold text-[#1A1330]">Payment Option</h2>
-                  <p className="text-[13px] text-[#8B85A0]">Settled directly with {selectedStore || "shop owner"} or delivery</p>
+                  <p className="text-[13px] text-[#8B85A0]">Pay upon receiving your package</p>
                 </div>
               </div>
 
               <div className="space-y-3">
-                {[
-                  {
-                    id: "pay_now_shop",
-                    title: `Pay Now with Shop (${selectedStore || "Shop Owner"})`,
-                    sub: "Scan KHQR & pay directly to store owner's mobile banking account",
-                    Icon: QrCode,
-                    badge: "Direct KHQR",
-                  },
-                  {
-                    id: "cod",
-                    title: "Cash on Delivery (COD)",
-                    sub: "Pay cash directly to delivery person upon package arrival",
-                    Icon: Truck,
-                  },
-                ].map(({ id, title, sub, Icon, badge }) => (
-                  <label
-                    key={id}
-                    className={cn(
-                      "flex cursor-pointer items-center justify-between rounded-2xl border-2 p-4.5 transition-all",
-                      paymentMethod === id
-                        ? "border-[#6C4CD8] bg-[#F8F7FC] shadow-sm"
-                        : "border-[#EDEBF3] bg-white hover:border-[#C4B5FD]"
-                    )}
-                  >
-                    <div className="flex items-center gap-4">
-                      <input
-                        type="radio"
-                        name="paymentMethod"
-                        value={id}
-                        checked={paymentMethod === id}
-                        onChange={() => setPaymentMethod(id as "pay_now_shop" | "cod")}
-                        className="h-5 w-5 accent-[#6C4CD8]"
-                      />
-                      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white shadow-xs text-[#6C4CD8]">
-                        <Icon size={22} />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="text-[15px] font-extrabold text-[#1A1330]">{title}</p>
-                          {badge && (
-                            <span className="rounded-md bg-[#6C4CD8] px-2 py-0.5 text-[10px] font-bold uppercase text-white">
-                              {badge}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[13px] text-[#8B85A0] mt-0.5">{sub}</p>
-                      </div>
+                <label
+                  className="flex cursor-pointer items-center justify-between rounded-2xl border-2 border-[#6C4CD8] bg-[#F8F7FC] p-4.5 shadow-sm transition-all"
+                >
+                  <div className="flex items-center gap-4">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="cod"
+                      checked={true}
+                      readOnly
+                      className="h-5 w-5 accent-[#6C4CD8]"
+                    />
+                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white shadow-xs text-[#6C4CD8]">
+                      <Truck size={22} />
                     </div>
-                  </label>
-                ))}
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="text-[15px] font-extrabold text-[#1A1330]">Pay on Delivery (COD)</p>
+                        <span className="rounded-md bg-[#6C4CD8] px-2 py-0.5 text-[10px] font-bold uppercase text-white">
+                          Only Option
+                        </span>
+                      </div>
+                      <p className="text-[13px] text-[#8B85A0] mt-0.5">Pay in cash or mobile banking directly to the courier upon delivery</p>
+                    </div>
+                  </div>
+                </label>
               </div>
             </section>
           </div>
@@ -1959,12 +2356,17 @@ export default function CheckoutClient() {
                 )}
               </button>
 
-              {!isAddressValid && (
+              {!isAddressValid ? (
                 <p className="text-center text-[12px] font-semibold text-amber-700 bg-amber-50 rounded-xl p-2.5 border border-amber-200/80 flex items-center justify-center gap-1.5">
                   <AlertTriangle size={14} className="shrink-0 text-amber-600" />
                   <span>Please fill in all required address fields to proceed with checkout</span>
                 </p>
-              )}
+              ) : isAddressModified ? (
+                <p className="text-center text-[12px] font-semibold text-[#6C4CD8] bg-[#F1EFFA] rounded-xl p-2.5 border border-[#D5CBEF] flex items-center justify-center gap-1.5">
+                  <MapPin size={14} className="shrink-0 text-[#6C4CD8]" />
+                  <span>Address modified: You will be asked to confirm changes upon checkout</span>
+                </p>
+              ) : null}
 
               {/* Trust Badges */}
               <div className="flex items-center justify-center gap-2 pt-2 text-[12px] font-semibold text-[#8B85A0]">
@@ -1975,6 +2377,99 @@ export default function CheckoutClient() {
           </div>
         </div>
       </form>
+
+      {/* ── ADDRESS CHANGE CONFIRMATION MODAL ── */}
+      {showAddressChangeConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in">
+          <div className="w-full max-w-lg overflow-hidden rounded-3xl bg-white p-7 shadow-2xl space-y-6">
+            <div className="flex items-center justify-between border-b border-[#F0EDFB] pb-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 border border-amber-200">
+                  <AlertTriangle size={22} />
+                </div>
+                <div>
+                  <h3 className="text-[18px] font-extrabold text-[#1A1330]">Confirm Delivery Address</h3>
+                  <p className="text-[13px] text-[#8B85A0]">You modified your shipping address details</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddressChangeConfirmModal(false)}
+                className="rounded-xl p-1.5 text-[#8B85A0] hover:bg-[#F6F5FA] transition cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="rounded-2xl bg-[#F8F7FC] border border-[#E8E4F5] p-5 space-y-3.5">
+              <div className="flex items-center justify-between border-b border-[#EAE6F4] pb-2.5">
+                <span className="text-xs font-bold uppercase tracking-wider text-[#8B85A0]">Location Label</span>
+                <span className="text-sm font-extrabold text-[#1A1330] flex items-center gap-1.5">
+                  <Building size={14} className="text-[#6C4CD8]" />
+                  {locationTitle.trim() || "Delivery Location"}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between border-b border-[#EAE6F4] pb-2.5">
+                <span className="text-xs font-bold uppercase tracking-wider text-[#8B85A0]">Recipient</span>
+                <span className="text-sm font-bold text-[#1A1330]">
+                  {fullName.trim()} · {phone.trim()}
+                </span>
+              </div>
+
+              <div>
+                <span className="text-xs font-bold uppercase tracking-wider text-[#8B85A0] block mb-1">
+                  Full Delivery Address
+                </span>
+                <p className="text-sm font-semibold text-[#2D2447] leading-relaxed">
+                  {fullAddressString}
+                </p>
+              </div>
+
+              {latitude != null && longitude != null && (
+                <div className="flex items-center justify-between pt-1 border-t border-[#EAE6F4] text-xs">
+                  <span className="font-bold text-[#8B85A0]">GPS Coordinates</span>
+                  <span className="font-extrabold text-[#6C4CD8]">
+                    📍 {latitude.toFixed(4)}°, {longitude.toFixed(4)}°
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <p className="text-[13px] text-[#6B6580] leading-relaxed text-center">
+              Would you like to confirm and save this address to your address book and proceed with your order?
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowAddressChangeConfirmModal(false)}
+                className="flex-1 rounded-2xl border border-[#EDEBF3] bg-white py-3.5 text-sm font-bold text-[#5A5470] transition hover:bg-[#F8F7FB] active:scale-95 cursor-pointer"
+              >
+                Review / Edit Address
+              </button>
+              <button
+                type="button"
+                disabled={isConfirmingAddressSave}
+                onClick={handleConfirmAddressChangeAndProceed}
+                className="flex-1 inline-flex items-center justify-center gap-2 rounded-2xl bg-[#6C4CD8] py-3.5 text-sm font-bold text-white shadow-md shadow-[#6C4CD8]/25 transition hover:bg-[#5B3DC0] active:scale-95 cursor-pointer disabled:opacity-50"
+              >
+                {isConfirmingAddressSave ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Check size={16} />
+                    Confirm &amp; Proceed
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── STEP 1: CONFIRMATION POPUP MODAL ── */}
       {showConfirmModal && (
@@ -2015,7 +2510,7 @@ export default function CheckoutClient() {
               <div className="flex justify-between text-[#8B85A0]">
                 <span>Payment Option</span>
                 <span className="font-semibold text-[#1A1330]">
-                  {paymentMethod === "pay_now_shop" ? "Pay Now with Shop (KHQR)" : "Cash on Delivery (COD)"}
+                  Pay on Delivery (COD)
                 </span>
               </div>
               <div className="border-t border-[#E2DFEC] pt-2 flex justify-between font-extrabold text-[16px] text-[#1A1330]">

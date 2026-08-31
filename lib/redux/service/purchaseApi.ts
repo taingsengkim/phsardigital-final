@@ -34,10 +34,19 @@ export const purchaseApi = createApi({
         url: "/purchases",
         params: {
           pageNumber: params?.pageNumber ?? 0,
-          pageSize: params?.pageSize ?? 20,
+          pageSize: params?.pageSize ?? 50,
           ...(params?.status ? { status: params.status } : {}),
         },
       }),
+      transformResponse: (response: any): PurchasePage => {
+        if (Array.isArray(response)) {
+          return { content: response };
+        }
+        if (response && Array.isArray(response.content)) {
+          return response as PurchasePage;
+        }
+        return { content: [] };
+      },
       providesTags: ["Purchase"],
     }),
 

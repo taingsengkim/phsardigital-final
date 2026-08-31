@@ -163,6 +163,7 @@ export default function OrdersPageClient() {
           { id: "PENDING", label: "Awaiting seller", count: orders.filter((o) => o.status === "PENDING").length },
           { id: "CONFIRMED", label: "Confirmed", count: orders.filter((o) => o.status === "CONFIRMED").length },
           { id: "COMPLETED", label: "Completed", count: orders.filter((o) => o.status === "COMPLETED").length },
+          { id: "CANCELLED", label: "Cancelled", count: orders.filter((o) => o.status === "CANCELLED").length },
         ].map((tab) => (
           <motion.button
             key={tab.id}
@@ -233,7 +234,12 @@ export default function OrdersPageClient() {
                   </div>
                 </div>
 
-                <div>{getStatusBadge(order.status)}</div>
+                <div className="flex items-center gap-3">
+                  <div className="rounded-lg bg-[#EDE9FB] px-3 py-1 text-xs sm:text-sm font-black text-[#6C4CD8]">
+                    ${order.total.toFixed(2)}
+                  </div>
+                  <div>{getStatusBadge(order.status)}</div>
+                </div>
               </div>
 
               {/* Order Items List */}
@@ -246,7 +252,7 @@ export default function OrdersPageClient() {
 
                     <div className="flex-1 min-w-0">
                       <Link
-                        href={`/products/${item.slug}`}
+                        href={item.slug ? `/products/${item.slug}` : "/products"}
                         className="text-base sm:text-lg font-extrabold text-[#1A1330] transition-colors hover:text-[#6C4CD8] line-clamp-1 block"
                       >
                         {item.title}
@@ -267,16 +273,24 @@ export default function OrdersPageClient() {
 
               {/* Delivery Info & Actions Footer */}
               <div className="border-t border-[#F0EDFB] bg-[#FAFAFE] px-6 py-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="space-y-1">
+                <div className="space-y-1.5 min-w-0 flex-1">
                   <div className="flex items-center gap-2 text-xs sm:text-sm text-[#7C7596]">
                     <MapPin size={15} className="text-[#6C4CD8] shrink-0" />
-                    <span className="truncate max-w-md">{order.shippingAddress}</span>
+                    <span className="truncate max-w-md font-medium text-[#1A1330]">{order.shippingAddress}</span>
                   </div>
-                  <div className="flex items-center gap-3 text-xs sm:text-sm text-[#7C7596] pl-6">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:text-sm text-[#7C7596] pl-6">
                     <span>Payment: <strong className="text-[#1A1330]">{order.paymentMethod}</strong></span>
                     <span>•</span>
                     <span>Status: <strong className="text-[#6C4CD8]">{order.estimatedDelivery}</strong></span>
+                    <span>•</span>
+                    <span>Total: <strong className="text-[#6C4CD8] font-black">${order.total.toFixed(2)}</strong></span>
                   </div>
+                  {order.note && (
+                    <div className="ml-6 mt-1 flex items-start gap-1.5 text-xs text-[#6B6580] bg-[#F4F3F8] rounded-xl px-3 py-1.5 max-w-lg">
+                      <span className="font-bold text-[#1A1330] shrink-0">Delivery Note:</span>
+                      <span className="italic line-clamp-2">&ldquo;{order.note}&rdquo;</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Buttons */}
@@ -287,7 +301,7 @@ export default function OrdersPageClient() {
                       whileTap={{ scale: 0.95 }}
                       disabled={isCancelling}
                       onClick={() => void handleCancel(order)}
-                      className="flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs sm:text-sm font-bold text-rose-700 hover:bg-rose-100 disabled:opacity-60"
+                      className="flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs sm:text-sm font-bold text-rose-700 hover:bg-rose-100 disabled:opacity-60 cursor-pointer"
                     >
                       <X size={16} />
                       Cancel order
@@ -298,7 +312,7 @@ export default function OrdersPageClient() {
                     whileHover={{ scale: 1.04 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => setTrackingOrder(order)}
-                    className="flex items-center gap-1.5 rounded-xl bg-[#F1EFFA] px-4 py-2.5 text-xs sm:text-sm font-bold text-[#6C4CD8] hover:bg-[#E5E0F5]"
+                    className="flex items-center gap-1.5 rounded-xl bg-[#F1EFFA] px-4 py-2.5 text-xs sm:text-sm font-bold text-[#6C4CD8] hover:bg-[#E5E0F5] cursor-pointer"
                   >
                     <Truck size={16} />
                     Track Package
@@ -308,18 +322,18 @@ export default function OrdersPageClient() {
                     whileHover={{ scale: 1.04 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => handleReorder(order)}
-                    className="flex items-center gap-1.5 rounded-xl bg-[#6C4CD8] px-4 py-2.5 text-xs sm:text-sm font-extrabold text-white shadow-sm hover:bg-[#5B3EC4]"
+                    className="flex items-center gap-1.5 rounded-xl bg-[#6C4CD8] px-4 py-2.5 text-xs sm:text-sm font-extrabold text-white shadow-sm hover:bg-[#5B3EC4] cursor-pointer"
                   >
                     <RefreshCw size={15} />
                     Buy Again
                   </motion.button>
 
-                  <Link href="/messages">
+                  <Link href={order.storeSlug ? `/messages?seller=${encodeURIComponent(order.storeSlug)}` : "/messages"}>
                     <motion.button
                       whileHover={{ scale: 1.04 }}
                       whileTap={{ scale: 0.95 }}
                       aria-label="Contact Seller"
-                      className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#EDEBF3] bg-white text-[#6C4CD8] hover:bg-[#F1EFFA]"
+                      className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#EDEBF3] bg-white text-[#6C4CD8] hover:bg-[#F1EFFA] cursor-pointer"
                     >
                       <MessageSquare size={16} />
                     </motion.button>
@@ -370,15 +384,15 @@ export default function OrdersPageClient() {
               {/* Modal Header */}
               <div className="flex items-center justify-between border-b border-[#EDEBF3] pb-4">
                 <div>
-                  <div className="flex items-center gap-2">
-                    <Truck className="text-[#6C4CD8]" size={20} />
+                  <div className="flex items-center gap-2 text-[#6C4CD8]">
+                    <Truck size={20} />
                     <h3 className="text-xl font-black text-[#1A1330]">Shipment Tracking</h3>
                   </div>
                   <p className="text-xs text-[#7C7596] mt-0.5">Order ID: {trackingOrder.id}</p>
                 </div>
                 <button
                   onClick={() => setTrackingOrder(null)}
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F8F7FB] text-[#7C7596] hover:bg-rose-50 hover:text-rose-600"
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F8F7FB] text-[#7C7596] hover:bg-rose-50 hover:text-rose-600 cursor-pointer"
                 >
                   <X size={18} />
                 </button>
@@ -398,6 +412,10 @@ export default function OrdersPageClient() {
                   <span className="text-[#7C7596]">Estimated Delivery:</span>
                   <span className="font-bold text-emerald-600">{trackingOrder.estimatedDelivery}</span>
                 </div>
+                <div className="flex justify-between text-xs sm:text-sm">
+                  <span className="text-[#7C7596]">Deliver To:</span>
+                  <span className="font-medium text-[#1A1330] text-right truncate max-w-[240px]">{trackingOrder.shippingAddress}</span>
+                </div>
               </div>
 
               {/* Timeline Progress */}
@@ -411,9 +429,11 @@ export default function OrdersPageClient() {
                   },
                   {
                     title: "Confirmed by Vendor",
-                    desc: `Packed & prepared by ${trackingOrder.storeName}`,
-                    time: "Vendor confirmed",
-                    completed: true,
+                    desc: trackingOrder.status === "CANCELLED"
+                      ? "Order cancelled."
+                      : `Packed & prepared by ${trackingOrder.storeName}`,
+                    time: trackingOrder.status === "PENDING" ? "Awaiting vendor" : "Vendor updated",
+                    completed: trackingOrder.status !== "PENDING",
                   },
                   {
                     title: "Handed to Courier",
@@ -466,7 +486,7 @@ export default function OrdersPageClient() {
 
               <button
                 onClick={() => setTrackingOrder(null)}
-                className="w-full rounded-2xl bg-[#6C4CD8] py-3 text-sm font-bold text-white shadow-md hover:bg-[#5B3EC4]"
+                className="w-full rounded-2xl bg-[#6C4CD8] py-3 text-sm font-bold text-white shadow-md hover:bg-[#5B3EC4] cursor-pointer"
               >
                 Close Tracking
               </button>
