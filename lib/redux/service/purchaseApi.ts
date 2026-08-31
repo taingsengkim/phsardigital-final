@@ -108,6 +108,14 @@ export const purchaseApi = createApi({
       }),
       invalidatesTags: ["Purchase", "PurchaseSummary"],
     }),
+    createPosSale: builder.mutation<import("@/lib/types/pos").PosSaleResponse, import("@/lib/types/pos").PosSaleRequest>({
+      query: (body) => ({
+        url: "/pos/sales",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Purchase", "PurchaseSummary"],
+    }),
   }),
 })
 
@@ -120,4 +128,5 @@ export const {
   useCancelPurchaseMutation,
   useConfirmPurchaseMutation,
   useCompletePurchaseMutation,
+  useCreatePosSaleMutation,
 } = purchaseApi
