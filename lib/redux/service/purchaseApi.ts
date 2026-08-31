@@ -4,6 +4,8 @@ import type {
   Purchase,
   PurchasePage,
   PurchaseQuery,
+  SellerOrdersQuery,
+  SellerOrdersSummary,
 } from "@/lib/types/purchase"
 
 /**
@@ -18,7 +20,7 @@ import type {
 export const purchaseApi = createApi({
   reducerPath: "purchaseApi",
   baseQuery: fetchBaseQuery({ baseUrl: "/api" }),
-  tagTypes: ["Purchase"],
+  tagTypes: ["Purchase", "PurchaseSummary"],
   endpoints: (builder) => ({
     checkout: builder.mutation<Purchase, CheckoutArgs>({
       query: ({ sellerId, ...body }) => ({
@@ -26,7 +28,7 @@ export const purchaseApi = createApi({
         method: "POST",
         body,
       }),
-      invalidatesTags: ["Purchase"],
+      invalidatesTags: ["Purchase", "PurchaseSummary"],
     }),
 
     getMyPurchases: builder.query<PurchasePage, PurchaseQuery | void>({
@@ -40,12 +42,39 @@ export const purchaseApi = createApi({
       }),
       transformResponse: (response: any): PurchasePage => {
         if (Array.isArray(response)) {
-          return { content: response };
+          return { content: response }
         }
         if (response && Array.isArray(response.content)) {
-          return response as PurchasePage;
+          return response as PurchasePage
         }
-        return { content: [] };
+        return { content: [] }
+      },
+      providesTags: ["Purchase"],
+    }),
+
+    getSellerOrdersSummary: builder.query<SellerOrdersSummary, void>({
+      query: () => "/purchases/seller/orders/summary",
+      providesTags: ["PurchaseSummary"],
+    }),
+
+    getSellerOrders: builder.query<PurchasePage, SellerOrdersQuery | void>({
+      query: (params) => ({
+        url: "/purchases/seller/orders",
+        params: {
+          pageNumber: params?.pageNumber ?? 0,
+          pageSize: params?.pageSize ?? 20,
+          ...(params?.status ? { status: params.status } : {}),
+          ...(params?.search?.trim() ? { search: params.search.trim() } : {}),
+        },
+      }),
+      transformResponse: (response: any): PurchasePage => {
+        if (Array.isArray(response)) {
+          return { content: response }
+        }
+        if (response && Array.isArray(response.content)) {
+          return response as PurchasePage
+        }
+        return { content: [] }
       },
       providesTags: ["Purchase"],
     }),
@@ -63,21 +92,21 @@ export const purchaseApi = createApi({
         url: `/purchases/${encodeURIComponent(uuid)}/cancel`,
         method: "PATCH",
       }),
-      invalidatesTags: ["Purchase"],
+      invalidatesTags: ["Purchase", "PurchaseSummary"],
     }),
     confirmPurchase: builder.mutation<Purchase, string>({
       query: (uuid) => ({
         url: `/purchases/${encodeURIComponent(uuid)}/confirm`,
         method: "PATCH",
       }),
-      invalidatesTags: ["Purchase"],
+      invalidatesTags: ["Purchase", "PurchaseSummary"],
     }),
     completePurchase: builder.mutation<Purchase, string>({
       query: (uuid) => ({
         url: `/purchases/${encodeURIComponent(uuid)}/complete`,
         method: "PATCH",
       }),
-      invalidatesTags: ["Purchase"],
+      invalidatesTags: ["Purchase", "PurchaseSummary"],
     }),
   }),
 })
@@ -85,6 +114,8 @@ export const purchaseApi = createApi({
 export const {
   useCheckoutMutation,
   useGetMyPurchasesQuery,
+  useGetSellerOrdersSummaryQuery,
+  useGetSellerOrdersQuery,
   useGetPurchaseQuery,
   useCancelPurchaseMutation,
   useConfirmPurchaseMutation,

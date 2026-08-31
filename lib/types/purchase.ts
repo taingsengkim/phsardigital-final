@@ -22,9 +22,9 @@ export interface DeliveryPhoto {
 
 export interface Purchase {
   uuid: string
-  buyerId?: string
-  buyerName?: string
-  buyerPhone?: string
+  buyerId?: string | null
+  buyerName?: string | null
+  buyerPhone?: string | null
   sellerId?: string
   businessName?: string
   storeLogoUrl?: string | null
@@ -37,7 +37,27 @@ export interface Purchase {
   deliveryPhotos?: DeliveryPhoto[] | null
   note?: string | null
   items?: PurchaseItem[] | null
-  createdAt?: string
+  createdAt: string
+  confirmedAt?: string | null
+  completedAt?: string | null
+  cancelledAt?: string | null
+}
+
+export interface SellerOrdersSummary {
+  pending: number
+  confirmed: number
+  completed: number
+  cancelled: number
+  total: number
+  earnedRevenue: number
+  inFlightRevenue: number
+}
+
+export interface SellerOrdersQuery {
+  status?: PurchaseStatus | ""
+  search?: string
+  pageNumber?: number
+  pageSize?: number
 }
 
 /**
