@@ -234,6 +234,99 @@ function CardHeader({
   )
 }
 
+// ─── Custom Select Component (Replaces native browser <select>) ───────────────
+function CustomSelect<T extends string>({
+  value,
+  onChange,
+  options,
+  placeholder = "Select an option",
+  disabled,
+  error,
+}: {
+  value?: T
+  onChange: (val: T) => void
+  options: { value: T; label: string; description?: string; dotColor?: string }[]
+  placeholder?: string
+  disabled?: boolean
+  error?: boolean
+}) {
+  const [open, setOpen] = React.useState(false)
+  const ref = React.useRef<HTMLDivElement>(null)
+
+  React.useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handler)
+    return () => document.removeEventListener("mousedown", handler)
+  }, [])
+
+  const selected = options.find((o) => o.value === value)
+
+  return (
+    <div ref={ref} className="relative w-full">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setOpen((o) => !o)}
+        className={cn(
+          "flex h-10 w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-3.5 text-left text-sm text-slate-900 outline-none transition hover:bg-slate-50/80 focus:border-slate-400",
+          open && "border-slate-400 ring-1 ring-slate-400",
+          error && "border-rose-300",
+          disabled && "cursor-not-allowed opacity-50 bg-slate-50",
+        )}
+      >
+        <div className="flex items-center gap-2 truncate">
+          {selected?.dotColor && (
+            <span className={cn("size-2 rounded-full shrink-0", selected.dotColor)} />
+          )}
+          <span className={cn("truncate", !selected && "text-slate-400")}>
+            {selected ? selected.label : placeholder}
+          </span>
+        </div>
+        <ChevronDown className={cn("size-4 text-slate-400 transition-transform duration-200", open && "rotate-180")} />
+      </button>
+
+      {open && (
+        <div className="absolute top-full left-0 right-0 z-50 mt-1.5 max-h-60 overflow-y-auto rounded-lg border border-slate-200 bg-white p-1 shadow-lg animate-in fade-in-0 zoom-in-95 duration-100">
+          {options.map((opt) => {
+            const isSelected = opt.value === value
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => {
+                  onChange(opt.value)
+                  setOpen(false)
+                }}
+                className={cn(
+                  "flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-xs transition cursor-pointer",
+                  isSelected ? "bg-slate-100 text-slate-900 font-medium" : "text-slate-700 hover:bg-slate-50",
+                )}
+              >
+                <div className="flex items-center gap-2 truncate">
+                  {opt.dotColor && (
+                    <span className={cn("size-2 rounded-full shrink-0", opt.dotColor)} />
+                  )}
+                  <div>
+                    <div className="text-xs font-medium text-slate-900">{opt.label}</div>
+                    {opt.description && (
+                      <div className="text-[11px] text-slate-400">{opt.description}</div>
+                    )}
+                  </div>
+                </div>
+                {isSelected && <Check className="size-3.5 text-slate-900 shrink-0 ml-2" />}
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Category Attribute Fields ───────────────────────────────────────────────
 function AttributeField({
   attribute,
@@ -245,7 +338,6 @@ function AttributeField({
   onChange: (value: string) => void
 }) {
   const id = `attr-${attribute.code}`
-  const base = cn(INPUT_BASE, "h-10 text-sm")
 
   const labelEl = (
     <Label htmlFor={id} required={attribute.required}>
@@ -258,11 +350,15 @@ function AttributeField({
     return (
       <div>
         {labelEl}
-        <select id={id} value={value} onChange={(e) => onChange(e.target.value)} className={base}>
-          <option value="">Select option</option>
-          <option value="true">Yes</option>
-          <option value="false">No</option>
-        </select>
+        <CustomSelect
+          value={value}
+          onChange={onChange}
+          placeholder="Select option"
+          options={[
+            { value: "true", label: "Yes" },
+            { value: "false", label: "No" },
+          ]}
+        />
       </div>
     )
   }
@@ -271,14 +367,15 @@ function AttributeField({
     return (
       <div>
         {labelEl}
-        <select id={id} value={value} onChange={(e) => onChange(e.target.value)} className={base}>
-          <option value="">Select {attribute.label.toLowerCase()}</option>
-          {(attribute.options ?? []).map((o) => (
-            <option key={o.uuid ?? o.value} value={o.value}>
-              {o.label || o.value}
-            </option>
-          ))}
-        </select>
+        <CustomSelect
+          value={value}
+          onChange={onChange}
+          placeholder={`Select ${attribute.label.toLowerCase()}`}
+          options={(attribute.options ?? []).map((o) => ({
+            value: o.value,
+            label: o.label || o.value,
+          }))}
+        />
       </div>
     )
   }
@@ -330,7 +427,7 @@ function AttributeField({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={`Enter ${attribute.label.toLowerCase()}`}
-        className={base}
+        className={cn(INPUT_BASE, "h-10 text-sm")}
       />
     </div>
   )
@@ -1148,22 +1245,54 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
               <div className="p-5 space-y-4">
                 <div>
                   <Label>Status</Label>
-                  <select {...register("status")} className={cn(INPUT_BASE, "h-10 text-sm")}>
-                    <option value="ACTIVE">Active (Visible in marketplace)</option>
-                    <option value="DRAFT">Draft (Private)</option>
-                    <option value="ARCHIVED">Archived (Hidden)</option>
-                  </select>
+                  <CustomSelect
+                    value={watchedStatus}
+                    onChange={(val) => setValue("status", val as "ACTIVE" | "DRAFT" | "ARCHIVED", { shouldValidate: true })}
+                    options={[
+                      {
+                        value: "ACTIVE",
+                        label: "Active",
+                        description: "Visible in marketplace & search",
+                        dotColor: "bg-emerald-500",
+                      },
+                      {
+                        value: "DRAFT",
+                        label: "Draft",
+                        description: "Private to your shop",
+                        dotColor: "bg-slate-400",
+                      },
+                      {
+                        value: "ARCHIVED",
+                        label: "Archived",
+                        description: "Hidden from buyers",
+                        dotColor: "bg-amber-500",
+                      },
+                    ]}
+                  />
                 </div>
 
-                <div className="pt-2 border-t border-slate-100">
-                  <label className="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      {...register("isFeatured")}
-                      className="size-4 rounded border-slate-300 text-slate-900"
+                <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-medium text-slate-800 block">Featured Listing</span>
+                    <span className="text-[11px] text-slate-400">Show on store homepage showcase</span>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={watchedIsFeatured}
+                    onClick={() => setValue("isFeatured", !watchedIsFeatured, { shouldValidate: true })}
+                    className={cn(
+                      "relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out outline-none",
+                      watchedIsFeatured ? "bg-slate-900" : "bg-slate-200",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "pointer-events-none inline-block size-4 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out",
+                        watchedIsFeatured ? "translate-x-4" : "translate-x-0",
+                      )}
                     />
-                    <span>Feature on store homepage</span>
-                  </label>
+                  </button>
                 </div>
               </div>
             </Card>
