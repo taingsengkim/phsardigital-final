@@ -320,7 +320,18 @@ export default function QuickOrderPage() {
   }
 
   const saleErrorMessage = (err: unknown): string => {
-    const failure = err as { data?: { message?: string }; message?: string }
+    const failure = err as {
+      status?: number
+      data?: { message?: string; errorDetails?: { fieldMessage?: string }[] }
+      message?: string
+    }
+    // A duplicate-key 409 means the server already holds this sale. Its own
+    // wording ("check duplicate values and records referenced by this
+    // request") means nothing at a counter, so say what actually happened.
+    const detail = failure?.data?.errorDetails?.[0]?.fieldMessage ?? ""
+    if (failure?.status === 409 && /duplicate/i.test(detail)) {
+      return "This sale was already recorded. Check the orders list before ringing it up again."
+    }
     return failure?.data?.message || failure?.message || "Failed to process sale."
   }
 
@@ -350,6 +361,12 @@ export default function QuickOrderPage() {
     }
 
     const res = await createPosSale(salePayload).unwrap()
+
+    /* saleUuid is the sale's identity, not a retry token: once the server has
+       accepted one, posting it again is a duplicate-key 409. Retire it here,
+       the moment it is spent, so every later sale starts from a fresh
+       identity — including a basket re-rung after the cashier closed a QR. */
+    saleUuidRef.current = crypto.randomUUID()
 
     // Stock is taken the moment the sale is recorded, KHQR included, so the
     // catalogue and the orders list are already stale either way.
@@ -388,6 +405,12 @@ export default function QuickOrderPage() {
     try {
       await submitSale(saleUuidRef.current)
     } catch (err) {
+      // A 409 says the server already holds this sale, so the uuid in hand is
+      // spent. Hand the cashier a fresh one rather than a button that is
+      // guaranteed to fail the same way on the next press.
+      if ((err as { status?: number })?.status === 409) {
+        saleUuidRef.current = crypto.randomUUID()
+      }
       toast.error(saleErrorMessage(err))
     }
   }
@@ -406,7 +429,6 @@ export default function QuickOrderPage() {
     setPendingKhqrSale(null)
     toast.success("Payment received.")
 
-    saleUuidRef.current = crypto.randomUUID()
     handleClearCart()
     invalidateAfterSale()
   }
@@ -416,12 +438,14 @@ export default function QuickOrderPage() {
     // so this is a brand-new sale with a brand-new uuid. The stock came back
     // when it was cancelled, so the catalogue needs re-reading too.
     setPendingKhqrSale(null)
-    saleUuidRef.current = crypto.randomUUID()
     dispatch(sellerApi.util.invalidateTags(["SellerListings"]))
 
     try {
       await submitSale(saleUuidRef.current)
     } catch (err) {
+      if ((err as { status?: number })?.status === 409) {
+        saleUuidRef.current = crypto.randomUUID()
+      }
       toast.error(saleErrorMessage(err))
     }
   }
