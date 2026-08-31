@@ -30,7 +30,9 @@ export async function GET(request: NextRequest) {
 
   const resource = request.nextUrl.searchParams.get("resource")
   const pageNumber = request.nextUrl.searchParams.get("pageNumber") ?? "0"
-  const pageSize = request.nextUrl.searchParams.get("pageSize") ?? "20"
+  const rawPageSize = Number(request.nextUrl.searchParams.get("pageSize") ?? "20")
+  const clampedPageSize = isNaN(rawPageSize) || rawPageSize < 1 ? 20 : Math.min(rawPageSize, 100)
+  const pageSize = String(clampedPageSize)
   const pagination = `pageNumber=${encodeURIComponent(pageNumber)}&pageSize=${encodeURIComponent(pageSize)}`
   const pageable = `page=${encodeURIComponent(pageNumber)}&size=${encodeURIComponent(pageSize)}`
 

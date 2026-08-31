@@ -30,12 +30,12 @@ import {
 
 /* The 7-day chart, revenue and best sellers are all derived client-side from
    the order list, so the window has to be wide enough to actually contain a
-   week of trading rather than just the most recent screenful. */
-const ORDER_SAMPLE = 200;
+   week of trading rather than just the most recent screenful (max page size is 100). */
+const ORDER_SAMPLE = 100;
 
 /* Stock levels, the active/sold-out tiles and the subscription slot count are
-   all derived from the listing list, so it has to span the whole catalogue. */
-const LISTING_SAMPLE = 1000;
+   all derived from the listing list (max page size is 100). */
+const LISTING_SAMPLE = 100;
 
 /**
  * This page is prerendered, so anything derived from "now" — the rolling 7-day
