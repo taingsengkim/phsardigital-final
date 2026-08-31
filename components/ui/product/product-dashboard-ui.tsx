@@ -57,6 +57,11 @@ export const ProductDashboardUI: React.FC<{ successMessage?: string }> = ({ succ
       item.status === "deactive" ||
       item.status === "ARCHIVED";
 
+    const numericPrice = Number(item.discountPrice ?? item.fullPrice ?? item.price ?? 0);
+    const costPrice = item.costPrice !== null && item.costPrice !== undefined ? Number(item.costPrice) : null;
+    const profitPerUnit = costPrice !== null && numericPrice > 0 ? numericPrice - costPrice : null;
+    const marginPercent = profitPerUnit !== null && numericPrice > 0 ? (profitPerUnit / numericPrice) * 100 : null;
+
     return {
       id: item.uuid || String(item.id || index),
       uuid: item.uuid,
@@ -64,7 +69,11 @@ export const ProductDashboardUI: React.FC<{ successMessage?: string }> = ({ succ
       category: categoryName,
       image: primaryImg,
       status: isDeactive ? "deactive" : "active",
-      price: `$${Number(item.discountPrice ?? item.fullPrice ?? item.price ?? 0).toFixed(2)}`,
+      price: `$${numericPrice.toFixed(2)}`,
+      numericPrice,
+      costPrice,
+      profitPerUnit,
+      marginPercent,
       stockQty: Number(item.stockQty ?? item.stock ?? 0),
       sku: item.sku || null,
       sales: `$${((item.price || 50) * (item.sold || (index + 1) * 3)).toLocaleString()}`,

@@ -68,6 +68,7 @@ export interface CreateListingRequest {
   categoryUuid: string
   title: string
   sku?: string
+  costPrice?: number | null
   description: string
   fullPrice: number
   discountPrice?: number
@@ -86,6 +87,7 @@ export interface CreateListingRequest {
 export interface SellerListing extends CreateListingRequest {
   uuid: string
   sku?: string
+  costPrice?: number | null
   createdAt?: string
   updatedAt?: string
 }
@@ -100,6 +102,7 @@ export interface UpdateListingBody {
   categoryUuid?: string
   title?: string
   sku?: string
+  costPrice?: number | null
   description?: string
   fullPrice?: number
   discountPrice?: number

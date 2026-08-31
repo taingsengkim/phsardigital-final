@@ -47,6 +47,7 @@ type PosProduct = {
   name: string
   price: number
   fullPrice: number
+  costPrice: number | null
   category: string
   image: string
   stockQty: number
@@ -142,12 +143,15 @@ export default function QuickOrderPage() {
           ? Number(item.discountPrice)
           : null
       const activePrice = discountPrice !== null && discountPrice > 0 ? discountPrice : fullPrice
+      const costPrice =
+        item.costPrice !== null && item.costPrice !== undefined ? Number(item.costPrice) : null
 
       return {
         id: item.uuid || item.id || String(index),
         name: item.title || "Untitled product",
         price: activePrice,
         fullPrice: fullPrice > 0 ? fullPrice : activePrice,
+        costPrice,
         category: item.category?.name || "General",
         image: imgUri ? getFileUrl(imgUri) : "/picture/pic1.jpg",
         stockQty: Number(item.stockQty ?? item.stock ?? 0),
@@ -566,6 +570,11 @@ export default function QuickOrderPage() {
                           <div className="text-xs sm:text-sm font-black text-[#6C4CD8] tabular-nums">
                             {formatMoney(product.price)}
                           </div>
+                          {product.costPrice !== null && product.price > 0 && (
+                            <span className="text-[10px] font-semibold text-slate-400 block tabular-nums">
+                              Cost: ${product.costPrice.toFixed(2)} · {(((product.price - product.costPrice) / product.price) * 100).toFixed(0)}% margin
+                            </span>
+                          )}
                           <span
                             className={cn(
                               "text-[10px] font-bold",

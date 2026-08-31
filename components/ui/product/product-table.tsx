@@ -5,15 +5,22 @@ import Image from "next/image"
 import Link from "next/link"
 import {
   AlertCircle,
+  AlertTriangle,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   Barcode,
   Check,
+  ChevronDown,
   Edit,
   ExternalLink,
+  Info,
   Layers,
   Loader2,
   Minus,
   Package,
   PackagePlus,
+  Percent,
   Plus,
   Search,
   Sparkles,
@@ -36,6 +43,10 @@ export interface ProductRow {
   image: string
   status: "active" | "deactive"
   price: string
+  numericPrice?: number
+  costPrice?: number | null
+  profitPerUnit?: number | null
+  marginPercent?: number | null
   stockQty: number
   sku?: string | null
   sales?: string
@@ -51,6 +62,8 @@ export const ProductTable: React.FC<{ products?: ProductRow[] }> = ({ products =
   const [updateSellerListing] = useUpdateSellerListingMutation()
 
   const [query, setQuery] = React.useState("")
+  const [filterMode, setFilterMode] = React.useState<"ALL" | "ACTIVE" | "DRAFT" | "MISSING_COST" | "LOW_STOCK">("ALL")
+  const [marginSortDirection, setMarginSortDirection] = React.useState<"asc" | "desc" | null>(null)
   const [updatingId, setUpdatingId] = React.useState<string | null>(null)
 
   // Quick Restock Dialog State
@@ -59,11 +72,49 @@ export const ProductTable: React.FC<{ products?: ProductRow[] }> = ({ products =
   const [restockAmount, setRestockAmount] = React.useState<number>(10)
   const [isSavingRestock, setIsSavingRestock] = React.useState(false)
 
-  const visibleProducts = products.filter((product) =>
-    `${product.title} ${product.category} ${product.sku || ""}`
-      .toLowerCase()
-      .includes(query.trim().toLowerCase()),
-  )
+  // Missing cost price count
+  const missingCostCount = React.useMemo(() => {
+    return products.filter((p) => p.costPrice === null || p.costPrice === undefined).length
+  }, [products])
+
+  // Filter & Sort Logic
+  const visibleProducts = React.useMemo(() => {
+    let list = products.filter((product) => {
+      // Search query
+      const matchesQuery = `${product.title} ${product.category} ${product.sku || ""}`
+        .toLowerCase()
+        .includes(query.trim().toLowerCase())
+      if (!matchesQuery) return false
+
+      // Filter chips
+      if (filterMode === "ACTIVE") return product.status === "active"
+      if (filterMode === "DRAFT") return product.status === "deactive"
+      if (filterMode === "MISSING_COST") return product.costPrice === null || product.costPrice === undefined
+      if (filterMode === "LOW_STOCK") return product.stockQty < 5
+
+      return true
+    })
+
+    // Client-side margin sort
+    if (marginSortDirection !== null) {
+      list = [...list].sort((a, b) => {
+        const marginA = a.marginPercent !== null && a.marginPercent !== undefined ? a.marginPercent : -99999
+        const marginB = b.marginPercent !== null && b.marginPercent !== undefined ? b.marginPercent : -99999
+
+        if (marginSortDirection === "asc") return marginA - marginB
+        return marginB - marginA
+      })
+    }
+
+    return list
+  }, [products, query, filterMode, marginSortDirection])
+
+  // Toggle Margin Sort
+  const handleToggleMarginSort = () => {
+    if (marginSortDirection === null) setMarginSortDirection("desc")
+    else if (marginSortDirection === "desc") setMarginSortDirection("asc")
+    else setMarginSortDirection(null)
+  }
 
   // Direct Inline Stock Stepper
   const handleInlineStockChange = async (product: ProductRow, delta: number) => {
@@ -138,9 +189,9 @@ export const ProductTable: React.FC<{ products?: ProductRow[] }> = ({ products =
             <Package className="size-4.5" />
           </div>
           <div>
-            <h2 className="text-xl font-black text-slate-950">Store Inventory</h2>
+            <h2 className="text-xl font-black text-slate-950">Store Inventory & Margins</h2>
             <p className="text-xs text-slate-500 font-medium">
-              Manage stock levels, quick restock, and edit product listings
+              Track item costs, unit margins, barcodes, and manage stock levels
             </p>
           </div>
         </div>
@@ -151,20 +202,105 @@ export const ProductTable: React.FC<{ products?: ProductRow[] }> = ({ products =
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by title, category, or SKU barcode..."
+            placeholder="Search by title, SKU shop code, or category..."
             className="w-full rounded-2xl border border-slate-200 bg-slate-50/70 py-2.5 pr-4 pl-11 text-xs sm:text-sm font-medium text-slate-900 outline-none focus:border-[#6C4CD8] focus:bg-white focus:ring-2 focus:ring-[#6C4CD8]/20"
           />
         </div>
       </div>
 
+      {/* Filter Chips */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+        <button
+          type="button"
+          onClick={() => setFilterMode("ALL")}
+          className={cn(
+            "rounded-xl px-3.5 py-1.5 text-xs font-bold transition cursor-pointer shrink-0",
+            filterMode === "ALL"
+              ? "bg-[#6C4CD8] text-white shadow-xs"
+              : "bg-slate-100 text-slate-600 hover:bg-slate-200",
+          )}
+        >
+          All Products ({products.length})
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setFilterMode("ACTIVE")}
+          className={cn(
+            "rounded-xl px-3.5 py-1.5 text-xs font-bold transition cursor-pointer shrink-0",
+            filterMode === "ACTIVE"
+              ? "bg-[#6C4CD8] text-white shadow-xs"
+              : "bg-slate-100 text-slate-600 hover:bg-slate-200",
+          )}
+        >
+          Active
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setFilterMode("DRAFT")}
+          className={cn(
+            "rounded-xl px-3.5 py-1.5 text-xs font-bold transition cursor-pointer shrink-0",
+            filterMode === "DRAFT"
+              ? "bg-[#6C4CD8] text-white shadow-xs"
+              : "bg-slate-100 text-slate-600 hover:bg-slate-200",
+          )}
+        >
+          Draft / Inactive
+        </button>
+
+        {/* Missing Cost Price Filter Chip */}
+        <button
+          type="button"
+          onClick={() => setFilterMode("MISSING_COST")}
+          className={cn(
+            "rounded-xl px-3.5 py-1.5 text-xs font-extrabold transition cursor-pointer shrink-0 flex items-center gap-1.5",
+            filterMode === "MISSING_COST"
+              ? "bg-amber-600 text-white shadow-xs"
+              : missingCostCount > 0
+              ? "bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100"
+              : "bg-slate-100 text-slate-600 hover:bg-slate-200",
+          )}
+        >
+          <AlertTriangle className="size-3.5" />
+          <span>Missing Cost Price ({missingCostCount})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setFilterMode("LOW_STOCK")}
+          className={cn(
+            "rounded-xl px-3.5 py-1.5 text-xs font-bold transition cursor-pointer shrink-0",
+            filterMode === "LOW_STOCK"
+              ? "bg-[#6C4CD8] text-white shadow-xs"
+              : "bg-slate-100 text-slate-600 hover:bg-slate-200",
+          )}
+        >
+          Low Stock (&lt; 5)
+        </button>
+      </div>
+
       {/* Table */}
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[900px] border-separate border-spacing-0">
+        <table className="w-full min-w-[1050px] border-separate border-spacing-0">
           <thead>
             <tr className="text-left text-xs font-black uppercase tracking-wider text-slate-400">
-              <th className="pb-4 font-black">Product Item</th>
-              <th className="pb-4 font-black">Status</th>
-              <th className="pb-4 font-black">Price</th>
+              <th className="pb-4 font-black">Product</th>
+              <th className="pb-4 font-black">Shop Code / SKU</th>
+              <th className="pb-4 font-black">Selling Price</th>
+              <th className="pb-4 font-black">Cost Price</th>
+              <th className="pb-4 font-black cursor-pointer select-none" onClick={handleToggleMarginSort}>
+                <div className="inline-flex items-center gap-1.5 hover:text-slate-900 transition">
+                  <span>Unit Margin</span>
+                  {marginSortDirection === "desc" ? (
+                    <ArrowDown className="size-3.5 text-[#6C4CD8]" />
+                  ) : marginSortDirection === "asc" ? (
+                    <ArrowUp className="size-3.5 text-[#6C4CD8]" />
+                  ) : (
+                    <ArrowUpDown className="size-3 text-slate-400" />
+                  )}
+                </div>
+              </th>
               <th className="pb-4 font-black">Stock Level</th>
               <th className="pb-4 font-black">Quick Restock</th>
               <th className="pb-4 pr-4 font-black text-right">Actions</th>
@@ -174,6 +310,7 @@ export const ProductTable: React.FC<{ products?: ProductRow[] }> = ({ products =
             {visibleProducts.map((product) => {
               const targetUuid = product.uuid || product.id
               const isUpdatingThis = updatingId === targetUuid
+              const hasCost = product.costPrice !== null && product.costPrice !== undefined
 
               return (
                 <tr
@@ -181,7 +318,7 @@ export const ProductTable: React.FC<{ products?: ProductRow[] }> = ({ products =
                   className="group border-t border-slate-100 align-middle transition-colors hover:bg-slate-50/60"
                 >
                   {/* Product Info */}
-                  <td className="border-t border-slate-100 py-4 pr-6">
+                  <td className="border-t border-slate-100 py-4 pr-4">
                     <div className="flex items-center gap-3.5">
                       <div className="relative size-14 shrink-0 overflow-hidden rounded-2xl bg-slate-100 border border-slate-200">
                         <Image
@@ -191,48 +328,66 @@ export const ProductTable: React.FC<{ products?: ProductRow[] }> = ({ products =
                           className="object-cover"
                         />
                       </div>
-                      <div className="min-w-0 max-w-[260px]">
+                      <div className="min-w-0 max-w-[220px]">
                         <p className="text-xs sm:text-sm font-extrabold text-slate-950 truncate leading-snug">
                           {product.title}
                         </p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-[11px] font-semibold text-slate-500">
-                            {product.category}
-                          </span>
-                          {product.sku && (
-                            <>
-                              <span className="text-slate-300">•</span>
-                              <span className="font-mono text-[10px] font-bold text-[#6C4CD8]">
-                                SKU: {product.sku}
-                              </span>
-                            </>
-                          )}
-                        </div>
+                        <span className="text-[11px] font-semibold text-slate-500 block truncate">
+                          {product.category}
+                        </span>
                       </div>
                     </div>
                   </td>
 
-                  {/* Status */}
-                  <td className="border-t border-slate-100 py-4 pr-6">
-                    <span
-                      className={cn(
-                        "inline-flex items-center rounded-xl px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-wider",
-                        product.status === "active"
-                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                          : "bg-slate-100 text-slate-600 border border-slate-200",
-                      )}
-                    >
-                      {product.status === "active" ? "Active" : "Draft / Inactive"}
-                    </span>
+                  {/* SKU / Shop Code */}
+                  <td className="border-t border-slate-100 py-4 pr-4">
+                    {product.sku ? (
+                      <span className="font-mono text-xs font-bold text-[#6C4CD8] bg-purple-50 border border-purple-100 rounded-lg px-2 py-0.5 inline-block">
+                        {product.sku}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-slate-300 font-mono italic">Not set</span>
+                    )}
                   </td>
 
-                  {/* Price */}
-                  <td className="border-t border-slate-100 py-4 pr-6 text-sm font-black text-slate-900 tabular-nums">
+                  {/* Selling Price */}
+                  <td className="border-t border-slate-100 py-4 pr-4 text-sm font-black text-slate-900 tabular-nums">
                     {product.price}
                   </td>
 
+                  {/* Cost Price */}
+                  <td className="border-t border-slate-100 py-4 pr-4 text-xs font-bold tabular-nums">
+                    {hasCost ? (
+                      <span className="text-slate-700">${Number(product.costPrice).toFixed(2)}</span>
+                    ) : (
+                      <span className="text-amber-700 font-medium">Not set</span>
+                    )}
+                  </td>
+
+                  {/* Unit Margin (Client-side Computed) */}
+                  <td className="border-t border-slate-100 py-4 pr-4">
+                    {hasCost && product.marginPercent !== null && product.marginPercent !== undefined && product.profitPerUnit !== null && product.profitPerUnit !== undefined ? (
+                      product.profitPerUnit < 0 ? (
+                        <span className="inline-flex items-center gap-1 rounded-xl bg-amber-50 px-2 py-0.5 text-[11px] font-extrabold text-amber-900 border border-amber-200">
+                          Below cost (-${Math.abs(product.profitPerUnit).toFixed(2)})
+                        </span>
+                      ) : (
+                        <div className="space-y-0.5">
+                          <div className="text-xs font-black text-emerald-800 tabular-nums">
+                            {product.marginPercent.toFixed(1)}%
+                          </div>
+                          <div className="text-[10px] font-bold text-slate-400 tabular-nums">
+                            +${product.profitPerUnit.toFixed(2)} / unit
+                          </div>
+                        </div>
+                      )
+                    ) : (
+                      <span className="text-slate-300 text-xs font-black">—</span>
+                    )}
+                  </td>
+
                   {/* Stock Level Badge */}
-                  <td className="border-t border-slate-100 py-4 pr-6">
+                  <td className="border-t border-slate-100 py-4 pr-4">
                     <div className="space-y-1">
                       <span
                         className={cn(
@@ -264,7 +419,7 @@ export const ProductTable: React.FC<{ products?: ProductRow[] }> = ({ products =
                   </td>
 
                   {/* Quick Inline Stepper */}
-                  <td className="border-t border-slate-100 py-4 pr-6">
+                  <td className="border-t border-slate-100 py-4 pr-4">
                     <div className="flex items-center gap-1.5">
                       <div className="flex items-center rounded-xl bg-white border border-slate-200 p-0.5 shadow-xs">
                         <button
@@ -330,8 +485,8 @@ export const ProductTable: React.FC<{ products?: ProductRow[] }> = ({ products =
 
             {visibleProducts.length === 0 && (
               <tr>
-                <td colSpan={6} className="border-t border-slate-100 py-12 text-center text-xs text-slate-400">
-                  No products found matching &ldquo;{query}&rdquo;.
+                <td colSpan={8} className="border-t border-slate-100 py-12 text-center text-xs text-slate-400">
+                  No products match &ldquo;{query}&rdquo; for the selected filter.
                 </td>
               </tr>
             )}
@@ -393,7 +548,7 @@ export const ProductTable: React.FC<{ products?: ProductRow[] }> = ({ products =
               </div>
             </div>
 
-            {/* Mode Switcher: ADD to stock vs SET exact */}
+            {/* Mode Switcher */}
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-1.5 rounded-2xl bg-slate-100 p-1">
                 <button

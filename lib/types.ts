@@ -207,6 +207,7 @@ export type ApiListing = {
   price?: number | null;
   fullPrice?: number | null;
   discountPrice?: number | null;
+  costPrice?: number | null;
   stockQty?: number | null;
   status?: string | null;
   isFeatured?: boolean | null;

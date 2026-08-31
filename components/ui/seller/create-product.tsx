@@ -80,6 +80,10 @@ const createProductSchema = z
       .trim()
       .max(64, "SKU must not exceed 64 characters.")
       .optional(),
+    costPrice: z
+      .number({ error: "Enter a valid cost price." })
+      .min(0, "Cost price must be 0 or greater.")
+      .optional(),
     description: z
       .string()
       .trim()
@@ -389,6 +393,7 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
     defaultValues: {
       title: "",
       sku: "",
+      costPrice: undefined,
       description: "",
       price: undefined,
       discountPrice: undefined,
@@ -404,6 +409,7 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
   const watchedTitle = useWatch({ control, name: "title" })
   const watchedPrice = useWatch({ control, name: "price" })
   const watchedDiscountPrice = useWatch({ control, name: "discountPrice" })
+  const watchedCostPrice = useWatch({ control, name: "costPrice" })
   const watchedStockQty = useWatch({ control, name: "stockQty" })
   const watchedCategoryUuid = useWatch({ control, name: "categoryUuid" })
   const watchedIsFeatured = useWatch({ control, name: "isFeatured" })
@@ -473,6 +479,7 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
     reset({
       title: listing.title ?? "",
       sku: listing.sku ?? "",
+      costPrice: listing.costPrice != null ? Number(listing.costPrice) : undefined,
       description: listing.description ?? "",
       price: Number(listing.fullPrice ?? listing.price ?? 0),
       discountPrice: listing.discountPrice == null ? undefined : Number(listing.discountPrice),
@@ -612,6 +619,12 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
             categoryUuid: data.categoryUuid,
             title: data.title,
             sku: data.sku !== undefined ? (data.sku.trim() === "" ? "" : data.sku.trim()) : undefined,
+            costPrice:
+              data.costPrice !== undefined
+                ? isNaN(Number(data.costPrice))
+                  ? null
+                  : Number(data.costPrice)
+                : undefined,
             description: data.description,
             fullPrice: data.price,
             ...(data.discountPrice !== undefined ? { discountPrice: data.discountPrice } : {}),
@@ -649,6 +662,10 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
           categoryUuid: data.categoryUuid,
           title: data.title,
           sku: data.sku?.trim() ? data.sku.trim() : undefined,
+          costPrice:
+            data.costPrice !== undefined && !isNaN(Number(data.costPrice))
+              ? Number(data.costPrice)
+              : undefined,
           description: data.description,
           fullPrice: data.price,
           discountPrice: data.discountPrice,
@@ -934,7 +951,34 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
             <Card>
               <CardHeader icon={Banknote} label="Step 3" title="Pricing & Inventory" />
               <div className="p-6">
-                <div className="grid gap-5 sm:grid-cols-3">
+                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                  {/* Cost Price */}
+                  <div>
+                    <Label hint="What your shop paid per unit. Private to you and never visible to buyers.">
+                      Cost Price (Optional)
+                    </Label>
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-base font-black text-slate-400">
+                        $
+                      </span>
+                      <input
+                        {...register("costPrice", {
+                          setValueAs: (v) => (v === "" || isNaN(Number(v)) ? undefined : Number(v)),
+                        })}
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        className={cn(
+                          INPUT_BASE,
+                          "h-12 pl-8 font-black text-base tabular-nums",
+                          errors.costPrice && INPUT_ERROR,
+                        )}
+                      />
+                    </div>
+                    <FieldError message={errors.costPrice?.message} />
+                  </div>
+
                   {/* Regular Price */}
                   <div>
                     <Label required>Regular Price (USD)</Label>
@@ -1010,7 +1054,7 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
                         {watchedStockQty > 4
                           ? `${watchedStockQty} In Stock`
                           : watchedStockQty > 0
-                          ? `Low Stock (${watchedStockQty})`
+                          ? `Low (${watchedStockQty})`
                           : "Out of Stock"}
                       </span>
                     </div>
@@ -1055,29 +1099,77 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
                       </button>
                     </div>
                     <FieldError message={errors.stockQty?.message} />
-
-                    {/* Quick Add Presets */}
-                    <div className="flex items-center gap-1 pt-1">
-                      <span className="text-[10px] font-bold text-slate-400">Quick Add:</span>
-                      {[5, 10, 25, 50, 100].map((addAmount) => (
-                        <button
-                          key={addAmount}
-                          type="button"
-                          onClick={() => {
-                            const current = Number(getValues("stockQty") || 0)
-                            setValue("stockQty", current + addAmount, {
-                              shouldDirty: true,
-                              shouldValidate: true,
-                            })
-                            toast.success(`Added +${addAmount} units (Total: ${current + addAmount})`)
-                          }}
-                          className="rounded-lg bg-purple-50 px-2 py-0.5 text-[10px] font-extrabold text-[#6C4CD8] hover:bg-[#6C4CD8] hover:text-white transition"
-                        >
-                          +{addAmount}
-                        </button>
-                      ))}
-                    </div>
                   </div>
+                </div>
+
+                {/* Quick Add Presets Row */}
+                <div className="flex items-center gap-1.5 pt-2">
+                  <span className="text-[10px] font-bold text-slate-400">Quick Stock Add:</span>
+                  {[5, 10, 25, 50, 100].map((addAmount) => (
+                    <button
+                      key={addAmount}
+                      type="button"
+                      onClick={() => {
+                        const current = Number(getValues("stockQty") || 0)
+                        setValue("stockQty", current + addAmount, {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        })
+                        toast.success(`Added +${addAmount} units (Total: ${current + addAmount})`)
+                      }}
+                      className="rounded-lg bg-purple-50 px-2 py-0.5 text-[10px] font-extrabold text-[#6C4CD8] hover:bg-[#6C4CD8] hover:text-white transition"
+                    >
+                      +{addAmount}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Live Margin & Price Visual Summary Bar */}
+                <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-xs font-bold text-slate-400">Selling Price:</span>
+                      <span className="text-xl font-black text-slate-900 tabular-nums">
+                        ${((watchedDiscountPrice && watchedDiscountPrice > 0 ? watchedDiscountPrice : watchedPrice) || 0).toFixed(2)}
+                      </span>
+                    </div>
+
+                    {/* Live Margin Tag */}
+                    {watchedCostPrice !== undefined && watchedCostPrice !== null && !isNaN(Number(watchedCostPrice)) && Number(watchedCostPrice) >= 0 ? (
+                      (() => {
+                        const selling = (watchedDiscountPrice && watchedDiscountPrice > 0 ? watchedDiscountPrice : watchedPrice) || 0
+                        const cost = Number(watchedCostPrice)
+                        const profit = selling - cost
+                        const margin = selling > 0 ? (profit / selling) * 100 : 0
+
+                        if (profit < 0) {
+                          return (
+                            <span className="rounded-xl bg-amber-100 px-3 py-1 text-xs font-extrabold text-amber-900 border border-amber-200">
+                              ⚠️ Selling below cost · -${Math.abs(profit).toFixed(2)} loss/unit ({margin.toFixed(1)}% margin)
+                            </span>
+                          )
+                        }
+
+                        return (
+                          <span className="rounded-xl bg-emerald-100 px-3 py-1 text-xs font-extrabold text-emerald-900 border border-emerald-200">
+                            Margin {margin.toFixed(1)}% · +${profit.toFixed(2)} profit/unit
+                          </span>
+                        )
+                      })()
+                    ) : (
+                      <span className="text-xs font-semibold text-slate-400">
+                        Cost price: <span className="font-bold text-slate-500">Not set</span> · Margin unavailable
+                      </span>
+                    )}
+                  </div>
+
+                  <span className="text-xs font-bold text-slate-500">
+                    {watchedStockQty > 0 ? (
+                      <span className="text-emerald-700 font-black">{watchedStockQty} units ready</span>
+                    ) : (
+                      <span className="text-rose-600 font-black">Out of stock</span>
+                    )}
+                  </span>
                 </div>
 
                 {/* Price visual summary */}
