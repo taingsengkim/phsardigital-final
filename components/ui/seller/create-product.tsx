@@ -11,27 +11,31 @@ import { z } from "zod"
 import {
   AlertCircle,
   ArrowLeft,
+  ArrowRight,
+  BadgeCheck,
+  Banknote,
   Check,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
+  DollarSign,
   Eye,
-  HelpCircle,
+  EyeOff,
   ImagePlus,
   Info,
   Layers,
   Loader2,
   Package,
   Plus,
-  RotateCcw,
   Search,
-  ShieldCheck,
-  ShoppingCart,
   Sparkles,
   Star,
   Tag,
   Trash2,
+  TrendingDown,
+  Warehouse,
   X,
+  Zap,
 } from "lucide-react"
 import { toast } from "sonner"
 import {
@@ -48,25 +52,44 @@ import {
 import { readSellerDrafts, writeSellerDrafts } from "@/lib/seller-drafts"
 import { ListingGalleryManager } from "@/components/ui/seller/listing-gallery-manager"
 import { NewListingImages, type PickedImage } from "@/components/ui/seller/new-listing-images"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useAppDispatch } from "@/lib/hooks"
 import { sellerApi } from "@/lib/api/sellerApi"
 import type { CategoryAttributeDefinition, SellerCategoryTree } from "@/lib/types/seller-product"
 import { cn, getFileUrl } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 
+// ─── Schemas ────────────────────────────────────────────────────────────────
 const productImageSchema = z
-  .custom<File>((value) => typeof File !== "undefined" && value instanceof File, "Please select a valid image file.")
+  .custom<File>(
+    (value) => typeof File !== "undefined" && value instanceof File,
+    "Please select a valid image file.",
+  )
   .refine((file) => file.type.startsWith("image/"), "Only image files are allowed.")
   .refine((file) => file.size <= 8 * 1024 * 1024, "Each image must be 8 MB or smaller.")
 
 const createProductSchema = z
   .object({
-    title: z.string().trim().min(3, "Title must contain at least 3 characters.").max(120, "Title must not exceed 120 characters."),
-    description: z.string().trim().min(10, "Description must contain at least 10 characters.").max(5000, "Description must not exceed 5,000 characters."),
-    price: z.number({ error: "Enter a valid regular price." }).positive("Price must be greater than 0."),
-    discountPrice: z.number({ error: "Enter a valid discount price." }).positive("Discount price must be greater than 0.").optional(),
-    stockQty: z.number({ error: "Enter a valid stock quantity." }).int("Stock quantity must be a whole number.").min(0, "Stock quantity cannot be negative."),
+    title: z
+      .string()
+      .trim()
+      .min(3, "Title must be at least 3 characters.")
+      .max(120, "Title must not exceed 120 characters."),
+    description: z
+      .string()
+      .trim()
+      .min(10, "Description must be at least 10 characters.")
+      .max(5000, "Description must not exceed 5,000 characters."),
+    price: z
+      .number({ error: "Enter a valid regular price." })
+      .positive("Price must be greater than 0."),
+    discountPrice: z
+      .number({ error: "Enter a valid discount price." })
+      .positive("Discount price must be greater than 0.")
+      .optional(),
+    stockQty: z
+      .number({ error: "Enter a valid stock quantity." })
+      .int("Must be a whole number.")
+      .min(0, "Cannot be negative."),
     categoryUuid: z.string().min(1, "Please select a category."),
     status: z.enum(["DRAFT", "ACTIVE", "ARCHIVED"]),
     isFeatured: z.boolean(),
@@ -74,23 +97,27 @@ const createProductSchema = z
   })
   .refine(
     (data) => data.discountPrice === undefined || data.discountPrice < data.price,
-    { path: ["discountPrice"], message: "Discount price must be strictly lower than the regular price." },
+    {
+      path: ["discountPrice"],
+      message: "Discount price must be lower than the regular price.",
+    },
   )
 
 type CreateProductForm = z.infer<typeof createProductSchema>
 
-type CustomAttribute = {
+type CustomSpec = {
   id: string
   key: string
   value: string
 }
 
+// ─── Tree Helpers ────────────────────────────────────────────────────────────
 function categoryPath(tree: SellerCategoryTree[], uuid?: string | null): SellerCategoryTree[] {
   if (!uuid) return []
-  for (const category of tree) {
-    if (category.uuid === uuid) return [category]
-    const childPath = categoryPath(category.children ?? [], uuid)
-    if (childPath.length) return [category, ...childPath]
+  for (const c of tree) {
+    if (c.uuid === uuid) return [c]
+    const p = categoryPath(c.children ?? [], uuid)
+    if (p.length) return [c, ...p]
   }
   return []
 }
@@ -102,75 +129,120 @@ function findCategoryBySummary(
   const slug = summary?.slug?.trim().toLowerCase()
   const name = summary?.name?.trim().toLowerCase()
   if (!slug && !name) return undefined
-
-  for (const category of tree) {
-    if (slug && category.slug?.trim().toLowerCase() === slug) return category
-    if (!slug && name && category.name.trim().toLowerCase() === name) return category
-    const match = findCategoryBySummary(category.children ?? [], summary)
-    if (match) return match
+  for (const c of tree) {
+    if (slug && c.slug?.trim().toLowerCase() === slug) return c
+    if (!slug && name && c.name.trim().toLowerCase() === name) return c
+    const m = findCategoryBySummary(c.children ?? [], summary)
+    if (m) return m
   }
   return undefined
 }
 
-function flattenCategoryTree(tree: SellerCategoryTree[], parents: string[] = []): SellerCategoryTree[] {
-  return tree.flatMap((category) => {
-    const path = [...parents, category.name]
+function flattenCategoryTree(
+  tree: SellerCategoryTree[],
+  parents: string[] = [],
+  depth = 0,
+): (SellerCategoryTree & { depth: number; displayPath: string })[] {
+  return tree.flatMap((c) => {
+    const path = [...parents, c.name]
     return [
-      { ...category, name: path.join(" > ") },
-      ...flattenCategoryTree(category.children ?? [], path),
+      { ...c, depth, displayPath: path.join(" › ") },
+      ...flattenCategoryTree(c.children ?? [], path, depth + 1),
     ]
   })
 }
 
+// ─── Micro UI Primitives ─────────────────────────────────────────────────────
 function FieldError({ message }: { message?: string }) {
-  return message ? <p className="mt-1.5 text-xs font-semibold text-rose-600">{message}</p> : null
+  if (!message) return null
+  return (
+    <div className="mt-2 flex items-center gap-1.5">
+      <AlertCircle className="size-3.5 text-rose-500 shrink-0" />
+      <p className="text-xs font-semibold text-rose-600">{message}</p>
+    </div>
+  )
 }
 
-function FieldLabel({ children, required, tooltip }: { children: React.ReactNode; required?: boolean; tooltip?: string }) {
+function Label({
+  children,
+  required,
+  htmlFor,
+  hint,
+}: {
+  children: React.ReactNode
+  required?: boolean
+  htmlFor?: string
+  hint?: string
+}) {
   return (
-    <label className="mb-2 flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-slate-700">
+    <label
+      htmlFor={htmlFor}
+      className="mb-2 flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-slate-500"
+    >
       {children}
-      {required && <span className="text-rose-500 font-black">*</span>}
-      {tooltip && <span title={tooltip} className="cursor-help"><Info className="size-3.5 text-slate-400" /></span>}
+      {required && <span className="text-rose-500">*</span>}
+      {hint && (
+        <span title={hint} className="ml-auto cursor-help">
+          <Info className="size-3.5 text-slate-300 hover:text-slate-500 transition" />
+        </span>
+      )}
     </label>
   )
 }
 
-function Section({
-  title,
-  subtitle,
-  icon: Icon,
+const INPUT_BASE =
+  "w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-violet-400 focus:ring-3 focus:ring-violet-100"
+
+const INPUT_ERROR =
+  "border-rose-300 bg-rose-50/40 focus:border-rose-400 focus:ring-rose-100"
+
+// ─── Section Card ────────────────────────────────────────────────────────────
+function Card({
   children,
-  badge,
+  className,
 }: {
-  title: string
-  subtitle?: string
-  icon?: React.ElementType
   children: React.ReactNode
-  badge?: React.ReactNode
+  className?: string
 }) {
   return (
-    <section className="rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-7 shadow-xs space-y-5">
-      <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-        <div className="flex items-center gap-3">
-          {Icon && (
-            <span className="grid size-9 place-items-center rounded-xl bg-purple-50 text-[#6C4CD8]">
-              <Icon className="size-4.5" />
-            </span>
-          )}
-          <div>
-            <h2 className="text-base font-black text-slate-950">{title}</h2>
-            {subtitle && <p className="text-xs text-slate-500 font-medium">{subtitle}</p>}
-          </div>
-        </div>
-        {badge}
-      </div>
+    <div
+      className={cn(
+        "rounded-2xl border border-slate-200/80 bg-white shadow-sm",
+        className,
+      )}
+    >
       {children}
-    </section>
+    </div>
   )
 }
 
-function CategoryAttributeField({
+function CardHeader({
+  icon: Icon,
+  label,
+  title,
+  badge,
+}: {
+  icon: React.ElementType
+  label: string
+  title: string
+  badge?: React.ReactNode
+}) {
+  return (
+    <div className="flex items-center gap-4 border-b border-slate-100 px-6 py-5">
+      <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+        <Icon className="size-5" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</p>
+        <h2 className="text-base font-extrabold text-slate-900 leading-snug">{title}</h2>
+      </div>
+      {badge}
+    </div>
+  )
+}
+
+// ─── Category Attribute Fields ───────────────────────────────────────────────
+function AttributeField({
   attribute,
   value,
   onChange,
@@ -179,21 +251,22 @@ function CategoryAttributeField({
   value: string
   onChange: (value: string) => void
 }) {
-  const label = (
-    <FieldLabel required={attribute.required}>
+  const id = `attr-${attribute.code}`
+  const base = cn(INPUT_BASE, "h-11")
+
+  const labelEl = (
+    <Label htmlFor={id} required={attribute.required}>
       {attribute.label}
-      {attribute.unit ? ` (${attribute.unit})` : ""}
-    </FieldLabel>
+      {attribute.unit ? <span className="ml-1 text-slate-400 normal-case font-semibold">({attribute.unit})</span> : null}
+    </Label>
   )
-  const inputClass =
-    "h-11 w-full rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 text-xs sm:text-sm font-medium text-slate-900 outline-none transition focus:border-[#6C4CD8] focus:bg-white focus:ring-2 focus:ring-[#6C4CD8]/20"
 
   if (attribute.dataType === "BOOLEAN") {
     return (
       <div>
-        {label}
-        <select value={value} onChange={(e) => onChange(e.target.value)} className={inputClass}>
-          <option value="">Select option</option>
+        {labelEl}
+        <select id={id} value={value} onChange={(e) => onChange(e.target.value)} className={base}>
+          <option value="">Select…</option>
           <option value="true">Yes</option>
           <option value="false">No</option>
         </select>
@@ -204,12 +277,12 @@ function CategoryAttributeField({
   if (attribute.dataType === "SELECT") {
     return (
       <div>
-        {label}
-        <select value={value} onChange={(e) => onChange(e.target.value)} className={inputClass}>
-          <option value="">Select {attribute.label.toLowerCase()}</option>
-          {(attribute.options ?? []).map((opt) => (
-            <option key={opt.uuid ?? opt.value} value={opt.value}>
-              {opt.label || opt.value}
+        {labelEl}
+        <select id={id} value={value} onChange={(e) => onChange(e.target.value)} className={base}>
+          <option value="">Select {attribute.label.toLowerCase()}…</option>
+          {(attribute.options ?? []).map((o) => (
+            <option key={o.uuid ?? o.value} value={o.value}>
+              {o.label || o.value}
             </option>
           ))}
         </select>
@@ -220,34 +293,34 @@ function CategoryAttributeField({
   if (attribute.dataType === "MULTI_SELECT") {
     const selected = new Set(value.split(",").filter(Boolean))
     return (
-      <fieldset className="space-y-1.5">
-        <legend className="mb-2 text-xs font-extrabold uppercase tracking-wider text-slate-700">
+      <fieldset>
+        <legend className="mb-2 text-[11px] font-black uppercase tracking-widest text-slate-500">
           {attribute.label}
-          {attribute.required && <span className="text-rose-500"> *</span>}
+          {attribute.required && <span className="ml-1 text-rose-500">*</span>}
         </legend>
-        <div className="flex min-h-11 flex-wrap gap-1.5 rounded-xl border border-slate-200 bg-slate-50/40 p-2">
-          {(attribute.options ?? []).map((opt) => (
+        <div className="flex flex-wrap gap-2 rounded-xl border border-slate-200 bg-slate-50/40 p-3 min-h-11">
+          {(attribute.options ?? []).map((o) => (
             <label
-              key={opt.uuid ?? opt.value}
+              key={o.uuid ?? o.value}
               className={cn(
-                "cursor-pointer rounded-lg px-2.5 py-1 text-xs font-bold transition select-none",
-                selected.has(opt.value)
-                  ? "bg-[#6C4CD8] text-white shadow-xs"
-                  : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-100",
+                "cursor-pointer select-none rounded-lg px-3 py-1.5 text-xs font-bold transition-all",
+                selected.has(o.value)
+                  ? "bg-violet-600 text-white shadow-sm"
+                  : "bg-white text-slate-600 border border-slate-200 hover:border-violet-300 hover:text-violet-700",
               )}
             >
               <input
                 type="checkbox"
-                checked={selected.has(opt.value)}
+                className="sr-only"
+                checked={selected.has(o.value)}
                 onChange={(e) => {
                   const next = new Set(selected)
-                  if (e.target.checked) next.add(opt.value)
-                  else next.delete(opt.value)
+                  e.target.checked ? next.add(o.value) : next.delete(o.value)
                   onChange([...next].join(","))
                 }}
-                className="sr-only"
               />
-              {opt.label || opt.value}
+              {selected.has(o.value) && <Check className="inline mr-1 size-3" />}
+              {o.label || o.value}
             </label>
           ))}
         </div>
@@ -257,29 +330,31 @@ function CategoryAttributeField({
 
   return (
     <div>
-      {label}
+      {labelEl}
       <input
+        id={id}
         type={attribute.dataType === "NUMBER" ? "number" : "text"}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={`Enter ${attribute.label.toLowerCase()}`}
-        className={inputClass}
+        className={cn(base, "h-11")}
       />
     </div>
   )
 }
 
+// ─── Main Component ──────────────────────────────────────────────────────────
 export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
   const router = useRouter()
   const dispatch = useAppDispatch()
   const isEditing = Boolean(editUuid)
+
   const [formError, setFormError] = React.useState("")
   const [requiresSubscription, setRequiresSubscription] = React.useState(false)
   const [draftSaved, setDraftSaved] = React.useState(false)
 
-  // Category & Listing Queries
-  const { data: categoryTree = [], isLoading: categoriesLoading, isError: categoriesError } =
-    useGetSellerCategoryTreeQuery()
+  // Queries
+  const { data: categoryTree = [], isLoading: categoriesLoading } = useGetSellerCategoryTreeQuery()
   const { data: listing, error: listingError } = useGetSellerListingQuery(editUuid, {
     skip: !isEditing,
   })
@@ -292,7 +367,7 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
   const [addListingImage] = useAddListingImageMutation()
   const [removeListingDiscount] = useRemoveListingDiscountMutation()
 
-  // Form State
+  // Form
   const {
     register,
     handleSubmit,
@@ -301,6 +376,7 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
     getValues,
     reset,
     control,
+    watch,
     formState: { errors },
   } = useForm<CreateProductForm>({
     resolver: zodResolver(createProductSchema),
@@ -317,7 +393,7 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
     },
   })
 
-  // Watched Values for Real-time Preview
+  // Live-watched values
   const watchedTitle = useWatch({ control, name: "title" })
   const watchedPrice = useWatch({ control, name: "price" })
   const watchedDiscountPrice = useWatch({ control, name: "discountPrice" })
@@ -326,49 +402,59 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
   const watchedIsFeatured = useWatch({ control, name: "isFeatured" })
   const watchedStatus = useWatch({ control, name: "status" })
 
-  // Gallery and Photos State
+  // Gallery
   const [picked, setPicked] = React.useState<PickedImage[]>([])
   const [coverId, setCoverId] = React.useState("")
 
-  // Dynamic Category Attributes
-  const [attributeValues, setAttributeValues] = React.useState<Record<string, string>>({})
+  // Dynamic attributes
+  const [attrValues, setAttrValues] = React.useState<Record<string, string>>({})
+  const [customSpecs, setCustomSpecs] = React.useState<CustomSpec[]>([])
 
-  // Custom Key/Value Specifications
-  const [customSpecs, setCustomSpecs] = React.useState<CustomAttribute[]>([])
+  // Searchable category
+  const [catSearch, setCatSearch] = React.useState("")
+  const [catOpen, setCatOpen] = React.useState(false)
+  const catDropRef = React.useRef<HTMLDivElement>(null)
 
-  // Flattened categories for search & select
-  const [categorySearch, setCategorySearch] = React.useState("")
-  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = React.useState(false)
-  const categoryOptions = React.useMemo(() => flattenCategoryTree(categoryTree), [categoryTree])
-  const selectedCategory = categoryOptions.find((c) => c.uuid === watchedCategoryUuid)
-  const attributeCategoryUuid = selectedCategory?.uuid ?? ""
+  // Close category dropdown on outside click
+  React.useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (catDropRef.current && !catDropRef.current.contains(e.target as Node)) {
+        setCatOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handler)
+    return () => document.removeEventListener("mousedown", handler)
+  }, [])
 
-  // Dynamic schema for selected category
+  const flatCategories = React.useMemo(() => flattenCategoryTree(categoryTree), [categoryTree])
+  const selectedCategory = flatCategories.find((c) => c.uuid === watchedCategoryUuid)
+  const filteredCategories = React.useMemo(() => {
+    if (!catSearch.trim()) return flatCategories
+    const q = catSearch.toLowerCase()
+    return flatCategories.filter((c) => c.displayPath.toLowerCase().includes(q))
+  }, [flatCategories, catSearch])
+
+  // Category attributes
   const {
     data: attributeSchema,
-    isLoading: attributesLoading,
-    isError: attributesError,
-    refetch: refetchAttributes,
-  } = useGetSellerCategoryAttributesQuery(attributeCategoryUuid, {
-    skip: !attributeCategoryUuid,
+    isLoading: attrsLoading,
+    isError: attrsError,
+    refetch: refetchAttrs,
+  } = useGetSellerCategoryAttributesQuery(watchedCategoryUuid, {
+    skip: !watchedCategoryUuid,
   })
 
   const categoryAttributes = React.useMemo(() => {
     const grouped = attributeSchema?.groups?.flatMap((g) => g.attributes ?? []) ?? []
-    const attrs = grouped.length ? grouped : attributeSchema?.attributes ?? []
+    const attrs = grouped.length ? grouped : (attributeSchema?.attributes ?? [])
     return [...attrs].sort(
-      (a, b) => (a.groupSortOrder ?? 0) - (b.groupSortOrder ?? 0) || (a.sortOrder ?? 0) - (b.sortOrder ?? 0),
+      (a, b) =>
+        (a.groupSortOrder ?? 0) - (b.groupSortOrder ?? 0) ||
+        (a.sortOrder ?? 0) - (b.sortOrder ?? 0),
     )
   }, [attributeSchema])
 
   const isSubmitting = isCreating || isUpdating
-
-  // Filtered categories for searchable dropdown
-  const filteredCategories = React.useMemo(() => {
-    if (!categorySearch.trim()) return categoryOptions
-    const q = categorySearch.toLowerCase().trim()
-    return categoryOptions.filter((c) => c.name.toLowerCase().includes(q))
-  }, [categoryOptions, categorySearch])
 
   // Populate form on Edit
   React.useEffect(() => {
@@ -384,68 +470,76 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
       discountPrice: listing.discountPrice == null ? undefined : Number(listing.discountPrice),
       stockQty: Number(listing.stockQty ?? 0),
       categoryUuid: listing.category?.uuid ?? matched?.uuid ?? "",
-      status: listing.status === "DRAFT" || listing.status === "ARCHIVED" ? listing.status : "ACTIVE",
+      status:
+        listing.status === "DRAFT" || listing.status === "ARCHIVED" ? listing.status : "ACTIVE",
       isFeatured: Boolean(listing.isFeatured),
       images: [],
     })
   }, [categoryTree, isEditing, listing, reset])
 
-  // Populate dynamic category attributes & custom specs on Edit
   React.useEffect(() => {
-    if (!isEditing || !listing) return
-    const catVals: Record<string, string> = {}
-    const extraSpecs: CustomAttribute[] = []
+    if (!isEditing || !listing || categoryAttributes.length === 0) return
+    const vals: Record<string, string> = {}
+    const extras: CustomSpec[] = []
 
     for (const attr of listing.listingAttributes ?? []) {
-      const isPredefined = categoryAttributes.some(
-        (ca) => ca.code === attr.key || ca.label === attr.key,
-      )
-      if (isPredefined) {
-        const def = categoryAttributes.find(
-          (ca) => ca.code === attr.key || ca.label === attr.key,
-        )
-        catVals[def?.code ?? attr.key] = attr.value ?? ""
+      const def = categoryAttributes.find((ca) => ca.code === attr.key || ca.label === attr.key)
+      if (def) {
+        vals[def.code] = attr.value ?? ""
       } else {
-        extraSpecs.push({
-          id: crypto.randomUUID(),
-          key: attr.key,
-          value: attr.value,
-        })
+        extras.push({ id: crypto.randomUUID(), key: attr.key, value: attr.value })
       }
     }
 
-    if (categoryAttributes.length > 0) {
-      setAttributeValues(catVals)
-    }
-    if (extraSpecs.length > 0 && customSpecs.length === 0) {
-      setCustomSpecs(extraSpecs)
-    }
+    setAttrValues(vals)
+    if (extras.length > 0 && customSpecs.length === 0) setCustomSpecs(extras)
   }, [categoryAttributes, isEditing, listing])
 
-  // Calculate discount percentage
-  const discountPercent = React.useMemo(() => {
-    if (watchedPrice && watchedDiscountPrice && watchedDiscountPrice < watchedPrice) {
+  // Discount percent helper
+  const discountPct = React.useMemo(() => {
+    if (watchedPrice > 0 && watchedDiscountPrice && watchedDiscountPrice < watchedPrice) {
       return Math.round(((watchedPrice - watchedDiscountPrice) / watchedPrice) * 100)
     }
     return null
   }, [watchedPrice, watchedDiscountPrice])
 
-  // Custom Spec Helpers
-  const handleAddCustomSpec = () => {
+  // Preview thumbnail
+  const previewThumb = React.useMemo(() => {
+    if (picked.length > 0) {
+      const c = picked.find((p) => p.id === coverId) || picked[0]
+      return c?.previewUrl
+    }
+    if (!listing?.thumbnailUri) return null
+    const uri =
+      typeof listing.thumbnailUri === "string"
+        ? listing.thumbnailUri
+        : (listing.thumbnailUri as any)?.uri
+    return uri ? getFileUrl(uri) : null
+  }, [picked, coverId, listing])
+
+  // Completeness tracking for progress bar
+  const completeness = React.useMemo(() => {
+    let score = 0
+    const total = 5
+    if (watchedTitle?.trim().length >= 3) score++
+    if (watchedCategoryUuid) score++
+    if (watchedPrice > 0) score++
+    if (watchedStockQty >= 0) score++
+    if (picked.length > 0 || isEditing) score++
+    return Math.round((score / total) * 100)
+  }, [watchedTitle, watchedCategoryUuid, watchedPrice, watchedStockQty, picked, isEditing])
+
+  // Custom specs helpers
+  const addSpec = () =>
     setCustomSpecs((prev) => [...prev, { id: crypto.randomUUID(), key: "", value: "" }])
-  }
-
-  const handleUpdateCustomSpec = (id: string, field: "key" | "value", text: string) => {
+  const updateSpec = (id: string, field: "key" | "value", text: string) =>
     setCustomSpecs((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, [field]: text } : item)),
+      prev.map((s) => (s.id === id ? { ...s, [field]: text } : s)),
     )
-  }
+  const removeSpec = (id: string) =>
+    setCustomSpecs((prev) => prev.filter((s) => s.id !== id))
 
-  const handleRemoveCustomSpec = (id: string) => {
-    setCustomSpecs((prev) => prev.filter((item) => item.id !== id))
-  }
-
-  // Save Draft Locally
+  // Save Draft
   const saveDraft = () => {
     const data = getValues()
     const drafts = readSellerDrafts()
@@ -457,67 +551,51 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
       price: Number.isFinite(data.price) ? String(data.price) : "",
       discountPrice: Number.isFinite(data.discountPrice) ? String(data.discountPrice) : "",
       stockQty: Number.isFinite(data.stockQty) ? String(data.stockQty) : "",
-      imageNames: data.images.map((image) => image.name),
+      imageNames: data.images.map((f) => f.name),
       updatedAt: new Date().toISOString(),
     })
     writeSellerDrafts(drafts)
     setDraftSaved(true)
-    setFormError("")
-    toast.success("Saved to local drafts.")
+    toast.success("Progress saved as a draft.")
   }
 
-  // Main Submit Action
+  // Submit
   const submitProduct = async (data: CreateProductForm) => {
     setFormError("")
     setRequiresSubscription(false)
 
+    const missingAttr = categoryAttributes.find(
+      (a) => a.required && !attrValues[a.code]?.trim(),
+    )
+    if (missingAttr) {
+      setFormError(`"${missingAttr.label}" is required for this category.`)
+      window.scrollTo({ top: 0, behavior: "smooth" })
+      return
+    }
+
+    if (!isEditing && data.images.length === 0) {
+      setError("images", { type: "manual", message: "Upload at least one product photo." })
+      window.scrollTo({ top: 0, behavior: "smooth" })
+      return
+    }
+
     try {
-      // Validate required category attributes
-      const missingAttribute = categoryAttributes.find(
-        (attr) => attr.required && !attributeValues[attr.code]?.trim(),
-      )
-      if (missingAttribute) {
-        setFormError(`${missingAttribute.label} is required for this category.`)
-        window.scrollTo({ top: 0, behavior: "smooth" })
-        return
-      }
-
-      if (!isEditing && data.images.length === 0) {
-        setError("images", { type: "manual", message: "Please upload at least 1 cover photo." })
-        window.scrollTo({ top: 0, behavior: "smooth" })
-        return
-      }
-
-      // Upload newly added files
       const uploadedImages = await Promise.all(
         data.images.map((file) => uploadProductFile(file).unwrap()),
       )
-
-      const coverIndex = Math.max(
-        picked.findIndex((img) => img.id === coverId),
-        0,
-      )
+      const coverIdx = Math.max(picked.findIndex((p) => p.id === coverId), 0)
       const coverObjectName =
-        uploadedImages[coverIndex]?.objectName ?? uploadedImages[0]?.objectName
+        uploadedImages[coverIdx]?.objectName ?? uploadedImages[0]?.objectName
 
-      // Combine category attributes and custom specifications
-      const predefinedAttributes = categoryAttributes
-        .map((attr, index) => ({
-          key: attr.code,
-          value: attributeValues[attr.code]?.trim() ?? "",
-          sortOrder: attr.sortOrder ?? index,
-        }))
-        .filter((attr) => attr.value)
+      const predefined = categoryAttributes
+        .map((a, i) => ({ key: a.code, value: attrValues[a.code]?.trim() ?? "", sortOrder: a.sortOrder ?? i }))
+        .filter((a) => a.value)
 
-      const extraAttributes = customSpecs
-        .filter((spec) => spec.key.trim() && spec.value.trim())
-        .map((spec, index) => ({
-          key: spec.key.trim(),
-          value: spec.value.trim(),
-          sortOrder: predefinedAttributes.length + index,
-        }))
+      const extras = customSpecs
+        .filter((s) => s.key.trim() && s.value.trim())
+        .map((s, i) => ({ key: s.key.trim(), value: s.value.trim(), sortOrder: predefined.length + i }))
 
-      const allListingAttributes = [...predefinedAttributes, ...extraAttributes]
+      const allAttributes = [...predefined, ...extras]
 
       if (isEditing) {
         await updateSellerListing({
@@ -530,7 +608,7 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
             ...(data.discountPrice !== undefined ? { discountPrice: data.discountPrice } : {}),
             stockQty: data.stockQty,
             status: data.status,
-            listingAttributes: allListingAttributes,
+            listingAttributes: allAttributes,
           },
         }).unwrap()
 
@@ -544,21 +622,20 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
             objectName: uploadedImages[0].objectName,
           }).unwrap()
           await Promise.all(
-            uploadedImages.map((image, index) =>
+            uploadedImages.map((img, i) =>
               addListingImage({
                 uuid: editUuid,
-                objectName: image.objectName,
-                sortOrder: (listing?.images?.length ?? 0) + index,
+                objectName: img.objectName,
+                sortOrder: (listing?.images?.length ?? 0) + i,
               }).unwrap(),
             ),
           )
         }
       } else {
-        const galleryImages = uploadedImages.map((image, index) => ({
-          objectName: image.objectName,
-          sortOrder: index,
+        const galleryImages = uploadedImages.map((img, i) => ({
+          objectName: img.objectName,
+          sortOrder: i,
         }))
-
         const created = await createSellerListing({
           categoryUuid: data.categoryUuid,
           title: data.title,
@@ -569,590 +646,856 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
           isFeatured: data.isFeatured,
           thumbnailObjectName: coverObjectName,
           images: galleryImages,
-          listingAttributes: allListingAttributes,
+          listingAttributes: allAttributes,
         }).unwrap()
 
-        const createdUuid = created?.uuid
-        if (createdUuid) {
-          const persisted = new Set(
-            (created.images ?? []).map((img) => img.objectName).filter(Boolean),
-          )
-          const unattached = galleryImages.filter((img) => !persisted.has(img.objectName))
-          for (const image of unattached) {
-            await addListingImage({
-              uuid: createdUuid,
-              objectName: image.objectName,
-              sortOrder: image.sortOrder,
-            }).unwrap()
+        if (created?.uuid) {
+          const persisted = new Set((created.images ?? []).map((i) => i.objectName).filter(Boolean))
+          for (const img of galleryImages.filter((i) => !persisted.has(i.objectName))) {
+            await addListingImage({ uuid: created.uuid, objectName: img.objectName, sortOrder: img.sortOrder }).unwrap()
           }
         }
       }
 
       dispatch(sellerApi.util.invalidateTags(["SellerListings"]))
-      toast.success(isEditing ? "Product updated successfully!" : "Product published successfully!")
+      toast.success(isEditing ? "Product updated!" : "Product published to marketplace!")
       router.push(`/seller-dashboard/products/dashboard?success=${isEditing ? "updated" : "created"}`)
       router.refresh()
-    } catch (error: any) {
-      const status = error?.status
+    } catch (err: any) {
+      const status = err?.status
       if (status === 402 || status === 409) {
         setRequiresSubscription(true)
         setFormError(
           status === 409
-            ? "Your subscription listing quota is full. Upgrade your plan to list more products."
-            : "An active seller subscription is required to publish products.",
+            ? "Listing quota reached. Archive an item or upgrade your plan."
+            : "An active subscription is required to publish listings.",
         )
       } else {
-        setFormError(
-          error?.data?.message ||
-            error?.message ||
-            `Could not ${isEditing ? "update" : "create"} the product. Please check your inputs.`,
-        )
+        setFormError(err?.data?.message || err?.message || `Unable to ${isEditing ? "update" : "create"} the product.`)
       }
       window.scrollTo({ top: 0, behavior: "smooth" })
     }
   }
 
-  const showValidationError = (validationErrors: FieldErrors<CreateProductForm>) => {
-    const firstError = Object.values(validationErrors).find((err) => err?.message)
+  const showValidationError = (errs: FieldErrors<CreateProductForm>) => {
+    const first = Object.values(errs).find((e) => e?.message)
     setFormError(
-      typeof firstError?.message === "string"
-        ? firstError.message
-        : "Please fill out all required fields marked in red.",
+      typeof first?.message === "string" ? first.message : "Please fill in all required fields.",
     )
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
-  // Preview Image
-  const previewThumbnail = React.useMemo(() => {
-    if (picked.length > 0) {
-      const coverObj = picked.find((p) => p.id === coverId) || picked[0]
-      return coverObj?.previewUrl
-    }
-    if (listing?.thumbnailUri) {
-      const uri = typeof listing.thumbnailUri === "string" ? listing.thumbnailUri : (listing.thumbnailUri as any)?.uri
-      return uri ? getFileUrl(uri) : null
-    }
-    return null
-  }, [picked, coverId, listing])
-
   return (
-    <form
-      data-create-product
-      noValidate
-      onSubmit={handleSubmit(submitProduct, showValidationError)}
-      className="mx-auto w-full max-w-[1550px] space-y-6 pb-12"
-    >
-      {/* ── Top Header Actions Bar ── */}
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-xs">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-bold text-[#6C4CD8]">
-            <Link href="/seller-dashboard/products/dashboard" className="hover:underline">
-              Inventory
-            </Link>
-            <ChevronRight className="size-3 text-slate-400" />
-            <span className="text-slate-500">{isEditing ? "Edit Product" : "New Listing"}</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight mt-1">
-            {isEditing ? "Edit Product Listing" : "Create New Product"}
-          </h1>
-        </div>
-
-        <div className="flex items-center gap-2.5 shrink-0">
-          <Button
-            asChild
-            variant="outline"
-            size="sm"
-            className="rounded-xl border-slate-200 text-xs font-bold"
-          >
-            <Link href="/seller-dashboard/products/dashboard">
-              <ArrowLeft className="size-3.5 mr-1.5" /> Cancel
-            </Link>
-          </Button>
-
-          {!isEditing && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={saveDraft}
-              className="rounded-xl border-purple-200 text-[#6C4CD8] hover:bg-purple-50 text-xs font-bold"
+    <div className="min-h-screen bg-[#F4F5F7]">
+      {/* ── Sticky Top Bar ── */}
+      <div className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-md">
+        <div className="mx-auto flex max-w-[1600px] items-center gap-4 px-5 py-3.5 sm:px-8">
+          {/* Breadcrumb */}
+          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-400 min-w-0">
+            <Link
+              href="/seller-dashboard/products/dashboard"
+              className="flex items-center gap-1.5 text-slate-500 hover:text-violet-600 transition"
             >
-              Save Draft
-            </Button>
-          )}
+              <ArrowLeft className="size-4" />
+              <span className="hidden sm:inline">Inventory</span>
+            </Link>
+            <ChevronRight className="size-3.5 text-slate-300 shrink-0" />
+            <span className="text-slate-900 font-extrabold truncate">
+              {isEditing ? "Edit Product" : "New Listing"}
+            </span>
+          </div>
 
-          <Button
-            type="submit"
-            disabled={isSubmitting}
-            className="rounded-xl bg-[#6C4CD8] hover:bg-[#5B3DC0] text-xs font-black text-white px-5 shadow-md shadow-[#6C4CD8]/25"
-          >
-            {isSubmitting ? (
-              <span className="flex items-center gap-2">
-                <Loader2 className="size-4 animate-spin" /> Saving...
+          {/* Completeness Bar (new only) */}
+          {!isEditing && (
+            <div className="hidden sm:flex flex-1 items-center gap-3 max-w-xs mx-auto">
+              <div className="h-1.5 flex-1 rounded-full bg-slate-100 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-violet-500 to-violet-700 transition-all duration-500"
+                  style={{ width: `${completeness}%` }}
+                />
+              </div>
+              <span className="text-[11px] font-black tabular-nums text-slate-400">
+                {completeness}%
               </span>
-            ) : isEditing ? (
-              "Save Changes"
-            ) : (
-              "Publish Product"
-            )}
-          </Button>
-        </div>
-      </header>
-
-      {/* Draft Saved Status */}
-      {draftSaved && (
-        <div className="flex items-center justify-between rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-xs font-bold text-emerald-800 animate-in fade-in-50">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="size-4 text-emerald-600" />
-            <span>Product saved to local drafts successfully.</span>
-          </div>
-          <Link href="/seller-dashboard/products/drafts" className="underline font-black">
-            View Drafts →
-          </Link>
-        </div>
-      )}
-
-      {/* Global Form Error Banner */}
-      {formError && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-xs font-bold text-rose-800 animate-in fade-in-50">
-          <div className="flex items-center gap-2.5">
-            <AlertCircle className="size-5 text-rose-600 shrink-0" />
-            <span>{formError}</span>
-          </div>
-          {requiresSubscription && (
-            <Button asChild size="sm" className="rounded-xl bg-rose-700 hover:bg-rose-800 text-white font-bold text-xs shrink-0">
-              <Link href="/subscriptions">View Subscription Plans →</Link>
-            </Button>
+            </div>
           )}
-        </div>
-      )}
 
-      {/* ── 2-COLUMN DESKTOP LAYOUT (Editor Form + Live Preview) ── */}
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_380px] xl:grid-cols-[minmax(0,1fr)_420px]">
-        {/* ── LEFT COLUMN: MAIN FORM SECTIONS ── */}
-        <div className="space-y-6 min-w-0">
-          {/* Section 1: General Product Information */}
-          <Section title="General Information" subtitle="Provide a clear, compelling title and detailed description" icon={Package}>
-            <div className="space-y-4">
-              <div>
-                <FieldLabel required tooltip="Clear title including brand, model, key features">
-                  Product Title
-                </FieldLabel>
-                <input
-                  {...register("title")}
-                  placeholder="e.g., Apple iPhone 15 Pro Max 256GB Natural Titanium"
-                  className={cn(
-                    "h-12 w-full rounded-2xl border bg-slate-50/60 px-4 text-xs sm:text-sm font-medium text-slate-950 outline-none transition focus:border-[#6C4CD8] focus:bg-white focus:ring-2 focus:ring-[#6C4CD8]/20",
-                    errors.title ? "border-rose-400 bg-rose-50/20" : "border-slate-200",
-                  )}
-                />
-                <FieldError message={errors.title?.message} />
-              </div>
-
-              <div>
-                <FieldLabel required tooltip="Full description of specifications, box contents, condition">
-                  Product Description
-                </FieldLabel>
-                <textarea
-                  {...register("description")}
-                  rows={6}
-                  placeholder="Describe your item in detail (key features, condition, warranty, box contents)..."
-                  className={cn(
-                    "w-full rounded-2xl border bg-slate-50/60 p-4 text-xs sm:text-sm font-medium text-slate-950 outline-none transition focus:border-[#6C4CD8] focus:bg-white focus:ring-2 focus:ring-[#6C4CD8]/20 leading-relaxed",
-                    errors.description ? "border-rose-400 bg-rose-50/20" : "border-slate-200",
-                  )}
-                />
-                <FieldError message={errors.description?.message} />
-              </div>
-            </div>
-          </Section>
-
-          {/* Section 2: Media & Gallery */}
-          <Section
-            title="Product Images & Gallery"
-            subtitle="Upload up to 8 high-resolution photos. The starred image is your primary cover."
-            icon={ImagePlus}
-            badge={<span className="text-xs font-bold text-slate-400">Max 8 Images</span>}
-          >
-            {isEditing ? (
-              <ListingGalleryManager listing={listing} listingUuid={editUuid} />
-            ) : (
-              <div className="space-y-2">
-                <NewListingImages
-                  images={picked}
-                  coverId={coverId}
-                  max={8}
-                  onChange={(next, nextCoverId) => {
-                    setPicked(next)
-                    setCoverId(nextCoverId)
-                    setValue(
-                      "images",
-                      next.map((img) => img.file),
-                      { shouldDirty: true, shouldValidate: true },
-                    )
-                  }}
-                />
-                <FieldError message={errors.images?.message} />
-              </div>
-            )}
-          </Section>
-
-          {/* Section 3: Pricing & Inventory */}
-          <Section title="Pricing & Inventory" subtitle="Set your selling price, optional sale discount, and stock count" icon={Tag}>
-            <div className="grid gap-4 sm:grid-cols-3">
-              {/* Regular Price */}
-              <div>
-                <FieldLabel required>Regular Price ($)</FieldLabel>
-                <div className="relative">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-black text-slate-400">$</span>
-                  <input
-                    {...register("price", { valueAsNumber: true })}
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    placeholder="0.00"
-                    className={cn(
-                      "h-12 w-full rounded-2xl border bg-slate-50/60 pl-8 pr-4 text-xs sm:text-sm font-black text-slate-950 outline-none focus:border-[#6C4CD8] focus:bg-white focus:ring-2 focus:ring-[#6C4CD8]/20",
-                      errors.price ? "border-rose-400" : "border-slate-200",
-                    )}
-                  />
-                </div>
-                <FieldError message={errors.price?.message} />
-              </div>
-
-              {/* Discount Price */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <FieldLabel>Discount Price ($)</FieldLabel>
-                  {discountPercent !== null && (
-                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-800 animate-pulse">
-                      {discountPercent}% OFF
-                    </span>
-                  )}
-                </div>
-                <div className="relative">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-black text-slate-400">$</span>
-                  <input
-                    {...register("discountPrice", {
-                      setValueAs: (v) => (v === "" || isNaN(Number(v)) ? undefined : Number(v)),
-                    })}
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    placeholder="Optional sale price"
-                    className={cn(
-                      "h-12 w-full rounded-2xl border bg-slate-50/60 pl-8 pr-4 text-xs sm:text-sm font-black text-slate-950 outline-none focus:border-[#6C4CD8] focus:bg-white focus:ring-2 focus:ring-[#6C4CD8]/20",
-                      errors.discountPrice ? "border-rose-400" : "border-slate-200",
-                    )}
-                  />
-                </div>
-                <FieldError message={errors.discountPrice?.message} />
-              </div>
-
-              {/* Stock Quantity */}
-              <div>
-                <FieldLabel required>Stock Units</FieldLabel>
-                <input
-                  {...register("stockQty", { valueAsNumber: true })}
-                  type="number"
-                  step="1"
-                  min="0"
-                  placeholder="10"
-                  className={cn(
-                    "h-12 w-full rounded-2xl border bg-slate-50/60 px-4 text-xs sm:text-sm font-black text-slate-950 outline-none focus:border-[#6C4CD8] focus:bg-white focus:ring-2 focus:ring-[#6C4CD8]/20",
-                    errors.stockQty ? "border-rose-400" : "border-slate-200",
-                  )}
-                />
-                <FieldError message={errors.stockQty?.message} />
-              </div>
-            </div>
-          </Section>
-
-          {/* Section 4: Category & Dynamic Specifications */}
-          <Section title="Category & Classifications" subtitle="Select the category hierarchy to unlock customized attribute fields" icon={Layers}>
-            <div className="space-y-4">
-              <div>
-                <FieldLabel required>Product Category</FieldLabel>
-                {/* Searchable Category Selector */}
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
-                    disabled={categoriesLoading || Boolean(categoriesError)}
-                    className="flex h-12 w-full items-center justify-between rounded-2xl border border-slate-200 bg-slate-50/70 px-4 text-left text-xs sm:text-sm font-bold text-slate-900 transition hover:bg-slate-100/70"
-                  >
-                    <span className="truncate">
-                      {selectedCategory ? selectedCategory.name : "Select a product category..."}
-                    </span>
-                    <ChevronDown className="size-4 text-slate-400 shrink-0 ml-2" />
-                  </button>
-
-                  {isCategoryDropdownOpen && (
-                    <div className="absolute top-full left-0 right-0 z-30 mt-1.5 max-h-72 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl space-y-2">
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-slate-400" />
-                        <input
-                          type="search"
-                          value={categorySearch}
-                          onChange={(e) => setCategorySearch(e.target.value)}
-                          placeholder="Search categories..."
-                          className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-8 pr-3 py-1.5 text-xs font-medium outline-none focus:border-[#6C4CD8]"
-                        />
-                      </div>
-
-                      <div className="max-h-52 overflow-y-auto space-y-0.5 pr-1">
-                        {filteredCategories.map((cat) => (
-                          <button
-                            key={cat.uuid}
-                            type="button"
-                            onClick={() => {
-                              setAttributeValues({})
-                              setValue("categoryUuid", cat.uuid, { shouldDirty: true, shouldValidate: true })
-                              setIsCategoryDropdownOpen(false)
-                            }}
-                            className={cn(
-                              "w-full rounded-xl px-3 py-2 text-left text-xs font-bold transition flex items-center justify-between",
-                              cat.uuid === watchedCategoryUuid
-                                ? "bg-[#6C4CD8] text-white"
-                                : "text-slate-700 hover:bg-purple-50 hover:text-[#6C4CD8]",
-                            )}
-                          >
-                            <span className="truncate">{cat.name}</span>
-                            {cat.uuid === watchedCategoryUuid && <Check className="size-3.5 shrink-0" />}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <FieldError message={errors.categoryUuid?.message} />
-              </div>
-
-              {/* Dynamic Category Attributes Fields */}
-              {attributeCategoryUuid && (
-                <div className="pt-4 border-t border-slate-100 space-y-4">
-                  <h3 className="text-xs font-black uppercase tracking-wider text-[#6C4CD8]">
-                    {attributeSchema?.categoryName || "Category"} Specifications
-                  </h3>
-
-                  {attributesLoading ? (
-                    <div className="flex items-center gap-2 text-xs text-slate-400 py-3">
-                      <Loader2 className="size-4 animate-spin text-[#6C4CD8]" /> Loading category attributes...
-                    </div>
-                  ) : categoryAttributes.length > 0 ? (
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      {categoryAttributes.map((attr) => (
-                        <CategoryAttributeField
-                          key={attr.uuid || attr.code}
-                          attribute={attr}
-                          value={attributeValues[attr.code] ?? ""}
-                          onChange={(val) =>
-                            setAttributeValues((prev) => ({ ...prev, [attr.code]: val }))
-                          }
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-xs text-slate-400 italic">No additional attributes required for this category.</p>
-                  )}
-                </div>
-              )}
-            </div>
-          </Section>
-
-          {/* Section 5: Custom Specifications / Key-Value Details */}
-          <Section
-            title="Custom Specifications & Details"
-            subtitle="Add any extra attributes like Brand, Material, Warranty, Dimensions, etc."
-            icon={Tag}
-          >
-            <div className="space-y-3">
-              {customSpecs.map((spec) => (
-                <div key={spec.id} className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={spec.key}
-                    onChange={(e) => handleUpdateCustomSpec(spec.id, "key", e.target.value)}
-                    placeholder="Feature (e.g., Warranty)"
-                    className="w-1/3 rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2 text-xs font-bold text-slate-900 outline-none focus:border-[#6C4CD8] focus:bg-white"
-                  />
-                  <input
-                    type="text"
-                    value={spec.value}
-                    onChange={(e) => handleUpdateCustomSpec(spec.id, "value", e.target.value)}
-                    placeholder="Value (e.g., 1 Year Official Warranty)"
-                    className="flex-1 rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2 text-xs font-medium text-slate-900 outline-none focus:border-[#6C4CD8] focus:bg-white"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveCustomSpec(spec.id)}
-                    className="p-2 text-slate-400 hover:text-rose-600 transition"
-                  >
-                    <Trash2 className="size-4" />
-                  </button>
-                </div>
-              ))}
-
-              <Button
+          {/* Actions */}
+          <div className="ml-auto flex items-center gap-2 shrink-0">
+            {!isEditing && (
+              <button
                 type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleAddCustomSpec}
-                className="rounded-xl border-dashed border-[#6C4CD8]/50 text-xs font-bold text-[#6C4CD8] hover:bg-purple-50"
+                onClick={saveDraft}
+                className="hidden sm:inline-flex h-9 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600 shadow-xs hover:border-violet-200 hover:text-violet-700 transition"
               >
-                <Plus className="size-3.5 mr-1" /> Add Custom Specification
-              </Button>
-            </div>
-          </Section>
-
-          {/* Section 6: Visibility & Store Spotlight */}
-          <Section title="Visibility & Promotion" subtitle="Control marketplace availability and showcase status" icon={Sparkles}>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {/* Status Picker */}
-              <div>
-                <FieldLabel>Listing Status</FieldLabel>
-                <select
-                  {...register("status")}
-                  className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/70 px-4 text-xs sm:text-sm font-bold text-slate-900 outline-none focus:border-[#6C4CD8] focus:bg-white"
-                >
-                  <option value="ACTIVE">Active (Available on Marketplace)</option>
-                  <option value="DRAFT">Draft (Saved privately)</option>
-                  <option value="ARCHIVED">Archived / Inactive</option>
-                </select>
-              </div>
-
-              {/* isFeatured Switch */}
-              <div>
-                <FieldLabel>Featured Spotlight</FieldLabel>
-                <label className="flex h-12 items-center justify-between rounded-2xl border border-slate-200 bg-slate-50/70 px-4 cursor-pointer hover:bg-slate-100/70 transition">
-                  <span className="text-xs font-bold text-slate-700">Feature on Shop Homepage</span>
-                  <input
-                    type="checkbox"
-                    {...register("isFeatured")}
-                    className="size-4 accent-[#6C4CD8] rounded cursor-pointer"
-                  />
-                </label>
-              </div>
-            </div>
-          </Section>
-        </div>
-
-        {/* ── RIGHT COLUMN: STICKY REAL-TIME LIVE PREVIEW CARD ── */}
-        <aside className="space-y-5 lg:sticky lg:top-20">
-          <div className="rounded-3xl border border-slate-200/90 bg-white p-5 shadow-xs space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <Eye className="size-4 text-[#6C4CD8]" />
-                <span className="text-xs font-black text-slate-950 uppercase tracking-wider">
-                  Live Marketplace Card
-                </span>
-              </div>
-              <span className="rounded-full bg-purple-50 px-2 py-0.5 text-[10px] font-black text-[#6C4CD8]">
-                Real-time
-              </span>
-            </div>
-
-            {/* Live Product Card Mockup */}
-            <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-md transition-all">
-              {/* Product Thumbnail */}
-              <div className="relative aspect-square w-full bg-slate-100 overflow-hidden">
-                {previewThumbnail ? (
-                  <Image
-                    src={previewThumbnail}
-                    alt={watchedTitle || "Product preview"}
-                    fill
-                    className="object-cover"
-                  />
-                ) : (
-                  <div className="grid h-full w-full place-items-center text-slate-300">
-                    <Package className="size-16" />
-                  </div>
-                )}
-
-                {/* Featured Star Badge */}
-                {watchedIsFeatured && (
-                  <span className="absolute top-3 left-3 rounded-full bg-amber-400 px-2.5 py-0.5 text-[10px] font-black text-slate-950 shadow-md flex items-center gap-1">
-                    <Star className="size-3 fill-slate-950" /> Featured
-                  </span>
-                )}
-
-                {/* Discount Badge */}
-                {discountPercent !== null && (
-                  <span className="absolute top-3 right-3 rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-black text-white shadow-md">
-                    -{discountPercent}%
-                  </span>
-                )}
-              </div>
-
-              {/* Card Body */}
-              <div className="p-4 space-y-2">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#6C4CD8]">
-                  {selectedCategory?.name || "General"}
-                </span>
-
-                <h3 className="text-sm font-black text-slate-950 line-clamp-2 leading-snug">
-                  {watchedTitle || "Your Product Title will appear here..."}
-                </h3>
-
-                {/* Star Rating Mockup */}
-                <div className="flex items-center gap-1 text-xs text-amber-500">
-                  <div className="flex">
-                    {[1, 2, 3, 4, 5].map((i) => (
-                      <Star key={i} className="size-3.5 fill-amber-400 text-amber-400" />
-                    ))}
-                  </div>
-                  <span className="text-[11px] font-bold text-slate-400">(New Listing)</span>
-                </div>
-
-                {/* Pricing Display */}
-                <div className="flex items-baseline gap-2 pt-1">
-                  <span className="text-lg font-black text-slate-950 tabular-nums">
-                    {watchedDiscountPrice !== undefined && watchedDiscountPrice > 0
-                      ? `$${watchedDiscountPrice.toFixed(2)}`
-                      : watchedPrice !== undefined
-                      ? `$${watchedPrice.toFixed(2)}`
-                      : "$0.00"}
-                  </span>
-                  {watchedDiscountPrice !== undefined && watchedDiscountPrice > 0 && watchedPrice && (
-                    <span className="text-xs font-bold text-slate-400 line-through tabular-nums">
-                      ${watchedPrice.toFixed(2)}
-                    </span>
-                  )}
-                </div>
-
-                {/* Stock Tag */}
-                <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
-                  <span className="font-bold text-emerald-600">
-                    {watchedStockQty !== undefined && watchedStockQty > 0
-                      ? `${watchedStockQty} in stock`
-                      : "Out of stock"}
-                  </span>
-                  <span className="rounded-md bg-slate-100 px-2 py-0.5 font-bold text-slate-600">
-                    {watchedStatus}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Quick Action Button */}
-            <Button
-              type="submit"
+                Save Draft
+              </button>
+            )}
+            <button
+              type="button"
               disabled={isSubmitting}
-              className="w-full h-12 rounded-2xl bg-[#6C4CD8] hover:bg-[#5B3DC0] font-black text-white shadow-md shadow-[#6C4CD8]/25 text-sm"
+              onClick={() => handleSubmit(submitProduct, showValidationError)()}
+              className="inline-flex h-9 items-center gap-2 rounded-xl bg-violet-600 px-5 text-xs font-extrabold text-white shadow-sm shadow-violet-200 hover:bg-violet-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isSubmitting ? (
-                <span className="flex items-center gap-2">
-                  <Loader2 className="size-4 animate-spin" /> Saving...
-                </span>
-              ) : isEditing ? (
-                "Save Changes"
+                <Loader2 className="size-4 animate-spin" />
               ) : (
-                "Publish Product Now"
+                <Zap className="size-4" />
               )}
-            </Button>
+              {isSubmitting ? "Saving…" : isEditing ? "Save Changes" : "Publish Now"}
+            </button>
           </div>
-        </aside>
+        </div>
+
+        {/* Mobile Progress Bar */}
+        {!isEditing && (
+          <div className="h-0.5 bg-slate-100 sm:hidden">
+            <div
+              className="h-full bg-violet-600 transition-all duration-500"
+              style={{ width: `${completeness}%` }}
+            />
+          </div>
+        )}
       </div>
-    </form>
+
+      {/* ── Page Body ── */}
+      <form
+        noValidate
+        onSubmit={handleSubmit(submitProduct, showValidationError)}
+        className="mx-auto max-w-[1600px] px-4 py-6 sm:px-8 sm:py-8"
+      >
+        {/* Alert banners */}
+        {draftSaved && (
+          <div className="mb-5 flex items-center justify-between rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm font-bold text-emerald-800 animate-in slide-in-from-top-2 duration-200">
+            <div className="flex items-center gap-2.5">
+              <CheckCircle2 className="size-4.5 text-emerald-600 shrink-0" />
+              Saved as draft — no progress lost.
+            </div>
+            <Link
+              href="/seller-dashboard/products/drafts"
+              className="shrink-0 text-xs font-black text-emerald-700 underline hover:text-emerald-900"
+            >
+              View Drafts →
+            </Link>
+          </div>
+        )}
+
+        {formError && (
+          <div className="mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 animate-in slide-in-from-top-2 duration-200">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="size-5 text-rose-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-extrabold text-rose-700">{formError}</p>
+              </div>
+            </div>
+            {requiresSubscription && (
+              <Link
+                href="/subscriptions"
+                className="shrink-0 inline-flex h-9 items-center rounded-xl bg-rose-600 px-4 text-xs font-extrabold text-white hover:bg-rose-700 transition"
+              >
+                Upgrade Plan →
+              </Link>
+            )}
+          </div>
+        )}
+
+        {isEditing && listingError && (
+          <div className="mb-5 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm font-bold text-rose-700">
+            Could not load this product. It may no longer exist or belong to another store.
+          </div>
+        )}
+
+        {/* Main 2-col layout */}
+        <div className="grid gap-6 lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_400px]">
+          {/* ── LEFT: Form Sections ── */}
+          <div className="min-w-0 space-y-5">
+            {/* ① Basic Information */}
+            <Card>
+              <CardHeader icon={Package} label="Step 1" title="Product Information" />
+              <div className="space-y-5 p-6">
+                {/* Title */}
+                <div>
+                  <Label required hint="Write a clear, keyword-rich title (3–120 chars)">
+                    Product Title
+                  </Label>
+                  <input
+                    {...register("title")}
+                    placeholder="e.g. Sony WH-1000XM5 Noise-Cancelling Headphones — Black"
+                    className={cn(INPUT_BASE, "h-12 text-base", errors.title && INPUT_ERROR)}
+                  />
+                  <div className="mt-2 flex items-center justify-between">
+                    <FieldError message={errors.title?.message} />
+                    <span
+                      className={cn(
+                        "ml-auto text-[11px] font-semibold tabular-nums",
+                        (watchedTitle?.length || 0) > 100
+                          ? "text-rose-500"
+                          : "text-slate-300",
+                      )}
+                    >
+                      {watchedTitle?.length || 0}/120
+                    </span>
+                  </div>
+                </div>
+
+                {/* Description */}
+                <div>
+                  <Label required hint="Describe specs, condition, box contents, and highlights">
+                    Full Description
+                  </Label>
+                  <textarea
+                    {...register("description")}
+                    rows={7}
+                    placeholder="Include key features, specifications, box contents, warranty, and anything a buyer needs to make a confident purchase decision…"
+                    className={cn(
+                      INPUT_BASE,
+                      "py-3.5 leading-relaxed resize-y",
+                      errors.description && INPUT_ERROR,
+                    )}
+                  />
+                  <div className="mt-2 flex items-center justify-between">
+                    <FieldError message={errors.description?.message} />
+                    <span className="ml-auto text-[11px] font-semibold text-slate-300 tabular-nums">
+                      {useWatch({ control, name: "description" })?.length || 0}/5000
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* ② Images */}
+            <Card>
+              <CardHeader
+                icon={ImagePlus}
+                label="Step 2"
+                title="Photos & Gallery"
+                badge={
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-black text-slate-500">
+                    Max 8 images
+                  </span>
+                }
+              />
+              <div className="p-6">
+                {isEditing ? (
+                  <ListingGalleryManager listing={listing} listingUuid={editUuid} />
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-xs text-slate-500 font-medium">
+                      Upload up to 8 high-resolution photos. Drag to reorder — the starred photo becomes your cover image visible to buyers.
+                    </p>
+                    <NewListingImages
+                      images={picked}
+                      coverId={coverId}
+                      max={8}
+                      onChange={(next, nextCoverId) => {
+                        setPicked(next)
+                        setCoverId(nextCoverId)
+                        setValue("images", next.map((p) => p.file), {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        })
+                      }}
+                    />
+                    <FieldError message={errors.images?.message} />
+                  </div>
+                )}
+              </div>
+            </Card>
+
+            {/* ③ Pricing & Inventory */}
+            <Card>
+              <CardHeader icon={Banknote} label="Step 3" title="Pricing & Inventory" />
+              <div className="p-6">
+                <div className="grid gap-5 sm:grid-cols-3">
+                  {/* Regular Price */}
+                  <div>
+                    <Label required>Regular Price (USD)</Label>
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-base font-black text-slate-400">
+                        $
+                      </span>
+                      <input
+                        {...register("price", { valueAsNumber: true })}
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        className={cn(
+                          INPUT_BASE,
+                          "h-12 pl-8 font-black text-base tabular-nums",
+                          errors.price && INPUT_ERROR,
+                        )}
+                      />
+                    </div>
+                    <FieldError message={errors.price?.message} />
+                  </div>
+
+                  {/* Discount Price */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <Label>Sale Price (Optional)</Label>
+                      {discountPct !== null && (
+                        <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-black text-emerald-800 flex items-center gap-1">
+                          <TrendingDown className="size-3" />
+                          {discountPct}% OFF
+                        </span>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-base font-black text-slate-400">
+                        $
+                      </span>
+                      <input
+                        {...register("discountPrice", {
+                          setValueAs: (v) => (v === "" || isNaN(Number(v)) ? undefined : Number(v)),
+                        })}
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        className={cn(
+                          INPUT_BASE,
+                          "h-12 pl-8 font-black text-base tabular-nums",
+                          errors.discountPrice && INPUT_ERROR,
+                        )}
+                      />
+                    </div>
+                    <FieldError message={errors.discountPrice?.message} />
+                  </div>
+
+                  {/* Stock */}
+                  <div>
+                    <Label required hint="Total units available to sell">
+                      Stock Units
+                    </Label>
+                    <input
+                      {...register("stockQty", { valueAsNumber: true })}
+                      type="number"
+                      step="1"
+                      min="0"
+                      placeholder="10"
+                      className={cn(
+                        INPUT_BASE,
+                        "h-12 font-black text-base tabular-nums",
+                        errors.stockQty && INPUT_ERROR,
+                      )}
+                    />
+                    <FieldError message={errors.stockQty?.message} />
+                  </div>
+                </div>
+
+                {/* Price visual summary */}
+                {watchedPrice > 0 && (
+                  <div className="mt-5 flex flex-wrap items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-xl font-black text-slate-900 tabular-nums">
+                        ${(watchedDiscountPrice || watchedPrice).toFixed(2)}
+                      </span>
+                      {watchedDiscountPrice && watchedDiscountPrice < watchedPrice && (
+                        <span className="text-sm font-semibold text-slate-400 line-through tabular-nums">
+                          ${watchedPrice.toFixed(2)}
+                        </span>
+                      )}
+                      {discountPct !== null && (
+                        <span className="rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-black text-white">
+                          -{discountPct}%
+                        </span>
+                      )}
+                    </div>
+                    <span className="ml-auto text-xs font-bold text-slate-400">
+                      {watchedStockQty > 0 ? (
+                        <span className="text-emerald-600">{watchedStockQty} units in stock</span>
+                      ) : (
+                        <span className="text-rose-600">Out of stock</span>
+                      )}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </Card>
+
+            {/* ④ Category + Dynamic Attributes */}
+            <Card>
+              <CardHeader icon={Layers} label="Step 4" title="Category & Specifications" />
+              <div className="p-6 space-y-5">
+                {/* Category Search Dropdown */}
+                <div>
+                  <Label required>Product Category</Label>
+                  <div ref={catDropRef} className="relative">
+                    <button
+                      type="button"
+                      disabled={categoriesLoading}
+                      onClick={() => setCatOpen((o) => !o)}
+                      className={cn(
+                        "flex h-12 w-full items-center rounded-xl border border-slate-200 bg-white px-4 text-left text-sm font-bold text-slate-900 outline-none transition hover:bg-slate-50 focus:border-violet-400 focus:ring-3 focus:ring-violet-100",
+                        catOpen && "border-violet-400 ring-3 ring-violet-100",
+                        errors.categoryUuid && "border-rose-300 ring-3 ring-rose-100",
+                      )}
+                    >
+                      <span className="flex-1 truncate text-sm">
+                        {categoriesLoading ? (
+                          <span className="text-slate-400">Loading categories…</span>
+                        ) : selectedCategory ? (
+                          selectedCategory.displayPath
+                        ) : (
+                          <span className="text-slate-300">Select a category…</span>
+                        )}
+                      </span>
+                      <ChevronDown
+                        className={cn(
+                          "ml-2 size-4 shrink-0 text-slate-400 transition-transform",
+                          catOpen && "rotate-180",
+                        )}
+                      />
+                    </button>
+
+                    {catOpen && (
+                      <div className="absolute top-[calc(100%+4px)] left-0 right-0 z-40 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl animate-in fade-in-0 slide-in-from-top-1 duration-150">
+                        {/* Search Input */}
+                        <div className="border-b border-slate-100 p-3">
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+                            <input
+                              type="search"
+                              autoFocus
+                              value={catSearch}
+                              onChange={(e) => setCatSearch(e.target.value)}
+                              placeholder="Search categories…"
+                              className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm font-medium outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                            />
+                          </div>
+                        </div>
+
+                        {/* List */}
+                        <div className="max-h-60 overflow-y-auto py-1">
+                          {filteredCategories.length === 0 ? (
+                            <p className="px-4 py-3 text-xs text-slate-400">No categories found</p>
+                          ) : (
+                            filteredCategories.map((cat) => (
+                              <button
+                                key={cat.uuid}
+                                type="button"
+                                onClick={() => {
+                                  setAttrValues({})
+                                  setValue("categoryUuid", cat.uuid, {
+                                    shouldDirty: true,
+                                    shouldValidate: true,
+                                  })
+                                  setCatOpen(false)
+                                  setCatSearch("")
+                                }}
+                                className={cn(
+                                  "flex w-full items-center gap-2 px-4 py-2.5 text-left text-xs font-bold transition hover:bg-violet-50",
+                                  cat.uuid === watchedCategoryUuid
+                                    ? "bg-violet-50 text-violet-700"
+                                    : "text-slate-700",
+                                  cat.depth > 0 && "pl-6",
+                                  cat.depth > 1 && "pl-10",
+                                )}
+                                style={{ paddingLeft: `${16 + cat.depth * 16}px` }}
+                              >
+                                {cat.depth > 0 && (
+                                  <span className="text-slate-300 font-normal">└</span>
+                                )}
+                                <span className="flex-1 truncate">{cat.name}</span>
+                                {cat.uuid === watchedCategoryUuid && (
+                                  <Check className="size-4 text-violet-600 shrink-0" />
+                                )}
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <FieldError message={errors.categoryUuid?.message} />
+                </div>
+
+                {/* Dynamic Schema Fields */}
+                {watchedCategoryUuid && (
+                  <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-4 space-y-4">
+                    <p className="text-[11px] font-black uppercase tracking-widest text-violet-600">
+                      {attrsLoading ? "Loading attributes…" : `${attributeSchema?.categoryName || "Category"} Specifications`}
+                    </p>
+
+                    {attrsLoading ? (
+                      <div className="flex items-center gap-2.5 text-xs text-slate-400 py-2">
+                        <Loader2 className="size-4 animate-spin text-violet-500" />
+                        Fetching fields for this category…
+                      </div>
+                    ) : attrsError ? (
+                      <div className="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-bold text-amber-800">
+                        <span>Failed to load attributes.</span>
+                        <button type="button" onClick={() => refetchAttrs()} className="underline">
+                          Retry
+                        </button>
+                      </div>
+                    ) : categoryAttributes.length === 0 ? (
+                      <p className="text-xs text-slate-400 italic">
+                        No extra attributes required for this category.
+                      </p>
+                    ) : (
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        {categoryAttributes.map((attr) => (
+                          <AttributeField
+                            key={attr.uuid || attr.code}
+                            attribute={attr}
+                            value={attrValues[attr.code] ?? ""}
+                            onChange={(v) =>
+                              setAttrValues((prev) => ({ ...prev, [attr.code]: v }))
+                            }
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </Card>
+
+            {/* ⑤ Custom Specs */}
+            <Card>
+              <CardHeader
+                icon={Tag}
+                label="Step 5 — Optional"
+                title="Custom Specifications"
+                badge={
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-bold text-slate-400">
+                    Optional
+                  </span>
+                }
+              />
+              <div className="p-6 space-y-3">
+                <p className="text-xs text-slate-500 font-medium">
+                  Add extra specs like Brand, Warranty, Material, Dimensions, Model Number, Condition, etc.
+                </p>
+
+                {customSpecs.length === 0 && (
+                  <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/50 py-6 text-center text-xs text-slate-400 font-medium">
+                    No custom specifications yet. Click below to add one.
+                  </div>
+                )}
+
+                <div className="space-y-2.5">
+                  {customSpecs.map((spec, i) => (
+                    <div key={spec.id} className="flex items-center gap-2.5">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-50 text-[11px] font-black text-violet-600">
+                        {i + 1}
+                      </div>
+                      <input
+                        type="text"
+                        value={spec.key}
+                        onChange={(e) => updateSpec(spec.id, "key", e.target.value)}
+                        placeholder="Label (e.g. Warranty)"
+                        className="w-1/3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold text-slate-900 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                      />
+                      <input
+                        type="text"
+                        value={spec.value}
+                        onChange={(e) => updateSpec(spec.id, "value", e.target.value)}
+                        placeholder="Value (e.g. 1 Year Official)"
+                        className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-medium text-slate-900 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeSpec(spec.id)}
+                        className="grid size-8 shrink-0 place-items-center rounded-lg text-slate-300 transition hover:bg-rose-50 hover:text-rose-500"
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={addSpec}
+                  className="mt-1 flex items-center gap-2 rounded-xl border border-dashed border-violet-300 px-4 py-2.5 text-xs font-extrabold text-violet-600 transition hover:bg-violet-50 hover:border-violet-400"
+                >
+                  <Plus className="size-4" /> Add Specification Row
+                </button>
+              </div>
+            </Card>
+
+            {/* ⑥ Visibility & Promotion */}
+            <Card>
+              <CardHeader icon={Sparkles} label="Step 6" title="Visibility & Promotion" />
+              <div className="p-6">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {/* Status */}
+                  <div>
+                    <Label>Listing Status</Label>
+                    <select
+                      {...register("status")}
+                      className={cn(INPUT_BASE, "h-12")}
+                    >
+                      <option value="ACTIVE">Active — Visible on Marketplace</option>
+                      <option value="DRAFT">Draft — Saved Privately</option>
+                      <option value="ARCHIVED">Archived — Inactive & Hidden</option>
+                    </select>
+                    <p className="mt-2 text-[11px] text-slate-400 font-medium">
+                      {watchedStatus === "ACTIVE"
+                        ? "Buyers can find and purchase this product immediately."
+                        : watchedStatus === "DRAFT"
+                        ? "Only you can see this listing. Publish it when ready."
+                        : "Listing is hidden from buyers but kept in your inventory."}
+                    </p>
+                  </div>
+
+                  {/* Featured Toggle */}
+                  <div>
+                    <Label hint="Featured products get premium placement on the homepage">
+                      Featured Spotlight
+                    </Label>
+                    <label
+                      className={cn(
+                        "flex h-12 cursor-pointer items-center justify-between rounded-xl border px-4 transition hover:bg-slate-50",
+                        watchedIsFeatured
+                          ? "border-amber-300 bg-amber-50/50"
+                          : "border-slate-200 bg-white",
+                      )}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <Star
+                          className={cn(
+                            "size-4 transition",
+                            watchedIsFeatured
+                              ? "text-amber-500 fill-amber-400"
+                              : "text-slate-300",
+                          )}
+                        />
+                        <span
+                          className={cn(
+                            "text-sm font-bold",
+                            watchedIsFeatured ? "text-amber-700" : "text-slate-600",
+                          )}
+                        >
+                          {watchedIsFeatured ? "Featured on Homepage" : "Mark as Featured"}
+                        </span>
+                      </div>
+                      <input
+                        type="checkbox"
+                        {...register("isFeatured")}
+                        className="size-4.5 accent-amber-500 rounded"
+                      />
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          {/* ── RIGHT: Sticky Preview Panel ── */}
+          <aside className="space-y-4 lg:sticky lg:top-20 self-start">
+            {/* Live Preview Card */}
+            <Card>
+              <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+                <div className="flex items-center gap-2">
+                  <Eye className="size-4 text-violet-600" />
+                  <span className="text-xs font-black uppercase tracking-widest text-slate-600">
+                    Live Preview
+                  </span>
+                </div>
+                <span className="rounded-full bg-violet-50 px-2.5 py-0.5 text-[10px] font-black text-violet-600">
+                  Real-time
+                </span>
+              </div>
+
+              {/* Product Listing Card Mockup */}
+              <div className="p-4">
+                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                  {/* Image */}
+                  <div className="relative aspect-square w-full overflow-hidden bg-gradient-to-br from-slate-100 to-slate-50">
+                    {previewThumb ? (
+                      <Image
+                        src={previewThumb}
+                        alt="Preview"
+                        fill
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-slate-300">
+                        <Package className="size-12" />
+                        <span className="text-[10px] font-bold">No photo yet</span>
+                      </div>
+                    )}
+
+                    {/* Badges over image */}
+                    <div className="absolute top-3 left-3 flex flex-col gap-1.5">
+                      {watchedIsFeatured && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-black text-slate-900 shadow-sm">
+                          <Star className="size-2.5 fill-slate-900" /> Featured
+                        </span>
+                      )}
+                      {watchedStatus === "DRAFT" && (
+                        <span className="rounded-full bg-slate-700/80 px-2 py-0.5 text-[10px] font-black text-white backdrop-blur-sm">
+                          Draft
+                        </span>
+                      )}
+                      {watchedStatus === "ARCHIVED" && (
+                        <span className="rounded-full bg-slate-400/80 px-2 py-0.5 text-[10px] font-black text-white backdrop-blur-sm">
+                          Archived
+                        </span>
+                      )}
+                    </div>
+
+                    {discountPct !== null && (
+                      <span className="absolute top-3 right-3 rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-black text-white shadow-sm">
+                        -{discountPct}%
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Card Content */}
+                  <div className="p-4 space-y-2.5">
+                    {selectedCategory && (
+                      <span className="text-[10px] font-extrabold uppercase tracking-widest text-violet-600">
+                        {selectedCategory.name}
+                      </span>
+                    )}
+
+                    <h3 className="text-sm font-extrabold text-slate-950 leading-snug line-clamp-2 min-h-[2.5rem]">
+                      {watchedTitle?.trim() || (
+                        <span className="text-slate-300 font-medium">
+                          Your product title will appear here…
+                        </span>
+                      )}
+                    </h3>
+
+                    {/* Fake Stars */}
+                    <div className="flex items-center gap-1">
+                      {[1, 2, 3, 4, 5].map((i) => (
+                        <Star key={i} className="size-3 fill-amber-400 text-amber-400" />
+                      ))}
+                      <span className="ml-1 text-[10px] font-bold text-slate-400">
+                        New listing
+                      </span>
+                    </div>
+
+                    {/* Price */}
+                    <div className="flex items-baseline gap-2 pt-0.5">
+                      {watchedPrice > 0 ? (
+                        <>
+                          <span className="text-lg font-black text-slate-950 tabular-nums">
+                            ${(watchedDiscountPrice && watchedDiscountPrice < watchedPrice ? watchedDiscountPrice : watchedPrice).toFixed(2)}
+                          </span>
+                          {watchedDiscountPrice && watchedDiscountPrice < watchedPrice && (
+                            <span className="text-xs font-semibold text-slate-400 line-through tabular-nums">
+                              ${watchedPrice.toFixed(2)}
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-base font-black text-slate-300">$0.00</span>
+                      )}
+                    </div>
+
+                    {/* Stock + Status bar */}
+                    <div className="flex items-center justify-between border-t border-slate-100 pt-2.5 text-[11px] font-bold">
+                      <span
+                        className={cn(
+                          watchedStockQty > 0 ? "text-emerald-600" : "text-rose-500",
+                        )}
+                      >
+                        {watchedStockQty > 0 ? `${watchedStockQty} in stock` : "Out of stock"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* Completeness Checklist */}
+            {!isEditing && (
+              <Card>
+                <div className="px-5 py-4 space-y-3">
+                  <p className="text-[11px] font-black uppercase tracking-widest text-slate-500">
+                    Listing Readiness
+                  </p>
+                  <div className="space-y-2">
+                    {[
+                      { label: "Product title (3+ chars)", done: (watchedTitle?.trim().length || 0) >= 3 },
+                      { label: "Category selected", done: Boolean(watchedCategoryUuid) },
+                      { label: "Price set", done: watchedPrice > 0 },
+                      { label: "Stock quantity", done: watchedStockQty >= 0 },
+                      { label: "At least 1 photo", done: picked.length > 0 },
+                    ].map((item) => (
+                      <div key={item.label} className="flex items-center gap-2.5">
+                        <div
+                          className={cn(
+                            "grid size-5 shrink-0 place-items-center rounded-full transition-all",
+                            item.done
+                              ? "bg-emerald-100 text-emerald-600"
+                              : "bg-slate-100 text-slate-300",
+                          )}
+                        >
+                          <Check className="size-3" strokeWidth={3} />
+                        </div>
+                        <span
+                          className={cn(
+                            "text-xs font-semibold",
+                            item.done ? "text-slate-700" : "text-slate-400",
+                          )}
+                        >
+                          {item.label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div className="pt-2">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[11px] font-black text-slate-400">Overall Progress</span>
+                      <span className="text-[11px] font-black tabular-nums text-violet-600">
+                        {completeness}%
+                      </span>
+                    </div>
+                    <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                      <div
+                        className={cn(
+                          "h-full rounded-full transition-all duration-500",
+                          completeness === 100 ? "bg-emerald-500" : "bg-violet-600",
+                        )}
+                        style={{ width: `${completeness}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            )}
+
+            {/* Publish CTA */}
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full h-12 rounded-2xl bg-violet-600 text-sm font-extrabold text-white shadow-md shadow-violet-200/60 transition hover:bg-violet-700 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="size-4.5 animate-spin" />
+                  Saving…
+                </>
+              ) : (
+                <>
+                  <Zap className="size-4.5" />
+                  {isEditing ? "Save Changes" : "Publish to Marketplace"}
+                </>
+              )}
+            </button>
+
+            {!isEditing && (
+              <button
+                type="button"
+                onClick={saveDraft}
+                className="w-full h-10 rounded-2xl border border-slate-200 bg-white text-xs font-extrabold text-slate-600 transition hover:border-violet-300 hover:text-violet-700"
+              >
+                Save as Draft
+              </button>
+            )}
+          </aside>
+        </div>
+      </form>
+    </div>
   )
 }
