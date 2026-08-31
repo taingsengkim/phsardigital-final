@@ -50,8 +50,17 @@ export async function POST(request: NextRequest) {
       try {
         data = JSON.parse(text);
       } catch {
-        data = text;
+        data = { message: text };
       }
+    }
+
+    if (!res.ok) {
+      const cleanMessage =
+        data?.message ||
+        (res.status === 415
+          ? "Unsupported file format. Please upload JPG, PNG, WebP, or GIF."
+          : "Failed to upload file.");
+      return NextResponse.json({ message: cleanMessage }, { status: res.status });
     }
 
     return NextResponse.json(data, { status: res.status });

@@ -85,8 +85,9 @@ export default function ReviewDialog({
     const file = e.target.files?.[0]
     if (!file) return
 
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please upload an image file (JPG, PNG, WebP)")
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"]
+    if (!allowedTypes.includes(file.type.toLowerCase())) {
+      toast.error("Please upload a supported image format (JPG, PNG, WebP, or GIF)")
       return
     }
 
@@ -104,11 +105,27 @@ export default function ReviewDialog({
         method: "POST",
         body: formData,
       })
-      if (!res.ok) {
-        const errText = await res.text()
-        throw new Error(errText || "Upload failed")
+
+      const text = await res.text()
+      let data: any = null
+      if (text) {
+        try {
+          data = JSON.parse(text)
+        } catch {
+          data = { message: text }
+        }
       }
-      const data = await res.json()
+
+      if (!res.ok) {
+        const errorMsg =
+          data?.message ||
+          (res.status === 415
+            ? "Unsupported file format. Please upload JPG, PNG, WebP, or GIF."
+            : "Failed to upload photo")
+        toast.error(errorMsg)
+        return
+      }
+
       if (data?.objectName) {
         setPhotoObjectName(data.objectName)
         setPhotoPreviewUri(data.uri || URL.createObjectURL(file))
