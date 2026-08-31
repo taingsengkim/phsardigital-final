@@ -1,14 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { ArrowUpDown, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AuthLeftPanel from "@/components/auth/AuthLeftPanel";
 import { AuthToast, type ToastState } from "@/components/auth/AuthToast";
 import { authClient } from "@/lib/auth-client";
 
-export default function LoginPage() {
+function LoginForm() {
+  const searchParams = useSearchParams();
+  const callbackURL =
+    searchParams.get("callbackURL") ||
+    searchParams.get("callbackUrl") ||
+    "/home";
+
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
 
@@ -17,7 +24,7 @@ export default function LoginPage() {
     try {
       const { error } = await authClient.signIn.oauth2({
         providerId: "keycloak",
-        callbackURL: "/",
+        callbackURL,
       });
       if (error) throw new Error(error.message);
     } catch (err: any) {
@@ -178,3 +185,18 @@ function KeycloakIcon() {
     </svg>
   );
 }
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-[#F4F3F8]">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#6C4CD8] border-t-transparent" />
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
+  );
+}
+

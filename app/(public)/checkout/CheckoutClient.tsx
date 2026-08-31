@@ -34,6 +34,7 @@ import {
   Minus,
   Edit2,
   Trash2,
+  Loader2,
 } from "lucide-react";
 import { cn, displayImageUrl } from "@/lib/utils";
 import { getListingBySlug } from "@/app/api/listings";
@@ -45,6 +46,8 @@ import {
   type Address,
   type CreateAddressRequest,
 } from "@/lib/api/addressApi";
+import { useSession } from "@/lib/auth-client";
+import { useGetMeQuery } from "@/lib/api/authApi";
 import type { Listing } from "@/lib/types";
 
 type CheckoutItem = {
@@ -122,9 +125,11 @@ function toSavedAddress(address: Address): SavedAddress {
     commune: isCity ? "" : (address.commune ?? ""),
     village: address.village ?? "",
     streetNo: address.streetNo ?? "",
-    province: address.province ?? "",
+    province: address.province ?? (isCity ? "Phnom Penh" : ""),
     city: isCity ? "Phnom Penh" : (address.province ?? ""),
     address: address.formattedAddress ?? "",
+    googleMapLink: address.locationName ?? "",
+    photos: (address.landmarkPhotos ?? []).map((p) => p.url ?? "").filter(Boolean),
   };
 }
 
@@ -316,9 +321,11 @@ export default function CheckoutClient() {
     }, 4000);
   }
 
-  // Saved Addresses State
+  // Saved Addresses & User Profile State
+  const { data: session } = useSession();
+  const { data: userProfile } = useGetMeQuery(undefined, { skip: !session?.user });
   const [checkout] = useCheckoutMutation();
-  const { data: serverAddresses } = useGetAddressesQuery();
+  const { data: serverAddresses, isLoading: isLoadingAddresses } = useGetAddressesQuery(undefined, { skip: !session?.user });
   const [createAddress] = useCreateAddressMutation();
   /* Checkout needs the cart's uuid and the seller's id, but the screen tracks
      the chosen shop by name — so keep the identifiers alongside it. */
@@ -333,23 +340,24 @@ export default function CheckoutClient() {
     [serverAddresses],
   );
   const [selectedAddressId, setSelectedAddressId] = useState<string>("new");
+  const [hasUserModifiedAddress, setHasUserModifiedAddress] = useState(false);
 
   // Form Input State (City vs Province)
   const [locationType, setLocationType] = useState<"city" | "province">("city");
-  const [locationTitle, setLocationTitle] = useState("Home (Phnom Penh)");
-  const [fullName, setFullName] = useState("Vanneth Sok");
-  const [phone, setPhone] = useState("012 345 6789");
+  const [locationTitle, setLocationTitle] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
 
   // City User Fields (Phnom Penh)
-  const [khan, setKhan] = useState("Daun Penh");
-  const [sangkat, setSangkat] = useState("Wat Phnom");
-  const [village, setVillage] = useState("Phum 1");
-  const [streetNo, setStreetNo] = useState("Canadia Tower, 18th Floor, Monivong Blvd");
+  const [khan, setKhan] = useState("");
+  const [sangkat, setSangkat] = useState("");
+  const [village, setVillage] = useState("");
+  const [streetNo, setStreetNo] = useState("");
 
   // Province User Fields
   const [province, setProvince] = useState("Siem Reap");
-  const [district, setDistrict] = useState("Svay Dangkum");
-  const [commune, setCommune] = useState("Sala Kamreuk");
+  const [district, setDistrict] = useState("");
+  const [commune, setCommune] = useState("");
 
   // Shared Optional Fields
   const [googleMapLink, setGoogleMapLink] = useState("");
@@ -357,10 +365,38 @@ export default function CheckoutClient() {
   const [viewPhotoUrl, setViewPhotoUrl] = useState<string | null>(null);
 
   const [paymentMethod, setPaymentMethod] = useState<"pay_now_shop" | "cod">("pay_now_shop");
+  const [deliveryNote, setDeliveryNote] = useState("");
 
   // New location options
   const [newLabel, setNewLabel] = useState("");
   const [saveNewAddress, setSaveNewAddress] = useState(true);
+
+  // Auto-populate from saved address or user profile
+  useEffect(() => {
+    if (serverAddresses && serverAddresses.length > 0) {
+      if (selectedAddressId === "new" && !hasUserModifiedAddress) {
+        const defaultAddr = serverAddresses.find((a) => a.isDefault) || serverAddresses[0];
+        if (defaultAddr) {
+          handleSelectSavedAddress(toSavedAddress(defaultAddr));
+        }
+      }
+    } else if (userProfile && selectedAddressId === "new" && !hasUserModifiedAddress) {
+      const derivedName =
+        userProfile.fullName ||
+        `${userProfile.firstName || ""} ${userProfile.lastName || ""}`.trim() ||
+        session?.user?.name ||
+        "";
+      if (derivedName && !fullName) {
+        setFullName(derivedName);
+      }
+      if (userProfile.phone && !phone) {
+        setPhone(userProfile.phone);
+      }
+      if (!locationTitle) {
+        setLocationTitle("Home (Phnom Penh)");
+      }
+    }
+  }, [serverAddresses, userProfile, session, hasUserModifiedAddress]);
 
   // Chat message & threads state
   const [chatInput, setChatInput] = useState("");
@@ -575,14 +611,14 @@ export default function CheckoutClient() {
     const type = addr.locationType || (addr.city === "Phnom Penh" ? "city" : "province");
     setLocationType(type);
     if (type === "city") {
-      setKhan(addr.khan || "Daun Penh");
-      setSangkat(addr.sangkat || "Wat Phnom");
-      setVillage(addr.village || "Phum 1");
+      setKhan(addr.khan || "");
+      setSangkat(addr.sangkat || "");
+      setVillage(addr.village || "");
       setStreetNo(addr.streetNo || addr.address || "");
     } else {
       setProvince(addr.province || addr.city || "Siem Reap");
-      setDistrict(addr.district || "Svay Dangkum");
-      setCommune(addr.commune || "Sala Kamreuk");
+      setDistrict(addr.district || "");
+      setCommune(addr.commune || "");
       setVillage(addr.village || addr.address || "");
     }
     setGoogleMapLink(addr.googleMapLink || "");
@@ -591,10 +627,16 @@ export default function CheckoutClient() {
 
   // Handle clicking + Add New Location
   function handleAddNewAddressClick() {
+    setHasUserModifiedAddress(true);
     setSelectedAddressId("new");
     setLocationTitle("");
-    setFullName("Vanneth Sok");
-    setPhone("012 345 6789");
+    const derivedName =
+      userProfile?.fullName ||
+      `${userProfile?.firstName || ""} ${userProfile?.lastName || ""}`.trim() ||
+      session?.user?.name ||
+      "";
+    setFullName(derivedName);
+    setPhone(userProfile?.phone || "");
     setLocationType("city");
     setKhan("");
     setSangkat("");
@@ -605,7 +647,7 @@ export default function CheckoutClient() {
     setCommune("");
     setGoogleMapLink("");
     setHousePhotos([]);
-    setNewLabel("New Location");
+    setNewLabel("");
   }
 
   // Group items by store
@@ -718,15 +760,15 @@ export default function CheckoutClient() {
   function toAddressRequest(): CreateAddressRequest {
     return {
       type: locationType === "city" ? "CITY" : "PROVINCE",
-      label: newLabel.trim() || locationTitle,
-      recipient: fullName,
-      phone: phone,
-      locationName: googleMapLink,
-      streetNo: streetNo,
-      province: locationType === "province" ? province : undefined,
-      district: locationType === "province" ? district : khan,
-      commune: locationType === "province" ? commune : sangkat,
-      village: village,
+      label: newLabel.trim() || locationTitle.trim() || (locationType === "city" ? "Home (Phnom Penh)" : "Province Location"),
+      recipient: fullName.trim(),
+      phone: phone.trim(),
+      locationName: googleMapLink.trim() || locationTitle.trim(),
+      streetNo: streetNo.trim(),
+      province: locationType === "province" ? province.trim() : "Phnom Penh",
+      district: locationType === "province" ? district.trim() : khan.trim(),
+      commune: locationType === "province" ? commune.trim() : sangkat.trim(),
+      village: village.trim(),
       isDefault: false,
     };
   }
@@ -778,6 +820,7 @@ export default function CheckoutClient() {
         shippingAddress: fullAddressString,
         recipientName: fullName.trim(),
         recipientPhone: phone.trim(),
+        ...(deliveryNote.trim() ? { note: deliveryNote.trim() } : {}),
       }).unwrap();
 
       const store = selectedStore;
@@ -1307,9 +1350,17 @@ export default function CheckoutClient() {
 
               {/* ── SAVED LOCATION SELECTOR CARDS ── */}
               <div className="mb-6">
-                <label className="mb-2.5 block text-[13px] font-extrabold text-[#1A1330] uppercase tracking-wide">
-                  Saved Locations
-                </label>
+                <div className="flex items-center justify-between mb-2.5">
+                  <label className="block text-[13px] font-extrabold text-[#1A1330] uppercase tracking-wide">
+                    Saved Locations {savedAddresses.length > 0 && `(${savedAddresses.length})`}
+                  </label>
+                  {isLoadingAddresses && (
+                    <span className="flex items-center gap-1.5 text-xs text-[#6C4CD8]">
+                      <Loader2 size={12} className="animate-spin" /> Loading addresses...
+                    </span>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                   {savedAddresses.map((addr) => {
                     const isSelected = selectedAddressId === addr.id;
@@ -1318,26 +1369,42 @@ export default function CheckoutClient() {
                         key={addr.id}
                         onClick={() => handleSelectSavedAddress(addr)}
                         className={cn(
-                          "relative flex cursor-pointer flex-col justify-between rounded-2xl border-2 p-3.5 transition-all",
+                          "relative flex cursor-pointer flex-col justify-between rounded-2xl border-2 p-3.5 transition-all min-h-[96px]",
                           isSelected
                             ? "border-[#6C4CD8] bg-[#F8F7FC] shadow-sm"
                             : "border-[#EDEBF3] bg-white hover:border-[#C4B5FD]"
                         )}
                       >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-[13.5px] font-extrabold text-[#1A1330] flex items-center gap-1.5 truncate">
-                            {addr.id === "home" ? <Home size={14} className="text-[#6C4CD8] shrink-0" /> : <Building size={14} className="text-[#6C4CD8] shrink-0" />}
-                            <span className="truncate">{addr.label}</span>
-                          </span>
-                          {isSelected && (
-                            <span className="flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full bg-[#6C4CD8] text-white">
-                              <Check size={11} />
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-[13.5px] font-extrabold text-[#1A1330] flex items-center gap-1.5 truncate">
+                              {addr.locationType === "city" ? (
+                                <Building size={14} className="text-[#6C4CD8] shrink-0" />
+                              ) : (
+                                <MapPin size={14} className="text-[#6C4CD8] shrink-0" />
+                              )}
+                              <span className="truncate">{addr.label}</span>
+                              {addr.isDefault && (
+                                <span className="rounded-full bg-emerald-100 px-1.5 py-0.2 text-[9px] font-bold uppercase text-emerald-800 shrink-0">
+                                  Default
+                                </span>
+                              )}
                             </span>
-                          )}
+                            {isSelected && (
+                              <span className="flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full bg-[#6C4CD8] text-white">
+                                <Check size={11} />
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11.5px] text-[#8B85A0] line-clamp-2 leading-tight">
+                            {addr.address || `${addr.streetNo ? `${addr.streetNo}, ` : ""}${addr.khan || addr.district || ""}, ${addr.city || addr.province || ""}`}
+                          </p>
                         </div>
-                        <p className="text-[11.5px] text-[#8B85A0] line-clamp-2 leading-tight">
-                          {addr.address}, {addr.city}
-                        </p>
+                        {addr.fullName && (
+                          <p className="mt-1.5 text-[10.5px] font-semibold text-[#6B6580] truncate border-t border-[#F0EDFB] pt-1">
+                            {addr.fullName} · {addr.phone}
+                          </p>
+                        )}
                       </div>
                     );
                   })}
@@ -1346,7 +1413,7 @@ export default function CheckoutClient() {
                   <div
                     onClick={handleAddNewAddressClick}
                     className={cn(
-                      "flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed p-3.5 text-center transition-all",
+                      "flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed p-3.5 text-center transition-all min-h-[96px]",
                       selectedAddressId === "new"
                         ? "border-[#6C4CD8] bg-[#F8F7FC] text-[#6C4CD8]"
                         : "border-[#DCD7EC] bg-white text-[#8B85A0] hover:border-[#6C4CD8] hover:text-[#6C4CD8]"
@@ -1686,6 +1753,22 @@ export default function CheckoutClient() {
                     </label>
                   </div>
                 )}
+
+                {/* Delivery Note / Instructions */}
+                <div className="sm:col-span-2 pt-2">
+                  <label htmlFor="deliveryNote" className="mb-1.5 flex items-center justify-between text-[13px] font-bold text-[#1A1330]">
+                    <span>Delivery Instructions / Note for Seller</span>
+                    <span className="text-[12px] font-normal text-[#8B85A0]">Optional</span>
+                  </label>
+                  <textarea
+                    id="deliveryNote"
+                    rows={2}
+                    value={deliveryNote}
+                    onChange={(e) => setDeliveryNote(e.target.value)}
+                    placeholder="e.g. Please call upon arrival or leave package at lobby front desk"
+                    className="w-full rounded-xl border border-[#E2DFEC] bg-[#F6F5FA] px-4 py-3 text-[14px] font-medium text-[#1A1330] outline-none focus:border-[#6C4CD8] focus:bg-white transition resize-none"
+                  />
+                </div>
               </div>
             </section>
 

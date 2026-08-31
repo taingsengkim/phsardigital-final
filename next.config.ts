@@ -8,6 +8,11 @@ const nextConfig: NextConfig = {
         destination: "/home",
         permanent: false,
       },
+      {
+        source: "/seller-dashboard",
+        destination: "/seller-dashboard/home",
+        permanent: false,
+      },
     ];
   },
   reactCompiler: true,
