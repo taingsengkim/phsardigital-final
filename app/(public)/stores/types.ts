@@ -38,7 +38,7 @@ export type StoreDetails = {
   rating: number;
   reviewCount: number;
   productCount: number;
-  followersCount: number;
+  followersCount?: number;
   verified: boolean;
   location: string;
   fullAddress?: string;

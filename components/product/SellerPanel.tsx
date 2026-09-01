@@ -261,7 +261,7 @@ export default function SellerPanel({
           {/* socials */}
           {socials.length > 0 && (
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[13px] font-semibold text-[#8B85A0]">Follow:</span>
+              <span className="text-[13px] font-semibold text-[#8B85A0]">Socials:</span>
               {socials.map((link) => (
                 <a
                   key={link}

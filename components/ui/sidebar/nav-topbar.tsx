@@ -161,7 +161,6 @@ export function NavTopbar() {
     if (pathname === "/seller-dashboard/products/dashboard")
       return "Product Overview";
     if (pathname === "/seller-dashboard/products/comment") return "Comments";
-    if (pathname.startsWith("/seller-dashboard/customer")) return "Customers";
     if (pathname.startsWith("/seller-dashboard/message"))
       return "Message Center";
     if (pathname.startsWith("/seller-dashboard/shop")) return "Store Settings";

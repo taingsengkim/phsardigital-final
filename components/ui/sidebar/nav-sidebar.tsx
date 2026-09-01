@@ -12,7 +12,6 @@ import {
   PackageCheck,
   ShoppingBag,
   Store,
-  Users,
 } from "lucide-react";
 import PhsarDigitalLogo from "@/assets/svg/phsardigitalLogo";
 import { useGetConversationsQuery } from "@/lib/redux/service/sellerMessageApi";
@@ -137,16 +136,6 @@ export function SellerSidebar() {
             >
               <ShoppingBag strokeWidth={1.8} />
               <span className="min-w-0 group-data-[collapsible=icon]:hidden"><span className="block text-[15px] font-semibold leading-5">Quick Order</span><span className="block truncate text-[11px] font-medium text-[#94a4bc]">Create a sale</span></span>
-            </Link>
-            <Link
-              href="/seller-dashboard/customer/customer-list"
-              className={cn(
-                itemClass,
-                active("/seller-dashboard/customer", true) && activeClass,
-              )}
-            >
-              <Users strokeWidth={1.8} />
-              <span className="min-w-0 group-data-[collapsible=icon]:hidden"><span className="block text-[15px] font-semibold leading-5">Customers</span><span className="block truncate text-[11px] font-medium text-[#94a4bc]">Buyer directory</span></span>
             </Link>
 
             <Link

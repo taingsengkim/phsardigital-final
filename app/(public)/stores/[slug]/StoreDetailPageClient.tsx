@@ -9,8 +9,6 @@ import {
   CheckCircle2,
   MapPin,
   MessageSquare,
-  UserPlus,
-  UserCheck,
   Share2,
   ShoppingBag,
   ShoppingCart,
@@ -151,7 +149,6 @@ export default function StoreDetailPageClient({ slug }: { slug?: string }) {
     rating,
     reviewCount,
     productCount: rawProducts.length,
-    followersCount: sellerProfile?.followersCount ?? 0,
     location,
     joinedYear: sellerProfile?.createdAt ? String(new Date(sellerProfile.createdAt).getFullYear()) : "2024",
     description: tagline,
@@ -170,8 +167,6 @@ export default function StoreDetailPageClient({ slug }: { slug?: string }) {
     reviews: formattedReviews as any,
   };
 
-  const [isFollowing, setIsFollowing] = useState(false);
-  const [followersCount, setFollowersCount] = useState(store.followersCount);
   const [activeTab, setActiveTab] = useState<"products" | "offers" | "reviews" | "about">("products");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
@@ -181,18 +176,6 @@ export default function StoreDetailPageClient({ slug }: { slug?: string }) {
   function showToast(msg: string) {
     setToastMessage(msg);
     setTimeout(() => setToastMessage((c) => (c === msg ? null : c)), 3500);
-  }
-
-  function toggleFollow() {
-    if (isFollowing) {
-      setIsFollowing(false);
-      setFollowersCount((prev) => prev - 1);
-      showToast(`Unfollowed ${store.name}`);
-    } else {
-      setIsFollowing(true);
-      setFollowersCount((prev) => prev + 1);
-      showToast(`You are now following ${store.name}!`);
-    }
   }
 
   function handleShare() {
@@ -284,35 +267,14 @@ export default function StoreDetailPageClient({ slug }: { slug?: string }) {
 
           {/* Header Action Buttons */}
           <div className="flex items-center gap-3 shrink-0 pt-2 sm:pt-0">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.94 }}
-              onClick={toggleFollow}
-              className={`flex items-center gap-2 rounded-full px-6 py-3 text-sm sm:text-base font-extrabold transition-all shadow-md ${
-                isFollowing
-                  ? "bg-[#F1EFFA] text-[#6C4CD8] border border-[#6C4CD8]/30 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200"
-                  : "bg-[#6C4CD8] text-white hover:bg-[#5B3EC4]"
-              }`}
-            >
-              {isFollowing ? (
-                <>
-                  <UserCheck size={18} /> Following ({followersCount.toLocaleString()})
-                </>
-              ) : (
-                <>
-                  <UserPlus size={18} /> Follow Store
-                </>
-              )}
-            </motion.button>
-
             <Link href={`/messages?seller=${encodeURIComponent(safeSlug)}`}>
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.94 }}
-                className="flex items-center gap-2 rounded-full border border-[#EDEBF3] bg-white px-5 py-3 text-sm sm:text-base font-extrabold text-[#1A1330] shadow-xs hover:bg-[#F1EFFA] hover:text-[#6C4CD8]"
+                className="flex items-center gap-2 rounded-full bg-[#6C4CD8] px-6 py-3 text-sm sm:text-base font-extrabold text-white shadow-md hover:bg-[#5B3EC4]"
               >
-                <MessageSquare size={18} className="text-[#6C4CD8]" />
-                Chat
+                <MessageSquare size={18} className="text-white" />
+                Chat with Store
               </motion.button>
             </Link>
 
