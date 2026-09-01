@@ -577,7 +577,11 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
     const extras: CustomSpec[] = []
 
     for (const attr of listing.listingAttributes ?? []) {
-      const def = categoryAttributes.find((ca) => ca.code === attr.key || ca.label === attr.key)
+      const def = categoryAttributes.find(
+        (ca) =>
+          ca.code.toLowerCase() === attr.key.toLowerCase() ||
+          ca.label?.toLowerCase() === attr.key.toLowerCase(),
+      )
       if (def) {
         vals[def.code] = attr.value ?? ""
       } else {
@@ -670,7 +674,11 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
         uploadedImages[coverIdx]?.objectName ?? uploadedImages[0]?.objectName
 
       const predefined = categoryAttributes
-        .map((a, i) => ({ key: a.code, value: attrValues[a.code]?.trim() ?? "", sortOrder: a.sortOrder ?? i }))
+        .map((a, i) => ({
+          key: a.label?.trim() || a.code,
+          value: attrValues[a.code]?.trim() ?? "",
+          sortOrder: a.sortOrder ?? i,
+        }))
         .filter((a) => a.value)
 
       const extras = customSpecs

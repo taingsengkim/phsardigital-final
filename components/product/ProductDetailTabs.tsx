@@ -30,6 +30,10 @@ import {
   useGetListingReviewSummaryQuery,
 } from "@/lib/redux/service/sellerCommentApi";
 import type { ReviewResponse, ReviewSummaryResponse } from "@/lib/types/review";
+import {
+  formatAttributeKey,
+  formatAttributeValue,
+} from "@/lib/attribute-formatter";
 
 type Tab = "details" | "reviews" | "shipping";
 
@@ -182,21 +186,21 @@ export default function ProductDetailTabs({
           {specificationGroups.length > 0 ? (
             <div className="mt-8 space-y-6">
               {specificationGroups.map((group, gi) => (
-                <div key={group.name || gi} className="overflow-hidden rounded-2xl border border-[#E2DFEC]">
-                  <div className="bg-[#FAF9FD] px-6 py-3 border-b border-[#E2DFEC]">
-                    <h4 className="text-[17px] font-bold text-[#1A1330]">{group.name}</h4>
+                <div key={group.name || gi} className="overflow-hidden rounded-3xl border border-[#EDEBF3] bg-white shadow-2xs">
+                  <div className="bg-[#FAF9FD] px-6 py-4 border-b border-[#EDEBF3]">
+                    <h4 className="text-base sm:text-lg font-black text-[#1A1330]">{group.name}</h4>
                   </div>
-                  <div className="divide-y divide-[#E2DFEC]">
+                  <div className="divide-y divide-[#EDEBF3]">
                     {(group.attributes ?? []).map((attr, i) => (
                       <div
                         key={attr.uuid ?? `${attr.key}-${i}`}
                         className={cn(
-                          "grid grid-cols-[minmax(120px,1fr)_2fr] gap-4 px-6 py-4 text-[16px]",
-                          i % 2 === 0 ? "bg-white" : "bg-[#F8F6FD]"
+                          "grid grid-cols-[minmax(140px,1fr)_2fr] gap-4 px-6 py-4 text-sm sm:text-base",
+                          i % 2 === 0 ? "bg-white" : "bg-[#FDFBFE]"
                         )}
                       >
-                        <span className="font-semibold text-[#1A1330]">{attr.key}</span>
-                        <span className="text-[#5A5470]">{attr.value}</span>
+                        <span className="font-extrabold text-[#7C7596]">{formatAttributeKey(attr.key)}</span>
+                        <span className="font-semibold text-[#1A1330]">{formatAttributeValue(attr.value)}</span>
                       </div>
                     ))}
                   </div>
@@ -204,21 +208,21 @@ export default function ProductDetailTabs({
               ))}
             </div>
           ) : sortedAttributes.length > 0 ? (
-            <div className="mt-8 overflow-hidden rounded-2xl border border-[#E2DFEC]">
-              <div className="bg-[#FAF9FD] px-6 py-3 border-b border-[#E2DFEC]">
-                <h4 className="text-[17px] font-bold text-[#1A1330]">Specifications</h4>
+            <div className="mt-8 overflow-hidden rounded-3xl border border-[#EDEBF3] bg-white shadow-2xs">
+              <div className="bg-[#FAF9FD] px-6 py-4 border-b border-[#EDEBF3]">
+                <h4 className="text-base sm:text-lg font-black text-[#1A1330]">Specifications</h4>
               </div>
-              <div className="divide-y divide-[#E2DFEC]">
+              <div className="divide-y divide-[#EDEBF3]">
                 {sortedAttributes.map((attr, i) => (
                   <div
                     key={attr.uuid ?? `${attr.key}-${i}`}
                     className={cn(
-                      "grid grid-cols-[minmax(120px,1fr)_2fr] gap-4 px-6 py-4 text-[16px]",
-                      i % 2 === 0 ? "bg-white" : "bg-[#F8F6FD]"
+                      "grid grid-cols-[minmax(140px,1fr)_2fr] gap-4 px-6 py-4 text-sm sm:text-base",
+                      i % 2 === 0 ? "bg-white" : "bg-[#FDFBFE]"
                     )}
                   >
-                    <span className="font-semibold text-[#1A1330]">{attr.key}</span>
-                    <span className="text-[#5A5470]">{attr.value}</span>
+                    <span className="font-extrabold text-[#7C7596]">{formatAttributeKey(attr.key)}</span>
+                    <span className="font-semibold text-[#1A1330]">{formatAttributeValue(attr.value)}</span>
                   </div>
                 ))}
               </div>

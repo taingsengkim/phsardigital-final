@@ -35,6 +35,10 @@ import {
   getListingPrice,
   hasListingDiscount,
 } from "@/lib/api/listing-price";
+import {
+  formatAttributeKey,
+  formatAttributeValue,
+} from "@/lib/attribute-formatter";
 
 type Props = {
   listing: ApiListing;
@@ -96,6 +100,10 @@ export default function ProductDetailClient({
   const price = getListingPrice(listing);
   const fullPrice = getListingFullPrice(listing);
   const hasDiscount = hasListingDiscount(listing);
+  const discountPercent =
+    hasDiscount && fullPrice > 0
+      ? Math.round(((fullPrice - price) / fullPrice) * 100)
+      : null;
   const stock = typeof listing.stockQty === "number" ? listing.stockQty : 0;
   const sold = typeof listing.sold === "number" ? listing.sold : 0;
 
@@ -105,9 +113,13 @@ export default function ProductDetailClient({
 
   const attributes = useMemo(
     () =>
-      [...(listing.listingAttributes ?? [])].sort(
-        (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0),
-      ),
+      [...(listing.listingAttributes ?? [])]
+        .map((attr) => ({
+          ...attr,
+          formattedKey: formatAttributeKey(attr.key),
+          formattedValue: formatAttributeValue(attr.value),
+        }))
+        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)),
     [listing.listingAttributes],
   );
 
@@ -229,25 +241,26 @@ export default function ProductDetailClient({
         {listing.category?.name && (
           <Link
             href={`/products?categorySlug=${listing.category.slug ?? ""}`}
-            className="rounded-full bg-[#F1EFFA] px-3 py-1 text-[13px] font-bold text-[#6C4CD8] transition hover:bg-[#E4DEFA]"
+            className="inline-flex items-center gap-1 rounded-full bg-[#F1EFFA] px-3.5 py-1.5 text-xs font-extrabold text-[#6C4CD8] transition-all hover:bg-[#E4DEFA] hover:shadow-xs"
           >
+            <ShoppingBag size={13} />
             {listing.category.name}
           </Link>
         )}
         {listing.isFeatured && (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FFF7E6] px-3 py-1 text-[13px] font-bold text-[#B7791F]">
-            <Star size={12} fill="#B7791F" />
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3.5 py-1.5 text-xs font-extrabold text-amber-700 border border-amber-200/60 shadow-2xs">
+            <Star size={13} className="fill-amber-500 text-amber-500" />
             Featured
           </span>
         )}
         {sold > 0 && (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F0FDF4] px-3 py-1 text-[13px] font-bold text-emerald-600">
-            <Flame size={12} />
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3.5 py-1.5 text-xs font-extrabold text-emerald-700 border border-emerald-200/60 shadow-2xs">
+            <Flame size={13} className="text-emerald-600" />
             {sold} sold
           </span>
         )}
         {!isActive && (
-          <span className="rounded-full bg-[#FEF2F2] px-3 py-1 text-[13px] font-bold text-red-500">
+          <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-3.5 py-1.5 text-xs font-extrabold text-rose-600 border border-rose-200 shadow-2xs">
             Unavailable
           </span>
         )}
@@ -255,91 +268,110 @@ export default function ProductDetailClient({
 
       {/* ── title row ── */}
       <div className="flex items-start justify-between gap-4">
-        <h1 className="text-[28px] font-extrabold leading-tight text-[#1A1330] lg:text-[32px]">
+        <h1 className="text-2xl sm:text-3xl lg:text-[34px] font-black leading-tight tracking-tight text-[#1A1330]">
           {listing.title || "Product details"}
         </h1>
         <div className="flex shrink-0 items-center gap-2 pt-1">
           <SavedButton listingId={listingId} initialSaved={Boolean(listing.isFavorite)} />
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             type="button"
             onClick={handleShare}
             aria-label={shared ? "Link copied" : "Share this product"}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-[#E2DFEC] bg-white text-[#6C4CD8] transition hover:bg-[#F1EFFA]"
+            className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#E2DFEC] bg-white text-[#6C4CD8] shadow-xs transition hover:bg-[#F1EFFA] hover:border-[#6C4CD8]/40"
           >
             {shared ? (
-              <Check size={16} className="text-emerald-500" />
+              <Check size={18} className="text-emerald-500" />
             ) : (
-              <Share2 size={16} />
+              <Share2 size={18} />
             )}
-          </button>
+          </motion.button>
         </div>
       </div>
 
       {/* ── seller + rating line ── */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[15px]">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm sm:text-base">
         {sellerName && (
           <Link
             href={sellerId ? `/stores/${sellerId}` : "/stores"}
-            className="inline-flex items-center gap-1.5 font-semibold text-[#6C4CD8] hover:underline"
+            className="inline-flex items-center gap-1.5 font-bold text-[#6C4CD8] transition hover:underline"
           >
-            <BadgeCheck size={15} />
-            {sellerName}
+            <BadgeCheck size={16} className="text-[#6C4CD8]" />
+            <span>{sellerName}</span>
           </Link>
         )}
 
         {average !== null ? (
           <span className="flex items-center gap-2 border-l border-[#E2DFEC] pl-4">
-            <RatingStars rating={average} size={16} />
-            <span className="font-bold text-[#F5B301]">
+            <RatingStars rating={average} size={15} />
+            <span className="font-black text-amber-600">
               {average.toFixed(1)}
             </span>
-            <a href="#reviews" className="text-[#8B85A0] hover:text-[#6C4CD8]">
+            <a href="#reviews" className="font-medium text-[#7C7596] hover:text-[#6C4CD8]">
               ({total} {total === 1 ? "review" : "reviews"})
             </a>
           </span>
         ) : (
-          <span className="border-l border-[#E2DFEC] pl-4 text-[#8B85A0]">
+          <span className="border-l border-[#E2DFEC] pl-4 text-xs sm:text-sm font-medium text-[#7C7596]">
             No reviews yet
           </span>
         )}
       </div>
 
-      {/* ── price block ── */}
-      <div className="rounded-2xl bg-[#F6F5FA] px-6 py-5">
-        <div className="flex flex-wrap items-baseline gap-3">
-          <span className="text-[36px] font-black leading-none text-[#6C4CD8]">
+      {/* ── price & stock hero block ── */}
+      <div className="relative overflow-hidden rounded-3xl border border-[#E8E4F4] bg-gradient-to-br from-[#FAF9FD] via-[#F6F4FA] to-[#F1EEFB] p-6 shadow-sm">
+        <div className="flex flex-wrap items-baseline gap-3.5">
+          <span className="text-3xl sm:text-4xl lg:text-[42px] font-black leading-none text-[#6C4CD8] tracking-tight">
             {formatUsd(price)}
           </span>
           {hasDiscount && (
-            <span className="text-[16px] font-semibold text-[#8B85A0] line-through">
-              {formatUsd(fullPrice)}
-            </span>
+            <>
+              <span className="text-base sm:text-lg font-bold text-[#8B85A0] line-through">
+                {formatUsd(fullPrice)}
+              </span>
+              {discountPercent !== null && (
+                <span className="rounded-full bg-rose-500 px-2.5 py-0.5 text-xs font-black text-white shadow-xs">
+                  -{discountPercent}% OFF
+                </span>
+              )}
+            </>
           )}
-          <span className="text-[15px] font-medium text-[#8B85A0]">
+          <span className="rounded-xl bg-white/80 px-2.5 py-1 text-xs sm:text-sm font-bold text-[#7C7596] border border-[#EDE8F6] shadow-2xs">
             ≈ {formatKhr(price)}
           </span>
         </div>
 
-        {/* stock status */}
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span
-            className={cn(
-              "h-2.5 w-2.5 rounded-full",
-              inStock
-                ? lowStock
-                  ? "bg-amber-500"
-                  : "bg-emerald-500"
-                : "bg-red-500",
+        {/* stock status with live dot */}
+        <div className="mt-4 flex flex-wrap items-center gap-2.5">
+          <span className="relative flex h-3 w-3">
+            {inStock && (
+              <span
+                className={cn(
+                  "absolute inline-flex h-full w-full animate-ping rounded-full opacity-75",
+                  lowStock ? "bg-amber-400" : "bg-emerald-400",
+                )}
+              />
             )}
-          />
+            <span
+              className={cn(
+                "relative inline-flex h-3 w-3 rounded-full",
+                inStock
+                  ? lowStock
+                    ? "bg-amber-500"
+                    : "bg-emerald-500"
+                  : "bg-rose-500",
+              )}
+            />
+          </span>
           <span
             className={cn(
-              "text-[15px] font-semibold",
+              "text-sm font-extrabold",
               inStock
                 ? lowStock
-                  ? "text-amber-600"
-                  : "text-emerald-600"
-                : "text-red-500",
+                  ? "text-amber-700"
+                  : "text-emerald-700"
+                : "text-rose-600",
             )}
           >
             {!isActive
@@ -353,166 +385,186 @@ export default function ProductDetailClient({
         </div>
 
         {qty > 1 && inStock && (
-          <p className="mt-2 text-[14px] text-[#5A5470]">
+          <p className="mt-3 text-xs sm:text-sm font-semibold text-[#5A5470] border-t border-[#E8E4F4] pt-2.5">
             Subtotal for {qty} items:{" "}
-            <span className="font-bold text-[#1A1330]">
+            <span className="font-black text-[#1A1330]">
               {formatUsd(price * qty)}
             </span>
           </p>
         )}
       </div>
 
-      {/* ── key specs ── */}
+      {/* ── key specifications / attributes ── */}
       {attributes.length > 0 && (
-        <div className="overflow-hidden rounded-2xl border border-[#E2DFEC] bg-white">
-          <div className="grid grid-cols-1 divide-y divide-[#F0EDFB] sm:grid-cols-2 sm:divide-x">
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-[#7C7596]">
+              Key Specifications
+            </h3>
+            {attributes.length > 6 && (
+              <a
+                href="#details"
+                className="text-xs font-bold text-[#6C4CD8] hover:underline"
+              >
+                View all ({attributes.length})
+              </a>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-3">
             {attributes.slice(0, 6).map((attr, i) => (
               <div
                 key={attr.uuid ?? `${attr.key}-${i}`}
-                className="px-5 py-3.5"
+                className="group flex flex-col justify-between rounded-2xl border border-[#EDEBF3] bg-white p-4 shadow-2xs transition-all hover:border-[#6C4CD8]/40 hover:bg-[#FAF9FE] hover:shadow-xs"
               >
-                <p className="text-[13px] font-semibold uppercase tracking-wide text-[#8B85A0]">
-                  {attr.key}
-                </p>
-                <p className="mt-0.5 text-[16px] font-semibold text-[#1A1330]">
-                  {attr.value}
+                <div className="flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#6C4CD8]" />
+                  <p className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-[#7C7596] truncate">
+                    {attr.formattedKey}
+                  </p>
+                </div>
+                <p className="mt-1.5 text-sm sm:text-base font-extrabold text-[#1A1330] break-words">
+                  {attr.formattedValue}
                 </p>
               </div>
             ))}
           </div>
-          {attributes.length > 6 && (
-            <a
-              href="#details"
-              className="block border-t border-[#F0EDFB] px-5 py-3 text-center text-[14px] font-bold text-[#6C4CD8] hover:bg-[#FAF9FD]"
-            >
-              See all {attributes.length} specifications
-            </a>
-          )}
         </div>
       )}
 
-      {/* ── quantity + add to cart ── */}
-      <div className="flex flex-wrap items-center gap-4">
-        <div className="flex items-center overflow-hidden rounded-xl border-2 border-[#E2DFEC] bg-white">
-          <button
+      {/* ── quantity + action buttons ── */}
+      <div className="space-y-3 pt-1">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Quantity Selector */}
+          <div className="flex items-center overflow-hidden rounded-2xl border-2 border-[#E2DFEC] bg-white shadow-2xs">
+            <button
+              type="button"
+              onClick={() => setQty((q) => Math.max(1, q - 1))}
+              disabled={qty <= 1 || !inStock}
+              aria-label="Decrease quantity"
+              className="flex h-13 w-12 items-center justify-center text-[#6C4CD8] transition hover:bg-[#F1EFFA] disabled:opacity-30"
+            >
+              <Minus size={16} />
+            </button>
+            <span
+              className="w-12 text-center text-base sm:text-lg font-black text-[#1A1330]"
+              aria-live="polite"
+            >
+              {qty}
+            </span>
+            <button
+              type="button"
+              onClick={() => setQty((q) => Math.min(stock || 1, q + 1))}
+              disabled={!inStock || qty >= stock}
+              aria-label="Increase quantity"
+              className="flex h-13 w-12 items-center justify-center text-[#6C4CD8] transition hover:bg-[#F1EFFA] disabled:opacity-30"
+            >
+              <Plus size={16} />
+            </button>
+          </div>
+
+          {/* Add to Cart Button */}
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.97 }}
             type="button"
-            onClick={() => setQty((q) => Math.max(1, q - 1))}
-            disabled={qty <= 1 || !inStock}
-            aria-label="Decrease quantity"
-            className="flex h-12 w-12 items-center justify-center text-[#6C4CD8] transition hover:bg-[#F1EFFA] disabled:opacity-30"
+            onClick={handleAddToCart}
+            disabled={adding || !inStock}
+            className={cn(
+              "flex flex-1 items-center justify-center gap-2.5 rounded-2xl py-4 px-6 text-base sm:text-lg font-black text-white shadow-md transition-all disabled:cursor-not-allowed disabled:opacity-50",
+              added
+                ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20"
+                : "bg-[#6C4CD8] hover:bg-[#5939C6] shadow-[#6C4CD8]/25 hover:shadow-lg",
+            )}
           >
-            <Minus size={16} />
-          </button>
-          <span
-            className="w-12 text-center text-[18px] font-bold text-[#1A1330]"
-            aria-live="polite"
-          >
-            {qty}
-          </span>
-          <button
-            type="button"
-            onClick={() => setQty((q) => Math.min(stock || 1, q + 1))}
-            disabled={!inStock || qty >= stock}
-            aria-label="Increase quantity"
-            className="flex h-12 w-12 items-center justify-center text-[#6C4CD8] transition hover:bg-[#F1EFFA] disabled:opacity-30"
-          >
-            <Plus size={16} />
-          </button>
+            {added ? <Check size={20} /> : <ShoppingCart size={20} />}
+            {adding ? "Adding..." : added ? "Added to Cart!" : t("add_to_cart")}
+          </motion.button>
         </div>
 
-        <button
+        {/* Buy Now Button */}
+        <motion.button
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.98 }}
           type="button"
-          onClick={handleAddToCart}
-          disabled={adding || !inStock}
-          className={cn(
-            "flex flex-1 items-center justify-center gap-2.5 rounded-xl py-3.5 text-[17px] font-bold text-white shadow-md transition-all hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50",
-            added
-              ? "bg-emerald-500 hover:bg-emerald-600"
-              : "bg-[#6C4CD8] hover:bg-[#5B3DC0]",
-          )}
+          onClick={handleBuyNow}
+          disabled={!inStock}
+          className="w-full rounded-2xl bg-[#1A1330] hover:bg-[#2B214A] py-3.5 px-6 text-base font-extrabold text-white shadow-sm transition-all disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {added ? <Check size={20} /> : <ShoppingCart size={20} />}
-          {adding ? "..." : added ? t("add_to_cart") : t("add_to_cart")}
-        </button>
+          {t("buy_now")}
+        </motion.button>
+
+        {/* Chat with Shop */}
+        {sellerId && (
+          <Link
+            href={`/messages?seller=${encodeURIComponent(sellerId)}&listing=${encodeURIComponent(listing.uuid)}`}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-[#E2DFEC] bg-white py-3 px-4 text-sm sm:text-base font-bold text-[#6C4CD8] shadow-2xs transition hover:border-[#6C4CD8] hover:bg-[#F1EFFA]"
+          >
+            <MessageCircle size={18} />
+            Chat with Seller
+          </Link>
+        )}
       </div>
 
-      <button
-        type="button"
-        onClick={handleBuyNow}
-        disabled={!inStock}
-        className="w-full rounded-xl border-2 border-[#6C4CD8] py-3.5 text-[17px] font-bold text-[#6C4CD8] transition hover:bg-[#6C4CD8] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        {t("buy_now")}
-      </button>
-
-      {sellerId && (
-        <Link
-          href={`/messages?seller=${encodeURIComponent(sellerId)}&listing=${encodeURIComponent(listing.uuid)}`}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[#E2DFEC] bg-[#F8F7FC] py-3 text-[15px] font-bold text-[#6C4CD8] transition hover:border-[#6C4CD8] hover:bg-[#F1EFFA]"
-        >
-          <MessageCircle size={17} />
-          Chat with shop about this item
-        </Link>
-      )}
-
-      {/* ── trust badges ── */}
-      <div className="grid grid-cols-3 gap-3">
+      {/* ── trust & assurance badges ── */}
+      <div className="grid grid-cols-3 gap-2.5 sm:gap-3 pt-2">
         {[
           {
             Icon: Truck,
             label: "Fast delivery",
-            sub: "Phnom Penh & provinces",
+            sub: "Cambodia-wide",
           },
-          { Icon: RotateCcw, label: "7-day returns", sub: "On damaged items" },
+          { Icon: RotateCcw, label: "7-day returns", sub: "Hassle-free" },
           {
             Icon: ShieldCheck,
-            label: "Buyer protection",
-            sub: "Secure checkout",
+            label: "100% Authentic",
+            sub: "Verified seller",
           },
         ].map(({ Icon, label, sub }) => (
           <div
             key={label}
-            className="flex flex-col items-center gap-1.5 rounded-xl bg-[#F6F5FA] py-4 text-center"
+            className="flex flex-col items-center gap-1 rounded-2xl bg-[#F8F7FC] border border-[#EDEBF3] p-3 text-center transition hover:bg-[#F1EFFA]"
           >
-            <Icon size={20} className="text-[#6C4CD8]" />
-            <p className="text-[13px] font-bold text-[#1A1330]">{label}</p>
-            <p className="text-[12px] text-[#8B85A0]">{sub}</p>
+            <div className="grid size-9 place-items-center rounded-xl bg-white text-[#6C4CD8] shadow-2xs">
+              <Icon size={18} />
+            </div>
+            <p className="text-xs sm:text-sm font-extrabold text-[#1A1330] mt-1">{label}</p>
+            <p className="text-[11px] font-medium text-[#7C7596]">{sub}</p>
           </div>
         ))}
       </div>
 
       {/* ── description preview ── */}
       {listing.description && (
-        <div className="border-t border-[#E2DFEC] pt-5">
-          <h2 className="mb-2 text-[18px] font-bold text-[#1A1330]">
+        <div className="rounded-3xl border border-[#EDEBF3] bg-white p-6 shadow-2xs">
+          <h2 className="mb-2.5 text-base sm:text-lg font-black text-[#1A1330]">
             About this item
           </h2>
-          <p className="whitespace-pre-line text-[16px] leading-relaxed text-[#5A5470]">
+          <p className="whitespace-pre-line text-sm sm:text-base leading-relaxed text-[#5A5470]">
             {listing.description}
           </p>
         </div>
       )}
 
       {/* ── listing meta ── */}
-      <dl className="flex flex-wrap gap-x-6 gap-y-2 border-t border-[#E2DFEC] pt-5 text-[13px] text-[#8B85A0]">
+      <dl className="flex flex-wrap items-center justify-between gap-y-2 border-t border-[#EDEBF3] pt-4 text-xs font-semibold text-[#7C7596]">
         <div className="flex items-center gap-1.5">
-          <Package size={13} />
+          <Package size={14} />
           <dt className="sr-only">Item code</dt>
-          <dd className="font-mono">{listingId.slice(0, 8).toUpperCase()}</dd>
+          <dd className="font-mono">ID: {listingId.slice(0, 8).toUpperCase()}</dd>
         </div>
         {listedOn && (
           <div className="flex items-center gap-1.5">
-            <dt>Listed</dt>
-            <dd className="font-semibold text-[#5A5470]">{listedOn}</dd>
+            <dt>Listed:</dt>
+            <dd className="text-[#1A1330]">{listedOn}</dd>
           </div>
         )}
         <button
           type="button"
           onClick={handleShare}
-          className="inline-flex items-center gap-1.5 font-semibold text-[#6C4CD8] hover:underline"
+          className="inline-flex items-center gap-1 text-[#6C4CD8] hover:underline"
         >
-          <Link2 size={13} />
-          {shared ? "Link copied" : "Copy link"}
+          <Link2 size={14} />
+          {shared ? "Link copied!" : "Copy link"}
         </button>
       </dl>
     </div>

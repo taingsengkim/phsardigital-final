@@ -5,6 +5,8 @@ import { Loader2, Package, X } from "lucide-react"
 import { useGetSellerListingQuery } from "@/lib/redux/service/sellerProductApi"
 import { getFileUrl } from "@/lib/utils"
 
+import { formatAttributeKey, formatAttributeValue } from "@/lib/attribute-formatter"
+
 export function ProductDetailModal({ uuid, onClose }: { uuid: string | null; onClose: () => void }) {
   const { data: product, isLoading, isError } = useGetSellerListingQuery(uuid ?? "", { skip: !uuid })
   if (!uuid) return null
@@ -41,7 +43,7 @@ export function ProductDetailModal({ uuid, onClose }: { uuid: string | null; onC
             {(product.listingAttributes ?? []).length > 0 && (
               <div className="md:col-span-2">
                 <h3 className="mb-3 font-bold">Product attributes</h3>
-                <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700">{(product.listingAttributes ?? []).map((attribute, index) => <div key={attribute.uuid ?? `${attribute.key}-${index}`} className="grid grid-cols-[1fr_2fr] gap-4 border-b border-slate-100 px-4 py-3 text-sm last:border-0 dark:border-slate-800"><span className="font-semibold">{attribute.key}</span><span className="text-slate-600 dark:text-slate-300">{attribute.value}</span></div>)}</div>
+                <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700">{(product.listingAttributes ?? []).map((attribute, index) => <div key={attribute.uuid ?? `${attribute.key}-${index}`} className="grid grid-cols-[1fr_2fr] gap-4 border-b border-slate-100 px-4 py-3 text-sm last:border-0 dark:border-slate-800"><span className="font-semibold">{formatAttributeKey(attribute.key)}</span><span className="text-slate-600 dark:text-slate-300">{formatAttributeValue(attribute.value)}</span></div>)}</div>
               </div>
             )}
           </div>
