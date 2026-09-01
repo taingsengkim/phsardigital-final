@@ -349,6 +349,21 @@ export async function GET(request: NextRequest) {
 
 
 
+function slugify(text: string): string {
+  return text
+    .toString()
+    .toLowerCase()
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function generateRandomSuffix(): string {
+  return Math.random().toString(36).substring(2, 6) + Math.random().toString(36).substring(2, 5);
+}
+
 export async function POST(request: NextRequest) {
   const authHeader = await getAuthHeader(request);
 
@@ -362,7 +377,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    const res = await fetch(`${BASE_URL}/api/v1/listings`, {
+    let res = await fetch(`${BASE_URL}/api/v1/listings`, {
       method: "POST",
       headers: {
         Authorization: authHeader,
@@ -372,13 +387,65 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify(body),
     });
 
-    const text = await res.text();
+    let text = await res.text();
     let data: any = null;
     if (text) {
       try {
         data = JSON.parse(text);
       } catch {
         data = text;
+      }
+    }
+
+    const isSlugConflict = (status: number, respData: any, respText: string) => {
+      if (status !== 409) return false;
+      const msg = (typeof respData === "object" && respData?.message ? respData.message : (typeof respData === "string" ? respData : respText)) || "";
+      return typeof msg === "string" && msg.toLowerCase().includes("slug");
+    };
+
+    // If slug already exists, automatically generate a new unique slug and retry
+    if (isSlugConflict(res.status, data, text)) {
+      const baseSlug = body.slug
+        ? slugify(body.slug)
+        : slugify(body.title || "product");
+
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        const uniqueSlug = `${baseSlug || "product"}-${generateRandomSuffix()}`;
+        const retryBody = {
+          ...body,
+          slug: uniqueSlug,
+        };
+
+        const retryRes = await fetch(`${BASE_URL}/api/v1/listings`, {
+          method: "POST",
+          headers: {
+            Authorization: authHeader,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify(retryBody),
+        });
+
+        const retryText = await retryRes.text();
+        let retryData: any = null;
+        if (retryText) {
+          try {
+            retryData = JSON.parse(retryText);
+          } catch {
+            retryData = retryText;
+          }
+        }
+
+        if (retryRes.ok) {
+          return NextResponse.json(retryData, { status: 201 });
+        }
+
+        if (!isSlugConflict(retryRes.status, retryData, retryText)) {
+          res = retryRes;
+          data = retryData;
+          text = retryText;
+          break;
+        }
       }
     }
 

@@ -67,6 +67,7 @@ export interface ListingAttributeInput {
 export interface CreateListingRequest {
   categoryUuid: string
   title: string
+  slug?: string
   sku?: string
   costPrice?: number | null
   description: string

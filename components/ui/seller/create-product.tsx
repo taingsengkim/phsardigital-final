@@ -764,6 +764,10 @@ export function CreateProduct({ editUuid = "" }: { editUuid?: string }) {
           setFormError(msg)
           return
         }
+        if (msg.toLowerCase().includes("slug")) {
+          setFormError(msg)
+          return
+        }
         setRequiresSubscription(true)
         setFormError(msg || "Listing quota reached. Upgrade your plan or archive an item.")
       } else if (status === 402) {
